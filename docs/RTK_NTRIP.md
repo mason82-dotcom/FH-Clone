@@ -1,137 +1,113 @@
-# Mavic 3 Enterprise Series – RTK / NTRIP
+# RTK und NTRIP
 
-## Sicherheits- und Zuständigkeitsgrenze
+## Zweck
 
-Für FH-Clone gilt für M3E/M3T/M3M:
+FH-Clone normalisiert und überwacht RTK-/GNSS-Zustände, ohne für nicht
+dokumentierte Produkte eigene NTRIP-Konfigurationsschnittstellen zu erfinden.
 
-- **NTRIP-Zugangsdaten werden nicht durch FH-Clone gesetzt.**
-- Host, Port, Mountpoint, Benutzername und Passwort werden nicht über eine eigene Cloud-API-Methode erfunden.
-- Die Konfiguration erfolgt am DJI-Controller/Pilot-2-Pfad.
-- FH-Clone verarbeitet RTK/GNSS über die dokumentierten read-only Telemetriedaten.
+## Zuständigkeitsgrenze für M3E/M3T/M3M
 
-Die DJI Cloud API dokumentiert für die Mavic-3-Enterprise-Pilot-Cloud keinen NTRIP-Konfigurationsdienst.
+Für die Mavic-3-Enterprise-Familie gilt:
 
-DJI PSDK stellt inzwischen Network-RTK-Konfigurationsschnittstellen bereit, diese aktuelle Funktion ist jedoch ausdrücklich für **Matrice 400 + Manifold 3** dokumentiert und wird nicht auf M3E/M3T/M3M übertragen.
+- NTRIP-Zugangsdaten werden nicht durch FH-Clone gesetzt.
+- Host, Port, Mountpoint, Benutzername und Passwort werden nicht in FH2
+  gespeichert.
+- Die Konfiguration erfolgt über den von DJI vorgesehenen Controller-/Pilot-2-
+  Pfad.
+- FH-Clone verarbeitet den resultierenden RTK-/GNSS-Zustand lesend.
 
-## Cloud-Telemetrie
+PSDK- oder Edge-SDK-Funktionen anderer Produktfamilien werden nicht auf M3E,
+M3T oder M3M übertragen, wenn DJI dies nicht ausdrücklich dokumentiert.
 
-Die DJI Cloud API liefert RTK/GNSS-Zustand in Aircraft Properties/OSD.
+## Normalisierte RTK-Felder
 
-Relevante Felder:
-
-| DJI-Feld | FH-Clone-Key | Bedeutung |
+| DJI-Feld | FH2-Schlüssel | Bedeutung |
 | --- | --- | --- |
-| `position_state.is_fixed` | `navigation.rtk.fix_state_code` | RTK-Fix-Zustand als Enum |
-| derived | `navigation.rtk.fix_status` | normalisierter String |
-| derived | `navigation.rtk.fixed` | boolescher Fix-Indikator |
-| `position_state.quality` | `navigation.rtk.quality_code` | Satellite-acquisition quality |
-| `gps_number` / `position_state.gps_number` | `navigation.gnss.gps_satellites` | GPS-Satelliten |
-| `rtk_number` / `position_state.rtk_number` | `navigation.rtk.satellites` | RTK-Satelliten |
-| `mode_code` | `flight.mode.code` | Aircraft-Betriebszustand |
-| derived from `mode_code == 18` | `navigation.rtk.airborne_fixing_mode` | Aircraft ist im Airborne-RTK-Fixing-Modus |
+| `position_state.is_fixed` | `navigation.rtk.fix_state_code` | DJI-Fix-Statuscode |
+| abgeleitet | `navigation.rtk.fix_status` | normalisierter Status |
+| abgeleitet | `navigation.rtk.fixed` | boolescher Fixindikator |
+| `position_state.quality` | `navigation.rtk.quality_code` | Qualitätscode |
+| `gps_number` | `navigation.gnss.gps_satellites` | GPS-Satelliten |
+| `rtk_number` | `navigation.rtk.satellites` | RTK-Satelliten |
+| `mode_code` | `flight.mode.code` | Aircraft-Betriebsmodus |
+| abgeleitet | `navigation.rtk.airborne_fixing_mode` | RTK-Fixing-Modus |
 
-### is_fixed ist kein Boolean
+## Fix-Zustand
 
-DJI definiert:
+`is_fixed` ist kein Boolean.
 
-```text
-0 = Not started
-1 = Fixing
-2 = Fixing successful
-3 = Fixing failed
-```
-
-Deshalb ist diese Logik falsch:
+Verwendete Interpretation:
 
 ```text
-is_fixed === 1 -> FIX
+0 = nicht gestartet
+1 = Fix läuft
+2 = Fix erfolgreich
+3 = Fix fehlgeschlagen
 ```
 
-FH-Clone verwendet:
+Daher:
 
 ```text
 is_fixed == 2 -> fixed
-quality == 10 -> RTK fixed acquisition mode
 ```
 
-### mode_code 18
+`mode_code == 18` wird separat als Airborne-RTK-Fixing-Modus geführt und
+nicht allein als erfolgreicher Fix interpretiert.
 
-`mode_code = 18` bedeutet `Airborne RTK fixing mode`.
+## Höhe
 
-Das ist ein Aircraft-Modus und wird **nicht** als alleiniger Beweis für einen erfolgreichen RTK-Fix verwendet.
+Für Mapping und Medien ist die Höhenreferenz entscheidend.
+
+FH-Clone trennt:
+
+```text
+Ellipsoidhöhe
+relative Höhe zum Start-/Takeoff-Bezug
+```
+
+Die normalisierten Keys dürfen nicht ohne dokumentierte Quelle
+untereinander ersetzt werden.
 
 ## Fix-Verlust
 
-`RtkFixMonitor` beobachtet den abgeleiteten booleschen Fix-Zustand.
-
-Ein Initialwert erzeugt keine Meldung. Nur echte Zustandswechsel erzeugen Events:
+Der RTK-Monitor erzeugt nur bei echten Zustandswechseln Ereignisse:
 
 ```text
 false -> true  = acquired
 true  -> false = lost
 ```
 
-Damit kann die WebUI später einen Fix-Verlust-Alert erzeugen, ohne einzelne OSD-Pakete fälschlich als Ereignis zu behandeln.
+Der Initialwert erzeugt kein künstliches Ereignis.
 
-## Höhe
+## Öffentliche API
 
-Für Mapping und RTK ist die Höhenreferenz entscheidend.
-
-DJI Cloud API:
-
-- `height` -> Ellipsoidhöhe
-- `elevation` -> Höhe relativ zum Start-/Takeoff-Punkt
-
-FH-Clone normalisiert daher:
-
-```text
-height    -> flight.altitude.ellipsoid_m
-elevation -> flight.altitude.relative_m
+```http
+GET /api/rtk
+GET /api/devices/{device_sn}/rtk
+GET /api/rtk/transitions
+GET /api/events/rtk
 ```
 
-## Missions-/Media-Metadaten
+Der Live-Stream läuft über Server-Sent Events und benötigt keine
+MQTT-Credentials im Browser.
 
-RTK-Status darf bei einer Aufnahme/Mission als Snapshot mitgeführt werden, z. B.:
+## Weboberfläche
 
-```text
-device_sn
-timestamp
-navigation.rtk.fix_status
-navigation.rtk.fixed
-navigation.rtk.quality_code
-navigation.rtk.satellites
-navigation.gnss.gps_satellites
-flight.altitude.ellipsoid_m
-flight.altitude.relative_m
-```
+Die vorhandene React-Ansicht zeigt unter anderem:
 
-NTRIP-Credentials werden niemals in Mission-, Media- oder Audit-Metadaten gespeichert.
-
-Eine frei eingegebene Bezeichnung der verwendeten RTK-/CORS-Quelle kann später als nicht-geheimes Missionsmetadatum ergänzt werden. Sie ist keine aus der Cloud API abgeleitete Information.
-
-## Produktgrenze
-
-M3E/M3T benötigen für RTK die entsprechende Hardwareausstattung; M3M besitzt RTK-Funktionalität bereits im Produktkonzept.
-
-Die tatsächliche Capability wird in FH-Clone trotzdem aus realer Geräte-/Telemetrieinformation abgeleitet und nicht allein anhand des Modellnamens angenommen.
-
-
-## Live-Verlauf in der WebUI
-
-Die React-WebUI hält pro Aircraft die letzten 120 RTK/GNSS-Samples im Speicher und visualisiert:
-
-- RTK-Satelliten
-- GPS-Satelliten
 - aktuellen Fix-Zustand
-- Fix-Verlust-Zeitpunkte
+- GPS-Satelliten
+- RTK-Satelliten
+- zeitlichen Verlauf
+- Fix-Verlust-Ereignisse
 
-Der Verlauf ist bewusst flüchtig. Persistente Flugauswertung wird später über die zentrale Telemetrie-/Timeseries-Schicht realisiert.
+Der Verlauf ist derzeit flüchtig. Persistente Historie gehört zum
+V3-Persistenz-Gate.
 
-## Sichere RTK-Quellenreferenz in Missionsmetadaten
+## Sichere Missionsmetadaten
 
-FH-Clone kann eine **nicht-sensitive** Referenz auf die verwendete Korrekturquelle dokumentieren.
-
-Beispiel:
+Missionskontext darf eine nicht-sensitive Referenz auf die Korrekturquelle
+enthalten:
 
 ```json
 {
@@ -142,22 +118,52 @@ Beispiel:
 }
 ```
 
-Erlaubt sind nur beschreibende Felder:
+Zulässig:
 
 - `label`
-- optional `provider`
-- optional `note`
-- `configuredVia = dji-pilot-2`
+- `provider`
+- `note`
+- `configuredVia`
 
-Nicht Bestandteil dieses Modells sind:
+Nicht zulässig:
 
-- Host/IP
+- Host
+- IP
 - Port
 - Mountpoint
 - Benutzername
 - Passwort
 - Token
 
-Diese Felder sind im typisierten Core-Modell absichtlich nicht repräsentierbar.
+Diese Geheimnisse sind im typisierten Core-Modell absichtlich nicht
+repräsentierbar.
 
-Der Missionskontext kann zusätzlich sichere RTK-Snapshots für Start/Landung sowie aggregierte Werte wie minimale RTK-Satellitenzahl und Fix-Loss-Anzahl tragen.
+## Missionskontext
+
+Der Core kann sichere RTK-Snapshots für Start/Landung sowie aggregierte Werte
+führen, zum Beispiel:
+
+- minimale RTK-Satellitenzahl
+- Fix-Loss-Anzahl
+- Takeoff-Snapshot
+- Landing-Snapshot
+- beschreibende Korrekturquellenreferenz
+
+## Produktgrenze
+
+M3E/M3T benötigen die entsprechende RTK-Hardwareausstattung. M3M besitzt RTK
+im Produktkonzept.
+
+Trotzdem soll die Anwendung die tatsächliche Capability aus realen Geräte- und
+Telemetriedaten ableiten und nicht allein aus dem Modellnamen.
+
+## V3-Abnahme
+
+Zu testen:
+
+- RTK-Fix korrekt erkannt
+- Fix-Verlust korrekt erkannt
+- Stale-Status
+- Reconnect
+- Missionssnapshot
+- keine NTRIP-Secrets in API, Log oder Persistenz
