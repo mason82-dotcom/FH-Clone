@@ -83,6 +83,22 @@ Automatisiert vorhanden sind unter anderem:
 
 Die finale lokale Gesamtabnahme bleibt offen.
 
+## DJI-MQTT/AuthN – VERTRAG GEKLÄRT, IMPLEMENTIERUNG OFFEN
+
+Der EMQX-5.7-Vertrag ist fachlich entschieden:
+
+- `POST /internal/emqx/authn`
+- HTTP 200 + `allow/deny`
+- `is_superuser=false`
+- `client_attrs.role=dji_gateway`
+- `client_attrs.gateway_sn`
+- kein `expire_at` im 5.7-Profil
+- Credential Store darf PostgreSQL nutzen
+- Topologie und DRC bleiben Runtime-only
+
+Offen ist die Implementierung durch Manager #26 einschließlich
+Credential-Hashing, Fail-Closed-Tests und AuthZ-Entkopplung von `clientid`.
+
 ## Gate 4 – RC Pro: REAL ZU VERIFIZIEREN
 
 Noch mit echter Hardware zu bestätigen:
