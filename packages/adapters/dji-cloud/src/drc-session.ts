@@ -85,10 +85,6 @@ export class InMemoryDrcSessionStore implements DrcSessionStore {
 
   constructor(private readonly now: () => number = Date.now) {}
 
-  async listOpenSessions(): Promise<DrcSessionRecord[]> {
-    return this.store.listOpen();
-  }
-
   async get(gatewaySn: string): Promise<DrcSessionRecord | undefined> {
     const entry = this.records.get(gatewaySn);
     if (!entry) return undefined;
@@ -304,8 +300,7 @@ export class DrcSessionManager {
   }
 
   async markDrcModeActive(gatewaySn: string): Promise<DrcSessionRecord> {
-    const record = await this.transitionState(gatewaySn, "authority_grabbed", "drc_mode_active");
-    return this.setTransportConnected(gatewaySn, true);
+    return this.transitionState(gatewaySn, "authority_grabbed", "drc_mode_active");
   }
 
   async setTransportConnected(gatewaySn: string, connected: boolean): Promise<DrcSessionRecord> {
@@ -495,6 +490,10 @@ export class DrcSessionManager {
 
   async get(gatewaySn: string): Promise<DrcSessionRecord | undefined> {
     return this.store.get(gatewaySn);
+  }
+
+  async listOpenSessions(): Promise<DrcSessionRecord[]> {
+    return this.store.listOpen();
   }
 
   async isActive(gatewaySn: string): Promise<boolean> {
