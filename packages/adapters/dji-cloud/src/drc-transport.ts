@@ -3,10 +3,24 @@ import type { DjiMqttPublisher, DrcBrokerCredentials, MqttQos } from "./drc.js";
 
 export type DrcTransportLossReason = "mqtt_close" | "mqtt_offline";
 
+export interface DrcTransportContext {
+  gatewaySn: string;
+  aircraftSn: string;
+}
+
+export interface DrcInboundMessage extends DrcTransportContext {
+  topic: string;
+  payload: unknown;
+  receivedAt: number;
+}
+
 export interface DrcBrokerTransportOptions {
   onConnected?: () => void | Promise<void>;
   onLost?: (reason: DrcTransportLossReason) => void | Promise<void>;
+  onMessage?: (message: DrcInboundMessage) => void | Promise<void>;
 }
+
+const SAFE_TOPIC_ID = /^[A-Za-z0-9_-]+$/;
 
 /**
  * Dedicated DJI DRC data-plane MQTT transport.
@@ -14,6 +28,9 @@ export interface DrcBrokerTransportOptions {
  * Credentials remain process-local and are never persisted or logged here.
  * A disconnected transport is fail-closed: publish() rejects until MQTT
  * reports a successful connect event.
+ *
+ * The upstream subscription is bound to exactly one active gateway. No
+ * wildcard DRC subscription is used.
  */
 export class DrcBrokerTransport implements DjiMqttPublisher {
   private client?: MqttClient;
@@ -26,9 +43,20 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
     return this.connected;
   }
 
-  async connect(credentials: DrcBrokerCredentials): Promise<void> {
+  async connect(
+    credentials: DrcBrokerCredentials,
+    context: DrcTransportContext
+  ): Promise<void> {
+    if (
+      !SAFE_TOPIC_ID.test(context.gatewaySn) ||
+      !SAFE_TOPIC_ID.test(context.aircraftSn)
+    ) {
+      throw new Error("invalid_drc_transport_identity");
+    }
+
     await this.disconnect();
     const generation = ++this.generation;
+    const topic = `thing/product/${context.gatewaySn}/drc/up`;
     const client = mqtt.connect(credentials.address, {
       protocolVersion: 5,
       clean: true,
@@ -50,18 +78,42 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
     client.on("offline", () => lose("mqtt_offline"));
     client.on("error", () => {
       // After connect, MQTT errors are diagnostic; close/offline are the
-      // authoritative transport-loss signals. Initial errors still reject below.
+      // authoritative transport-loss signals. Initial errors reject below.
+    });
+    client.on("message", (receivedTopic, bytes) => {
+      if (
+        generation !== this.generation ||
+        receivedTopic !== topic
+      ) {
+        return;
+      }
+
+      let payload: unknown;
+      try {
+        payload = JSON.parse(bytes.toString("utf8"));
+      } catch {
+        return;
+      }
+
+      void this.options.onMessage?.({
+        ...context,
+        topic: receivedTopic,
+        payload,
+        receivedAt: Date.now()
+      });
     });
 
     await new Promise<void>((resolve, reject) => {
-      const onConnect = () => {
-        cleanup();
-        if (generation !== this.generation) return reject(new Error("DRC transport superseded"));
-        this.connected = true;
-        void this.options.onConnected?.();
-        resolve();
+      let settled = false;
+
+      const cleanup = () => {
+        client.off("connect", onConnect);
+        client.off("error", onError);
       };
-      const onError = (error: Error) => {
+
+      const fail = (error: Error) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         if (generation === this.generation) {
           this.connected = false;
@@ -71,10 +123,24 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
         }
         reject(error);
       };
-      const cleanup = () => {
-        client.off("connect", onConnect);
-        client.off("error", onError);
+
+      const onConnect = () => {
+        client.subscribe(topic, { qos: 0 }, (error?: Error) => {
+          if (error) return fail(error);
+          if (settled) return;
+          if (generation !== this.generation) {
+            return fail(new Error("DRC transport superseded"));
+          }
+          settled = true;
+          cleanup();
+          this.connected = true;
+          void this.options.onConnected?.();
+          resolve();
+        });
       };
+
+      const onError = (error: Error) => fail(error);
+
       client.once("connect", onConnect);
       client.once("error", onError);
     });
@@ -92,7 +158,9 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
 
   async publish(topic: string, payload: unknown, qos: MqttQos): Promise<void> {
     const client = this.client;
-    if (!client || !this.connected) throw new Error("DJI DRC MQTT transport is not connected");
+    if (!client || !this.connected) {
+      throw new Error("DJI DRC MQTT transport is not connected");
+    }
     await new Promise<void>((resolve, reject) => {
       client.publish(topic, JSON.stringify(payload), { qos }, (error?: Error) =>
         error ? reject(error) : resolve()
