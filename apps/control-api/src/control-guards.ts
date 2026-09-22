@@ -50,3 +50,23 @@ export class RuntimeControlGuardRegistry {
     return this.leases.delete(aircraftSn);
   }
 }
+
+export interface RuntimeDrcGuardSources {
+  hasFc3(aircraftSn: string): boolean;
+  hasLease(aircraftSn: string, holder?: string): boolean;
+  supportsFlightControl(aircraftSn: string): boolean;
+  isCloudControlAuthorized(aircraftSn: string): boolean;
+}
+
+export function resolveRuntimeDrcGuards(
+  sources: RuntimeDrcGuardSources,
+  aircraftSn: string,
+  holder?: string
+): import("@fh-clone/adapter-dji-cloud").DrcSessionGuards {
+  return {
+    fc3: sources.hasFc3(aircraftSn),
+    controlLease: sources.hasLease(aircraftSn, holder),
+    capability: sources.supportsFlightControl(aircraftSn),
+    djiAuthority: sources.isCloudControlAuthorized(aircraftSn)
+  };
+}
