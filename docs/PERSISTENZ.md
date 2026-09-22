@@ -19,14 +19,31 @@ Zeitreihentelemetrie.
 - MissionStore in der Control API
 - Öffnen und Schließen automatisch erkannter Missionssitzungen
 - optionale sichere RTK-Quellenmetadaten
+- Recovery offener automatischer Missionen bei Dienstneustart mit `service_restart`
+- separater TimescaleDB-Compose-Unterstack mit gepinntem Image `timescale/timescaledb:2.30.1-pg16`
 
 ### Noch offen für V3
 
 - vollständiges Schreiben der normalisierten Telemetrie in `telemetry`
-- Wiederherstellung aktiver Laufzeitzustände nach Neustart
+- vollständiges Wiederaufbauen der übrigen Runtime-Registries nach Neustart
 - Persistenz von Topologie, AuthN/AuthZ-Audit und Medien
 - Migrations-/Upgrade-Ablauf im finalen Root-Compose
 - lokale Restart-/Retention-Abnahme
+
+## Datenbank-Unterstack
+
+Vorhanden:
+
+```text
+infra/timescale/compose.yaml
+infra/timescale/.env.example
+infra/timescale/sql/001_schema.sql
+```
+
+Der Container veröffentlicht Port 5432 nicht auf den Host, sondern verwendet
+`expose` für die interne Stack-Kommunikation.
+
+Details: [TimescaleDB-Komponente](../infra/timescale/README.md).
 
 ## Verbindung
 
@@ -139,6 +156,8 @@ Der `MissionStore`:
 - öffnet eine Mission beim automatischen Sitzungsstart
 - speichert Produktidentität aus der Topologie, soweit vorhanden
 - schließt die Mission mit Endzeit und Endgrund
+- markiert beim Service-Neustart noch offene automatische Missionen mit
+  `end_reason = service_restart`, statt sie automatisch wieder als aktiv zu behandeln
 - kann die Datenbankverbindung prüfen
 - schließt den Connection Pool beim Prozessende
 
@@ -157,7 +176,8 @@ Credential-Speicher mit Passwort-Hashes.
 ## V3-Abnahme
 
 - Schema reproduzierbar initialisierbar
-- Missionen über Neustart hinweg vorhanden
+- abgeschlossene Missionshistorie über Neustart hinweg vorhanden
+- offene automatische Missionen werden beim Neustart sicher mit `service_restart` abgeschlossen
 - Telemetrie-Writer implementiert und getestet
 - Retention funktioniert
 - Aggregat wird aktualisiert
