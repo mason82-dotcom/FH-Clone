@@ -8,6 +8,7 @@ export type RtkFixState =
 export interface RtkDeviceSnapshot {
   deviceId: string;
   gatewaySn?: string;
+  missionId?: string;
   fixState: RtkFixState;
   fixStateCode?: number;
   qualityCode?: number;
@@ -41,6 +42,7 @@ export interface RtkStatusEvent {
   type: "status";
   deviceId: string;
   gatewaySn?: string;
+  missionId?: string;
   status: Omit<RtkDeviceSnapshot, "deviceId" | "gatewaySn" | "stale" | "ageMs">;
 }
 
@@ -48,5 +50,6 @@ export interface RtkTransitionEvent {
   type: "fix-transition";
   deviceId: string;
   gatewaySn?: string;
+  missionId?: string;
   transition: RtkFixTransition;
 }
