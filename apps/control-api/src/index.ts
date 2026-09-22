@@ -19,6 +19,7 @@ import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
+import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -27,11 +28,21 @@ const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
 const djiOptions = getDjiOptions(topologyPersistence);
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
+const controlGuards = new RuntimeControlGuardRegistry();
 const drcSessions = dji
   ? new DrcSessionManager(dji.drc, new InMemoryDrcSessionStore(), {
       onAudit: (event) => console.info("[DRC]", event)
     })
   : undefined;
+function getDrcGuards(aircraftSn: string, holder?: string) {
+  return resolveRuntimeDrcGuards({
+    hasFc3: (sn) => controlGuards.hasFc3(sn),
+    hasLease: (sn, leaseHolder) => controlGuards.hasLease(sn, leaseHolder),
+    supportsFlightControl: (sn) => dji?.supportsFlightControl(sn) ?? false,
+    isCloudControlAuthorized: (sn) => dji?.isCloudControlAuthorized(sn) ?? false
+  }, aircraftSn, holder);
+}
+
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
 });
