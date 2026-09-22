@@ -1,12 +1,14 @@
 import {
   type WpmlAction,
   type WpmlActionGroup,
+  type WpmlAutoRerouteInfo,
   type WpmlBundle,
   type WpmlDroneInfo,
   type WpmlMissionConfig,
   type WpmlPayloadInfo,
   type WpmlTemplateDocument,
   type WpmlTemplateFolder,
+  type WpmlTemplatePayloadParam,
   type WpmlValidationIssue,
   type WpmlWaypoint,
   type WpmlWaylineFolder,
@@ -33,7 +35,11 @@ const DRONE_MODELS: Readonly<Record<string, string>> = {
   "77:1": "DJI Mavic 3 Thermal",
   "77:2": "DJI Mavic 3 Multispectral",
   "91:0": "DJI Matrice 3D",
-  "91:1": "DJI Matrice 3TD"
+  "91:1": "DJI Matrice 3TD",
+  "99:0": "DJI Matrice 4E",
+  "99:1": "DJI Matrice 4T",
+  "100:0": "DJI Matrice 4D",
+  "100:1": "DJI Matrice 4TD"
 };
 
 const KNOWN_TEMPLATE_TYPES = new Set(["waypoint", "mapping2d", "mapping3d", "mappingStrip"]);
@@ -78,6 +84,10 @@ const PAYLOAD_MODELS: Readonly<Record<number, string>> = {
   81: "DJI Matrice 3TD Camera",
   82: "DJI Zenmuse H30",
   83: "DJI Zenmuse H30T",
+  88: "DJI Matrice 4E Camera",
+  89: "DJI Matrice 4T Camera",
+  98: "DJI Matrice 4D Camera",
+  99: "DJI Matrice 4TD Camera",
   65534: "DJI PSDK Payload"
 };
 
@@ -100,6 +110,7 @@ export function parseWpmlTemplate(xml: string): WpmlTemplateDocument {
     issues.push(error("template.folder_missing", "template.kml requires at least one Folder"));
   }
 
+  const templateIds = new Set<number>();
   const actionGroupIds = new Set<number>();
   for (const [index, folder] of folders.entries()) {
     const path = `folders[${index}]`;
@@ -108,7 +119,10 @@ export function parseWpmlTemplate(xml: string): WpmlTemplateDocument {
     }
     if (!Number.isInteger(folder.templateId) || folder.templateId < 0 || folder.templateId > 65_535) {
       issues.push(error("template.id_invalid", "wpml:templateId must be in [0,65535]", path));
+    } else if (templateIds.has(folder.templateId)) {
+      issues.push(error("template.id_duplicate", "wpml:templateId must be unique in template.kml", path));
     }
+    templateIds.add(folder.templateId);
     if (folder.templateType && !KNOWN_TEMPLATE_TYPES.has(folder.templateType)) {
       issues.push(warning("template.type_unknown", `Unknown templateType: ${folder.templateType}`, path));
     }
@@ -253,6 +267,8 @@ function parseMissionConfig(xml: string): WpmlMissionConfig {
   const takeOffRefPointAglHeightM = xmlNumber(xml, "takeOffRefPointAGLHeight");
   const globalTransitionalSpeedMps = xmlNumber(xml, "globalTransitionalSpeed");
   const globalRthHeightM = xmlNumber(xml, "globalRTHHeight");
+  const autoRerouteXml = xmlBlocks(xml, "autoRerouteInfo")[0];
+  const autoReroute = autoRerouteXml ? parseAutoRerouteInfo(autoRerouteXml) : undefined;
   const drone = droneXml ? parseDroneInfo(droneXml) : undefined;
   const payload = payloadXml ? parsePayloadInfo(payloadXml) : undefined;
 
@@ -267,8 +283,22 @@ function parseMissionConfig(xml: string): WpmlMissionConfig {
     ...(takeOffRefPointAglHeightM !== undefined ? { takeOffRefPointAglHeightM } : {}),
     ...(globalTransitionalSpeedMps !== undefined ? { globalTransitionalSpeedMps } : {}),
     ...(globalRthHeightM !== undefined ? { globalRthHeightM } : {}),
+    ...(autoReroute ? { autoReroute } : {}),
     ...(drone ? { drone } : {}),
     ...(payload ? { payload } : {})
+  };
+}
+
+function parseAutoRerouteInfo(xml: string): WpmlAutoRerouteInfo {
+  const missionAutoRerouteMode = wpmlBoolean(xmlText(xml, "missionAutoRerouteMode"));
+  const transitionalAutoRerouteMode = wpmlBoolean(
+    xmlText(xml, "transitionalAutoRerouteMode")
+  );
+  return {
+    ...(missionAutoRerouteMode !== undefined ? { missionAutoRerouteMode } : {}),
+    ...(transitionalAutoRerouteMode !== undefined
+      ? { transitionalAutoRerouteMode }
+      : {})
   };
 }
 
@@ -304,6 +334,10 @@ function parseTemplateFolder(xml: string): WpmlTemplateFolder {
   const coordinateMode = xmlText(coordinateXml, "coordinateMode");
   const heightMode = xmlText(coordinateXml, "heightMode");
   const positioningType = xmlText(coordinateXml, "positioningType");
+  const payloadParamXml = xmlBlocks(xml, "payloadParam")[0];
+  const payloadParam = payloadParamXml
+    ? parseTemplatePayloadParam(payloadParamXml)
+    : undefined;
 
   return {
     rawXml: xml,
@@ -313,12 +347,29 @@ function parseTemplateFolder(xml: string): WpmlTemplateFolder {
     ...(coordinateMode ? { coordinateMode } : {}),
     ...(heightMode ? { heightMode } : {}),
     ...(positioningType ? { positioningType } : {}),
+    ...(payloadParam ? { payloadParam } : {}),
     // Mapping templates describe areas/strips rather than executable waypoint
     // points. Keep those geometries in rawXml until a dedicated model exists.
     waypoints:
       templateType === "waypoint"
         ? xmlBlocks(xml, "Placemark").map((block) => parseWaypoint(block, false))
         : []
+  };
+}
+
+function parseTemplatePayloadParam(xml: string): WpmlTemplatePayloadParam {
+  const positionIndex = xmlNumber(xml, "payloadPositionIndex");
+  const imageFormat = xmlText(xml, "imageFormat");
+  return {
+    rawXml: xml,
+    ...(positionIndex !== undefined ? { positionIndex } : {}),
+    ...(imageFormat ? { imageFormat } : {}),
+    imageFormats: imageFormat
+      ? imageFormat
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : []
   };
 }
 
@@ -424,8 +475,14 @@ function validateMissionConfig(
 
   if (config.takeOffSecurityHeightM === undefined) {
     issues.push(error("mission.takeoff_height_missing", "wpml:takeOffSecurityHeight is required", path));
-  } else if (config.takeOffSecurityHeightM <= 0 || config.takeOffSecurityHeightM > 1500) {
-    issues.push(error("mission.takeoff_height_invalid", "takeOffSecurityHeight must be > 0 and <= 1500 m", path));
+  } else if (config.takeOffSecurityHeightM < 1.2 || config.takeOffSecurityHeightM > 1500) {
+    issues.push(
+      error(
+        "mission.takeoff_height_invalid",
+        "takeOffSecurityHeight must be in the DJI remote-controller range [1.2,1500] m; dock routes may require at least 8 m",
+        path
+      )
+    );
   }
 
   if (config.globalTransitionalSpeedMps === undefined) {
@@ -454,6 +511,39 @@ function validateMissionConfig(
         path
       )
     );
+  } else if (
+    documentKind === "waylines" &&
+    config.globalRthHeightM !== undefined &&
+    (config.globalRthHeightM < 2 || config.globalRthHeightM > 1500)
+  ) {
+    issues.push(
+      error(
+        "mission.global_rth_height_invalid",
+        "globalRTHHeight must be in [2,1500] m",
+        path
+      )
+    );
+  }
+
+  if (config.autoReroute) {
+    if (config.autoReroute.missionAutoRerouteMode === undefined) {
+      issues.push(
+        error(
+          "mission.auto_reroute_mode_missing",
+          "autoRerouteInfo requires missionAutoRerouteMode",
+          path
+        )
+      );
+    }
+    if (config.autoReroute.transitionalAutoRerouteMode === undefined) {
+      issues.push(
+        error(
+          "mission.transitional_auto_reroute_mode_missing",
+          "autoRerouteInfo requires transitionalAutoRerouteMode",
+          path
+        )
+      );
+    }
   }
 
   if (
