@@ -280,8 +280,10 @@ GET /wayline/api/v1/workspaces/{workspace_id}/waylines
 x-auth-token: <serverseitiges Secret>
 ```
 
-DJI dokumentiert unter anderem folgende Filter:
+DJI dokumentiert beziehungsweise verwendet im offiziellen Cloud-API-Demo
+folgende Filter:
 
+- `key` – Wayline-Dateiname
 - `favorited`
 - `order_by`
 - `page`
@@ -291,14 +293,28 @@ DJI dokumentiert unter anderem folgende Filter:
 - `drone_model_keys[]`
 - `payload_model_key[]`
 
-FH2 reicht Arrayfilter als wiederholte Queryparameter weiter. DJI beschreibt
-sie als Arrays, legt auf der Referenzseite aber keine eindeutige
-Wire-Serialisierung fest. Dieses Detail bleibt für reale Pilot-2-Integration
-zu verifizieren.
+Das offizielle DJI-Cloud-API-Demo bindet die Arrayfelder als Java-`List`
+über Spring `@ParameterObject`. FH2 verwendet dafür wiederholte
+Queryparameter und bleibt damit zum Referenzserver-Vertrag kompatibel.
+Die reale Pilot-2-Laufzeit wird trotzdem als Hardware-/Integrationsnachweis
+offengehalten.
 
 Lokale Integer-Queryparameter werden strikt als vollständige Dezimalzahlen
 validiert. Werte wie `page=2foo` oder `page_size=25.5` werden nicht
 teilweise geparst, sondern abgewiesen.
+
+Der DJI-Demo-Vertrag wird zusätzlich fail-closed eingegrenzt:
+
+```text
+template_type: 0=waypoint, 1=mapping2d, 2=mapping3d, 3=mappingStrip
+action_type:   1=AI Spot-Check
+order_by:      name asc|desc
+               update_time asc|desc
+               create_time asc|desc
+page_size:     Standard 10
+```
+
+Andere Werte werden lokal mit `400 invalid_query_*` abgewiesen.
 
 ## Pilot-Katalogmodell
 

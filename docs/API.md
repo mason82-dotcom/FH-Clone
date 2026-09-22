@@ -142,19 +142,23 @@ Endpunkt erfindet keine Wayline-ID und aktiviert keine
 
 ```http
 GET /api/dji/pilot/waylines/status
-GET /api/dji/pilot/waylines?page=1&page_size=100
+GET /api/dji/pilot/waylines?page=1&page_size=10
 ```
 
 Optionale Filter:
 
 ```text
+key                 Wayline-Dateiname
 favorited
-order_by
-action_type
-template_type       (wiederholbar)
-drone_model_keys    (wiederholbar)
-payload_model_key   (wiederholbar)
+order_by            name|update_time|create_time + asc|desc
+action_type         1 = AI Spot-Check
+template_type       wiederholbar; 0..3
+drone_model_keys    wiederholbar
+payload_model_key   wiederholbar
 ```
+
+Ohne Angabe gilt `page=1` und – entsprechend dem offiziellen DJI-Demo –
+`page_size=10`.
 
 Dieser Pfad spiegelt die DJI Pilot-to-Cloud-Waypoint-Dateiliste und ist
 **nicht** mit `/api/fh2/waylines` gleichzusetzen.
