@@ -268,6 +268,47 @@ der gewählte Verarbeitungsweg die für den Datensatz erforderlichen
 Korrektur-/Kalibrierungsinformationen erfolgreich angewandt beziehungsweise
 explizit validiert hat.
 
+### DJI-Adapter-Metadatenmapper
+
+Der V3-Kandidat enthält im DJI-Adapter einen dependency-freien Mapper:
+
+```text
+normalizeDjiM3mMediaMetadata()
+```
+
+Er nimmt bereits extrahierte EXIF-/XMP-Metadaten als
+`Record<string, unknown>` entgegen und bildet ausschließlich dokumentierte
+DJI-M3M-Felder auf die herstellerneutralen Core-Typen ab.
+
+Abgebildet werden unter anderem:
+
+- `BandName` -> authoritative `SpectralBand` und erst dann Profil
+  `MULTISPECTRAL`
+- ohne dokumentiertes `BandName` bleibt das Asset fail-safe
+  `GENERIC/unknown`; insbesondere wird ein M3M-RGB-Bild nicht als
+  Narrow-Band geraten
+- `BandFreq`, `CentralWavelength` und `SensorIndex` ->
+  Konsistenzprüfung der Bandidentität
+- `CaptureUUID` -> authoritative Capture-Set-Korrelation
+- `UTCAtExposure` -> Aufnahmezeit
+- GPS/Höhe/Aircraft-/Gimbal-Pose -> `CaptureContext`
+- `RtkFlag` -> RTK-Fixinformation
+- Sonnenlichtsensor-/Gain-/Exposure-/Kalibrierungsfelder ->
+  Radiometrie-Metadaten
+
+Der Mapper:
+
+- liest **keine** TIFF-/JPEG-Dateien selbst,
+- führt **keine** EXIF-/XMP-Bibliothek ein,
+- rät kein Band aus Dateiname, Dateireihenfolge oder `SensorIndex`,
+- meldet widersprüchliche `BandName`-/`BandFreq`-/`CentralWavelength`-/
+  `SensorIndex`-Angaben als Konflikt,
+- bewahrt die vollständigen Rohmetadaten am `MediaAsset`.
+
+Die konkrete Parserbibliothek beziehungsweise Import-Pipeline bleibt außerhalb
+dieses Gate-5-Mappers. Reale Fixtures müssen zuerst zeigen, in welcher
+Namespace-/Tagdarstellung die verwendete Toolchain die DJI-Felder liefert.
+
 ### Noch real dateiseitig zu verifizieren
 
 Vor V3-RC müssen reale M3M-Dateien nur noch bestätigen:
