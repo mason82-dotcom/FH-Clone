@@ -20,8 +20,11 @@ Sub-Device geführt.
 DJI RC Pro Enterprise
 gateway_sn
    |
-   +-- Mavic 3 Enterprise / Thermal / Multispectral
+   +-- M3E / M3T / M3TA im aktuellen Pilot-to-Cloud-Produktprofil
        device_sn
+
+M3M wird separat als MSDK/WPML-/Media-Fall behandelt und erhält ohne
+eindeutige Cloud-Enumeration kein automatisches Live-Control-Profil.
 ```
 
 Die Zuordnung wird über `update_topo` gelernt.
@@ -120,8 +123,10 @@ Credential
 
 ## Mavic 3 Enterprise Series
 
-Für M3E/M3T/M3M wird Cloud-Flugsteuerung nicht aus vorhandenen DRC-Topics oder
+Für M3E/M3T/M3TA wird Cloud-Flugsteuerung nicht aus vorhandenen DRC-Topics oder
 aus der Existenz von DRC-Code abgeleitet.
+
+M3M gehört nicht automatisch in dieses Pilot-to-Cloud-Live-Control-Profil.
 
 Das Capability-Profil entscheidet produktbezogen.
 
