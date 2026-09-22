@@ -142,5 +142,11 @@ export function describeDjiProduct(product: DjiProductRef): string {
     return "DJI Mavic 3 Enterprise Series";
   }
 
+  if (product.type === 99) {
+    if (product.subType === 0) return "DJI Matrice 4E";
+    if (product.subType === 1) return "DJI Matrice 4T";
+    return "DJI Matrice 4 Series";
+  }
+
   return `DJI product ${product.type}/${product.subType}`;
 }
