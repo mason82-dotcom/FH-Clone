@@ -208,6 +208,27 @@ serverseitig über den vorhandenen DJI-`services/services_reply`-Pfad.
 
 Details: [LIVESTREAM.md](LIVESTREAM.md).
 
+### DJI Pilot 2 JSBridge
+
+FH2 besitzt zusätzlich eine eigene WebView-Bridge für DJI Pilot 2:
+
+```text
+DJI Pilot 2 WebView
+  -> window.djiBridge
+  -> DjiPilotBridgeProvider
+  -> typisierte JSBridge-Primitive
+```
+
+Diese Schicht ist **nicht** identisch mit der FlightHub-2-Standalone-Runtime
+`window.FH2`.
+
+Die Bridge initialisiert License, Workspace und Plattforminformation. Module
+wie `thing`, `api`, `ws`, `map`, `tsa`, `media`, `mission` und
+`liveshare` werden nur mit expliziten Runtime-Parametern geladen. Das Laden
+eines Pilot-Moduls erhöht keine FH2-Safety-Stufe.
+
+Details: [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md).
+
 ### DJI Mobile SDK V5
 
 Vorgesehener Android-/RC-Adapter. SDK-KeyManager- und Gerätewerte werden in

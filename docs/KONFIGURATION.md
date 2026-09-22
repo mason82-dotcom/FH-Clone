@@ -150,6 +150,34 @@ verwechselt oder wiederverwendet werden.
 
 Details: [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md).
 
+### DJI Pilot 2 JSBridge
+
+Die Pilot-2-WebView-Integration ist unabhängig von `window.FH2` und wird
+separat aktiviert.
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `VITE_DJI_JSBRIDGE_ENABLED` | `false` | aktiviert die Pilot-2-`window.djiBridge`-Initialisierung |
+| `VITE_DJI_JSBRIDGE_VERIFY_LICENSE` | `true` | prüft/verifiziert die DJI-Cloud-API-App-Lizenz |
+| `VITE_DJI_JSBRIDGE_APP_ID` | leer | DJI Cloud API App ID |
+| `VITE_DJI_JSBRIDGE_APP_KEY` | leer | DJI Cloud API App Key |
+| `VITE_DJI_JSBRIDGE_LICENSE` | leer | DJI Cloud API App License |
+| `VITE_DJI_JSBRIDGE_WORKSPACE_ID` | leer | Pilot-Workspace-ID im UUID-Format |
+| `VITE_DJI_JSBRIDGE_PLATFORM_NAME` | `FH2` | Plattformname in DJI Pilot 2 |
+| `VITE_DJI_JSBRIDGE_WORKSPACE_NAME` | `FH2` | Workspace-Anzeigename |
+| `VITE_DJI_JSBRIDGE_WORKSPACE_DESCRIPTION` | `FH2 Enterprise Flight Console` | Workspace-Beschreibung |
+
+DJIs App ID/App Key/License müssen für `platformVerifyLicense()` gemäß
+Herstellervertrag im WebView verfügbar sein und sind deshalb in dieser
+Vite-Variante browser-sichtbar. Sie dürfen nicht mit `FH2_USER_TOKEN`,
+MQTT-, EMQX-, DRC- oder Datenbank-Secrets wiederverwendet werden.
+
+MQTT-/API-/WS-Modulcredentials werden **nicht** über diese Variablen
+konfiguriert. Ihre spätere Übergabe erfolgt nur über einen expliziten,
+autorisierten Runtime-Pfad.
+
+Details: [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md).
+
 ## Self-Hosted Livestreaming
 
 Verbindlicher Zielpfad:

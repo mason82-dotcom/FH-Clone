@@ -140,6 +140,11 @@ Die `window.FH2`-Ausnahme gilt ausschließlich für die offiziellen
 Standalone-Komponenten. Sie darf nicht auf MQTT oder den FH-Clone-DRC-Pfad
 ausgeweitet werden.
 
+DJI Pilot 2 stellt innerhalb seines WebViews zusätzlich `window.djiBridge`
+bereit. FH2 kapselt diese Schnittstelle in einer eigenen Pilot-Bridge. Auch
+diese Bridge darf SafetyGate, Control Lease, DJI Authority oder DRC nicht
+umgehen. Das Laden eines DJI-Pilot-Moduls erzeugt keine FC2-/FC3-Freigabe.
+
 Die Weboberfläche darf nicht:
 
 - direkte MQTT-Credentials besitzen
@@ -164,6 +169,7 @@ Als geheim behandeln:
 - MQTT-Passwörter
 - EMQX-Interntoken
 - serverseitige DJI-/OpenAPI-Tokens
+- DJI-JSBridge-Licensewerte außerhalb des vorgesehenen Pilot-WebViews
 - DRC-Relay-Credentials
 - UgCS-Passwort
 - NTRIP-Credentials

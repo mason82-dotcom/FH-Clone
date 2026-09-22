@@ -51,6 +51,7 @@ Hardwareabnahme missverstanden werden.
 | [FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) | Abgrenzung zum stabilen M4-/FH2-Manager-Pfad | Referenz |
 | [FH2_OPENAPI_FEHLERCODES.md](FH2_OPENAPI_FEHLERCODES.md) | FlightHub-2-/OpenAPI-nahe DJI-Fehlercodes | Referenz |
 | [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md) | offizielle DJI Project Map, Wayline, Flight Path, Virtual Cockpit und `window.FH2` | Implementiert |
+| [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md) | DJI Pilot 2 WebView / `window.djiBridge` und Modulabhängigkeiten | Implementiert/Runtime-Konfiguration |
 
 ## Betrieb und Entwicklung
 
