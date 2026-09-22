@@ -2,7 +2,7 @@
 
 ## Stand
 
-Verifiziert am **22. September 2026** gegen die jeweils offiziellen
+Verifiziert am **23. September 2026** gegen die jeweils offiziellen
 DJI-Developer-Unterlagen.
 
 Diese Datei unterscheidet SDK-Version, Produktunterstützung und tatsächlich in
