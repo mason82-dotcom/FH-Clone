@@ -7,6 +7,10 @@ EMQX transportiert den DJI-Basic-Link und interne MQTT-Kommunikation.
 Die Broker-Konfiguration ist Teil des Sicherheitsmodells und darf nicht als
 reiner Nachrichtenbus betrachtet werden.
 
+Für das verbindliche EMQX-5.7-Profil wird `emqx.conf` verwendet. Das von
+neueren EMQX-Versionen bekannte `base.hocon` ist in 5.7 noch nicht der
+Konfigurationspfad und wird deshalb nicht als V3-Quelle verwendet.
+
 ## Warum dynamische Autorisierung?
 
 DJI Pilot 2 meldet ein Gateway und untergeordnete Geräte getrennt.
@@ -119,7 +123,7 @@ ist ausschließlich für Broker-/Infrastrukturzugriffe vorgesehen und darf nicht
 
 ## Dateien
 
-- `base.hocon` – EMQX-Autorisierungsgrundlage
+- `emqx.conf` – statische EMQX-5.7-Konfiguration für AuthN/AuthZ
 - `acl.conf` – statische Fallback-ACL
 - `../../docs/EMQX-AUTHZ.md` – detaillierter Vertrag
 - `../../docs/DJI_MQTT_SECURITY.md` – V3-Sicherheitsarchitektur
