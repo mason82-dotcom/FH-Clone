@@ -84,11 +84,15 @@ export function useRtkLive(): RtkLiveState {
           [payload.deviceId]: {
             deviceId: payload.deviceId,
             ...(payload.gatewaySn ? { gatewaySn: payload.gatewaySn } : {}),
+            ...(payload.missionId ? { missionId: payload.missionId } : {}),
             ...payload.status,
             stale: ageMs > 5_000,
             ageMs,
             ...(previous?.gatewaySn && !payload.gatewaySn
               ? { gatewaySn: previous.gatewaySn }
+              : {}),
+            ...(previous?.missionId && !payload.missionId
+              ? { missionId: previous.missionId }
               : {})
           }
         };
