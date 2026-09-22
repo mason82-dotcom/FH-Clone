@@ -315,11 +315,24 @@ add("WPML_PILOT", "REQUIRED_DRAFT", "reales Pilot-2-WPML-Evidence", realEvidence
 if (realEvidence(wpml)) {
   add("WPML_PILOT", "REQUIRED_DRAFT", "Quelle ist DJI Pilot 2", wpml.generatedBy === "DJI Pilot 2");
   add("WPML_PILOT", "REQUIRED_DRAFT", "authoritative KMZ SHA-256", sha256(wpml.sourceSha256));
+  const archiveEntries = arr(wpml.archiveEntries).map((v) => String(v).replace(/^\/+/, ""));
   add("WPML_PILOT", "REQUIRED_DRAFT", "template.kml im realen KMZ",
-    arr(wpml.archiveEntries).some((v) => /(^|\/)template\.kml$/i.test(String(v))));
-  add("WPML_PILOT", "REQUIRED_DRAFT", "waylines.wpml im ausführbaren realen KMZ",
-    wpml.executableWayline !== true ||
-    arr(wpml.archiveEntries).some((v) => /(^|\/)waylines\.wpml$/i.test(String(v))));
+    archiveEntries.some((v) => /(^|\/)template\.kml$/i.test(v)));
+  add("WPML_PILOT", "REQUIRED_DRAFT", "waylines.wpml im realen Standard-KMZ",
+    archiveEntries.some((v) => /(^|\/)waylines\.wpml$/i.test(v)));
+  const resourceReferences = arr(wpml.resourceReferences)
+    .map((v) => String(v).replace(/^\/+/, ""));
+  add("WPML_PILOT", "REQUIRED_DRAFT", "referenzierte WPML-Ressourcen sind im KMZ vorhanden",
+    resourceReferences.every((ref) =>
+      archiveEntries.some((entry) =>
+        entry === ref ||
+        entry === `wpmz/${ref}` ||
+        entry.endsWith(`/${ref}`)
+      )
+    ),
+    resourceReferences.length ? `refs=${resourceReferences.length}` : "keine Ressourcen referenziert");
+  add("WPML_PILOT", "INFORMATIONAL", "res/-Ressourcenbereich beobachtet", true,
+    archiveEntries.some((v) => /(^|\/)res\//i.test(v)) ? "vorhanden" : "kein ZIP-Eintrag beobachtet");
   add("WPML_PILOT", "REQUIRED_DRAFT", "Parservergleich gegen Original erfolgreich", wpml.parserComparison?.pass === true);
   add("WPML_PILOT", "REQUIRED_DRAFT", "MissionConfig/IDs/Höhen/Indizes geprüft",
     ["missionConfig", "productEnums", "heightModes", "templateWaylineIds", "continuousWaypointIndices"]
@@ -328,8 +341,6 @@ if (realEvidence(wpml)) {
     wpml.pilotCatalog?.realWorkspace === true &&
     wpml.pilotCatalog?.responseValidated === true &&
     wpml.pilotCatalog?.tokenPresentInFixture !== true);
-  add("WPML_PILOT", "INFORMATIONAL", "res/ ist optional, nicht Gate", true,
-    arr(wpml.archiveEntries).some((v) => /(^|\/)res\//i.test(String(v))) ? "vorhanden" : "nicht vorhanden");
 }
 
 // ---------------------------------------------------------------------------
@@ -346,15 +357,35 @@ if (realEvidence(js)) {
   add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "RC-/Aircraft-IDs nur gehasht",
     sha256(js.remoteControllerSnSha256) && sha256(js.aircraftSnSha256));
   add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "exakter Topologie-Pair-Match", js.topologyPairMatch === true);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Thing geladen und verbunden",
+  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Cloud-Modul thing geladen und verbunden",
     js.modules?.thing?.loaded === true && js.modules?.thing?.connected === true);
   add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Workspace gesetzt", js.workspace?.configured === true);
-  if (js.features?.map === true || js.features?.tsa === true || js.features?.mission === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "API+WS für Map/TSA/Mission geladen",
-      js.modules?.api?.loaded === true && js.modules?.ws?.loaded === true);
+  if (js.features?.map === true) {
+    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Map: API+WS+Map geladen",
+      js.modules?.api?.loaded === true &&
+      js.modules?.ws?.loaded === true &&
+      js.modules?.map?.loaded === true);
+  }
+  if (js.features?.tsa === true) {
+    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "TSA: API+WS+TSA geladen",
+      js.modules?.api?.loaded === true &&
+      js.modules?.ws?.loaded === true &&
+      js.modules?.tsa?.loaded === true);
+  }
+  if (js.features?.mission === true) {
+    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Mission: API+WS+Mission geladen",
+      js.modules?.api?.loaded === true &&
+      js.modules?.ws?.loaded === true &&
+      js.modules?.mission?.loaded === true);
   }
   if (js.features?.media === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Media-Modul geladen", js.modules?.media?.loaded === true);
+    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Media: API+Media geladen",
+      js.modules?.api?.loaded === true &&
+      js.modules?.media?.loaded === true);
+  }
+  if (js.features?.live === true || js.features?.livestream === true) {
+    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Live: Liveshare-Modul geladen",
+      js.modules?.liveshare?.loaded === true);
   }
   add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Browser-Bundle Secret-Scan grün", js.browserBundleSecretScanPass === true);
   add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "keine Secrets im veröffentlichten Session-Fixture", !sensitiveValueLeaked(js));
