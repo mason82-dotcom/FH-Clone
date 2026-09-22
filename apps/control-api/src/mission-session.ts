@@ -31,10 +31,10 @@ export interface MissionSessionTrackerOptions {
 }
 
 interface DeviceFlightState {
-  active?: AutoMissionSession;
-  lastCompleted?: AutoMissionSession;
-  standbySince?: number;
-  disconnectedSince?: number;
+  active: AutoMissionSession | undefined;
+  lastCompleted: AutoMissionSession | undefined;
+  standbySince: number | undefined;
+  disconnectedSince: number | undefined;
 }
 
 type Subscriber = (event: MissionSessionEvent) => void;
@@ -88,7 +88,13 @@ export class MissionSessionTracker {
     }
 
     const modeCode = extractModeCode(message.payload);
-    const state = this.states.get(message.deviceId) ?? {};
+    const state =
+      this.states.get(message.deviceId) ?? {
+        active: undefined,
+        lastCompleted: undefined,
+        standbySince: undefined,
+        disconnectedSince: undefined
+      };
     this.states.set(message.deviceId, state);
 
     if (state.active) {
