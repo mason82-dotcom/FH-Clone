@@ -289,3 +289,45 @@ Vor V3 fehlen insbesondere noch:
 - HTTP AuthN
 - finaler Root-Compose-Gesamtstart
 - vollständige automatisierte Abnahme
+
+
+## DJI Pilot Cloud Authority
+
+Der Control-API-Prozess stellt den aktuellen DJI-Authority-Zustand read-only bereit:
+
+```text
+GET /api/dji/gateways/{gateway_sn}/authority
+```
+
+Mögliche Zustände:
+
+```text
+unknown
+pending
+authorized
+denied
+canceled
+released
+timeout
+```
+
+Der eigentliche Pilot-Consent-Flow ist im DJI-Adapter gekapselt:
+
+```text
+cloud_control_auth_request
+        ↓
+Popup am DJI-Controller
+        ↓
+cloud_control_auth_notify
+        ↓
+status = ok | failed | canceled
+```
+
+Ein erfolgreiches `services_reply` allein aktiviert keine Flugsteuerung.
+
+Der aktuelle öffentliche Control-API stellt **keinen** Endpoint bereit, der diese
+Autorisierung auslöst. Das bleibt bis zur expliziten FC3-Freigabe intern.
+
+Für Mavic 3 Enterprise gilt ebenfalls: Cloud-Payload-Control benötigt die
+DJI-Pilot-Autorisierung, auch wenn Cloud-Flugsteuerung für dieses Produktprofil
+nicht freigegeben ist.
