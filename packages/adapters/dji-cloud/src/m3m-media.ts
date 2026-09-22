@@ -17,6 +17,27 @@ export interface DjiM3mMediaInput {
   objectKey?: string;
 }
 
+export function isDjiM3mMediaInput(value: unknown): value is DjiM3mMediaInput {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const input = value as Record<string, unknown>;
+  if (typeof input.assetId !== "string" || input.assetId.trim() === "") return false;
+  if (typeof input.deviceId !== "string" || input.deviceId.trim() === "") return false;
+  if (typeof input.sensorId !== "string" || input.sensorId.trim() === "") return false;
+  if (
+    typeof input.metadata !== "object" ||
+    input.metadata === null ||
+    Array.isArray(input.metadata)
+  ) {
+    return false;
+  }
+  if (input.fileName !== undefined && typeof input.fileName !== "string") return false;
+  if (input.objectKey !== undefined && typeof input.objectKey !== "string") return false;
+  return true;
+}
+
 export interface DjiM3mRadiometryMetadata {
   irradiance?: number;
   sunlightSensorStatus?: number;
