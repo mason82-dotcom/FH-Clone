@@ -14,7 +14,8 @@ import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
 import { DjiPilotCloudAuthorityCoordinator } from "./pilot-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
-import { DrcController, type DjiMqttPublisher, type MqttQos } from "./drc.js";
+import { DrcController, type DrcBrokerCredentials } from "./drc.js";
+import { DrcBrokerTransport, type DrcTransportLossReason } from "./drc-transport.js";
 import {
   DjiTopologyRegistry,
   describeDjiProduct,
@@ -39,6 +40,9 @@ export interface DjiCloudAdapterOptions {
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
    */
   apiVersion?: string;
+  onDrcTransportConnected?: () => void | Promise<void>;
+  onDrcTransportLost?: (reason: DrcTransportLossReason) => void | Promise<void>;
+  onDrcStatus?: (gatewaySn: string, drcState: 0 | 1 | 2, receivedAt: number) => void | Promise<void>;
   /** Optional inventory sink. Never used to hydrate runtime authorization state. */
   onTopologyChange?: (change: import("./topology.js").TopologyChange) => void | Promise<void>;
 }
@@ -86,13 +90,16 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   private readonly pendingServices = new Map<string, PendingServiceRequest>();
   readonly topology = new DjiTopologyRegistry();
   readonly cloudAuthority = new DjiCloudControlAuthorityRegistry();
+  readonly pilotAuthority = new DjiPilotCloudAuthorityCoordinator(this, this.cloudAuthority);
+  readonly drcTransport: DrcBrokerTransport;
   readonly drc: DrcController;
 
   constructor(private readonly options: DjiCloudAdapterOptions) {
-    const publisher: DjiMqttPublisher = {
-      publish: (topic, payload, qos) => this.publishDrc(topic, payload, qos)
-    };
-    this.drc = new DrcController(this, publisher);
+    this.drcTransport = new DrcBrokerTransport({
+      onConnected: () => this.options.onDrcTransportConnected?.(),
+      onLost: (reason) => this.options.onDrcTransportLost?.(reason)
+    });
+    this.drc = new DrcController(this, this.drcTransport);
   }
 
 
@@ -161,6 +168,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     }
     this.pendingServices.clear();
 
+    await this.drcTransport.disconnect();
     if (!client) return;
     await new Promise<void>((resolve) => {
       client.end(false, {}, resolve);
@@ -270,12 +278,12 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     });
   }
 
-  private async publishDrc(topic: string, payload: unknown, qos: MqttQos): Promise<void> {
-    const client = this.client;
-    if (!client || !this.connected) throw new Error("DJI Cloud MQTT adapter is not connected");
-    await new Promise<void>((resolve, reject) => {
-      client.publish(topic, JSON.stringify(payload), { qos }, (error?: Error) => error ? reject(error) : resolve());
-    });
+  async connectDrcTransport(credentials: DrcBrokerCredentials): Promise<void> {
+    await this.drcTransport.connect(credentials);
+  }
+
+  async disconnectDrcTransport(): Promise<void> {
+    await this.drcTransport.disconnect();
   }
 
   async execute(_command: AircraftCommand): Promise<CommandResult> {
@@ -309,6 +317,8 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     if (deviceId && topic.endsWith("/events")) {
       this.cloudAuthority.applyEvent(deviceId, payload, receivedAt);
+      const drcState = parseDrcStatusNotify(payload);
+      if (drcState !== undefined) await this.options.onDrcStatus?.(deviceId, drcState, receivedAt);
     }
 
     const isTopologyStatusTopic =
@@ -487,6 +497,7 @@ export { normalizeDjiPayload } from "./normalizer.js";
 export * from "./version.js";
 export * from "./service.js";
 export * from "./drc.js";
+export * from "./drc-transport.js";
 export * from "./topology.js";
 export * from "./capabilities.js";
 export * from "./rtk.js";
@@ -497,3 +508,10 @@ export * from "./cloud-authority.js";
 export * from "./pilot-authority.js";
 
 export * from "./drc-session.js";
+
+export function parseDrcStatusNotify(message: unknown): 0 | 1 | 2 | undefined {
+  if (!isRecord(message) || message.method !== "drc_status_notify") return undefined;
+  const data = isRecord(message.data) ? message.data : undefined;
+  const raw = data?.drc_state;
+  return raw === 0 || raw === 1 || raw === 2 ? raw : undefined;
+}
