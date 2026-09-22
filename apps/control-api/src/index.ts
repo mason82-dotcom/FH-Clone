@@ -26,10 +26,13 @@ const parameters = new ParameterRegistry();
 
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
-const djiOptions = getDjiOptions(topologyPersistence);
+let drcSessions: DrcSessionManager | undefined;
+const djiOptions = getDjiOptions(topologyPersistence, async (gatewaySn, drcState) => {
+  await drcSessions?.applyDrcStatus(gatewaySn, drcState);
+});
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const controlGuards = new RuntimeControlGuardRegistry();
-const drcSessions = dji
+drcSessions = dji
   ? new DrcSessionManager(dji.drc, new InMemoryDrcSessionStore(), {
       onAudit: (event) => console.info("[DRC]", event)
     })
@@ -301,7 +304,10 @@ async function shutdown(): Promise<void> {
 process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
 process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
 
-function getDjiOptions(topologyPersistence: TopologyPersistenceQueue): DjiCloudAdapterOptions | undefined {
+function getDjiOptions(
+  topologyPersistence: TopologyPersistenceQueue,
+  onDrcStatus: NonNullable<DjiCloudAdapterOptions["onDrcStatus"]>
+): DjiCloudAdapterOptions | undefined {
   const brokerUrl = process.env.DJI_MQTT_URL;
   if (!brokerUrl) return undefined;
 
@@ -310,6 +316,7 @@ function getDjiOptions(topologyPersistence: TopologyPersistenceQueue): DjiCloudA
     ...(process.env.DJI_MQTT_USERNAME ? { username: process.env.DJI_MQTT_USERNAME } : {}),
     ...(process.env.DJI_MQTT_PASSWORD ? { password: process.env.DJI_MQTT_PASSWORD } : {}),
     clientId: process.env.DJI_MQTT_CLIENT_ID ?? "fh-clone-backend",
+    onDrcStatus,
     ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {}),
     ...(topologyPersistence.enabled ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyPersistence.enqueue(change) } : {})
   };
