@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test dist/*.test.js"
+    "test": "npm run build && node --test dist/*.test.js dist/wpml/*.test.js"
   },
   "dependencies": {
     "@fh-clone/aircraft-core": "0.1.0",
