@@ -27,6 +27,23 @@ Maven
 
 Für den V3-Gesamtstack werden Docker und Docker Compose sowie TimescaleDB/PostgreSQL benötigt.
 
+## TimescaleDB-Unterstack
+
+Der Datenbankteil kann bereits separat reproduzierbar gestartet werden:
+
+```bash
+cd infra/timescale
+cp .env.example .env
+# TIMESCALE_PASSWORD in .env durch ein sicheres Passwort ersetzen
+docker compose --env-file .env up -d
+docker compose ps
+```
+
+Der Datenbankport wird nicht standardmäßig auf den Host veröffentlicht.
+
+Der vollständige Root-Compose für alle V3-Pflichtdienste ist davon getrennt
+noch ein offenes Release-Gate.
+
 ## Lokale Node.js-Prüfung
 
 ```bash
@@ -79,7 +96,9 @@ RTK_SOURCE_PROVIDER=...
 ```
 
 Ohne `TIMESCALE_URL` läuft die automatische Missionssitzung weiterhin
-In-Memory.
+In-Memory. Mit Datenbankverbindung werden Missionsstart und -ende gespeichert.
+Beim Dienstneustart werden noch offene automatische Missionen mit
+`service_restart` abgeschlossen, bevor neuer DJI-Ingest beginnt.
 
 Secrets niemals committen.
 
