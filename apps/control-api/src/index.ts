@@ -495,7 +495,7 @@ function enqueueAuthzAudit(
   },
   decision: {
     result: "allow" | "deny" | "ignore";
-    reason: import("./authz.js").AuthzReason;
+    reason: import("./authz.js").AuthzDecisionReason;
     gatewaySn?: string;
     aircraftSn?: string;
   },

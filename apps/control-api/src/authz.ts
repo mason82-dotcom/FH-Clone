@@ -13,23 +13,63 @@ export interface EmqxAuthorizationRequest {
 
 export type EmqxAuthorizationResult = "allow" | "deny" | "ignore";
 
-export const AUTHZ_REASONS = [
-  "no_match",
-  "gateway_own_topic",
-  "gateway_topology_mismatch",
-  "webui_read_only",
-  "webui_topic_out_of_scope",
-  "drc_session_active",
-  "drc_session_inactive",
-  "drc_backend_publish",
-  "internal_error"
-] as const;
+/**
+ * Stable authorization decision taxonomy persisted by the audit sink.
+ * These string values are a compatibility contract; never replace them
+ * with free-text reasons.
+ */
+export const AuthzDecisionReason = Object.freeze({
+  NoMatch: "no_match",
+  GatewayOwnTopic: "gateway_own_topic",
+  GatewayTopologyMismatch: "gateway_topology_mismatch",
+  WebUiReadOnly: "webui_read_only",
+  WebUiTopicOutOfScope: "webui_topic_out_of_scope",
+  DrcSessionActive: "drc_session_active",
+  DrcSessionInactive: "drc_session_inactive",
+  DrcBackendPublish: "drc_backend_publish",
+  InternalError: "internal_error",
+  InternalTokenMismatch: "internal_token_mismatch"
+} as const);
 
-export type AuthzReason = (typeof AUTHZ_REASONS)[number];
+export type AuthzDecisionReason =
+  (typeof AuthzDecisionReason)[keyof typeof AuthzDecisionReason];
+
+export const AUTHZ_REASONS: readonly AuthzDecisionReason[] =
+  Object.values(AuthzDecisionReason);
+
+/**
+ * Deterministic, fail-closed tie-break order. Principal-specific evaluators
+ * should normally produce one candidate; this order resolves any overlap.
+ */
+export const AUTHZ_REASON_PRIORITY: readonly AuthzDecisionReason[] = [
+  AuthzDecisionReason.InternalTokenMismatch,
+  AuthzDecisionReason.InternalError,
+  AuthzDecisionReason.GatewayTopologyMismatch,
+  AuthzDecisionReason.DrcSessionInactive,
+  AuthzDecisionReason.WebUiTopicOutOfScope,
+  AuthzDecisionReason.WebUiReadOnly,
+  AuthzDecisionReason.DrcBackendPublish,
+  AuthzDecisionReason.DrcSessionActive,
+  AuthzDecisionReason.GatewayOwnTopic,
+  AuthzDecisionReason.NoMatch
+];
+
+/** @deprecated Use AuthzDecisionReason. */
+export type AuthzReason = AuthzDecisionReason;
+
+export function selectAuthzDecisionReason(
+  candidates: Iterable<AuthzDecisionReason>
+): AuthzDecisionReason {
+  const available = new Set(candidates);
+  for (const reason of AUTHZ_REASON_PRIORITY) {
+    if (available.has(reason)) return reason;
+  }
+  return AuthzDecisionReason.NoMatch;
+}
 
 export interface EmqxAuthorizationDecision {
   result: EmqxAuthorizationResult;
-  reason: AuthzReason;
+  reason: AuthzDecisionReason;
   gatewaySn?: string;
   aircraftSn?: string;
 }
@@ -56,7 +96,7 @@ const SAFE_ID = /^[A-Za-z0-9_-]+$/;
 
 function decision(
   result: EmqxAuthorizationResult,
-  reason: AuthzReason,
+  reason: AuthzDecisionReason,
   context: Pick<EmqxAuthorizationDecision, "gatewaySn" | "aircraftSn"> = {}
 ): EmqxAuthorizationDecision {
   return { result, reason, ...context };

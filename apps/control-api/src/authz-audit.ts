@@ -10,7 +10,7 @@ import type {
 export interface AuthzAuditRecord {
   timeMs: number;
   decision: EmqxAuthorizationResult;
-  reason: AuthzReason;
+  reason: AuthzDecisionReason;
   action: string;
   topic: string;
   qos?: string | number;

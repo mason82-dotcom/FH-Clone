@@ -4,10 +4,13 @@ import test from "node:test";
 import { DjiTopologyRegistry } from "@fh-clone/adapter-dji-cloud";
 
 import {
+  AUTHZ_REASON_PRIORITY,
+  AuthzDecisionReason,
   authorizeDjiGateway,
   authorizeEmqx,
   evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest,
+  selectAuthzDecisionReason,
   type EmqxAuthorizationPolicy
 } from "./authz.js";
 
@@ -300,4 +303,33 @@ test("webui remains dynamically read-only", async () => {
   );
   assert.equal(read.result, "ignore");
   assert.equal(read.reason, "webui_read_only");
+});
+
+
+test("AuthzDecisionReason has the exact ten-value V3 contract and deterministic priority", () => {
+  assert.deepEqual(new Set(Object.values(AuthzDecisionReason)), new Set([
+    "no_match",
+    "gateway_own_topic",
+    "gateway_topology_mismatch",
+    "webui_read_only",
+    "webui_topic_out_of_scope",
+    "drc_session_active",
+    "drc_session_inactive",
+    "drc_backend_publish",
+    "internal_error",
+    "internal_token_mismatch"
+  ]));
+
+  assert.equal(
+    selectAuthzDecisionReason([
+      AuthzDecisionReason.NoMatch,
+      AuthzDecisionReason.DrcSessionActive,
+      AuthzDecisionReason.DrcSessionInactive
+    ]),
+    AuthzDecisionReason.DrcSessionInactive
+  );
+  assert.equal(
+    AUTHZ_REASON_PRIORITY.at(-1),
+    AuthzDecisionReason.NoMatch
+  );
 });

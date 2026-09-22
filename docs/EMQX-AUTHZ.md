@@ -270,6 +270,31 @@ ausgeschlossen (`drc/down` und `drc/up`), damit Start, Entzug und Dead-Man-
 Übergänge ohne TTL-Nachlauf wirksam werden. Für übrige dynamische Rechte gilt
 eine kurze TTL von 1 s.
 
+## Deterministische AuthZ-Entscheidungsgründe
+
+Jede gültig ausgewertete dynamische Autorisierungsentscheidung erhält exakt
+einen stabilen `AuthzDecisionReason`. Freitext ist für dieses Feld nicht
+zulässig.
+
+```text
+no_match
+gateway_own_topic
+gateway_topology_mismatch
+webui_read_only
+webui_topic_out_of_scope
+drc_session_active
+drc_session_inactive
+drc_backend_publish
+internal_error
+internal_token_mismatch
+```
+
+Bei theoretisch überlappenden Regeln gilt eine feste fail-closed Priorität:
+interne Token-/Fehlerzustände und Topologiefehler schlagen Freigaberegeln;
+`no_match` ist ausschließlich der letzte Fallback. Der interne
+AuthZ-Service-Token ist damit von einem allgemeinen Backendfehler im Audit
+unterscheidbar.
+
 ## Audit und Betrieb
 
 Bei Deny-Entscheidungen mindestens erfassen:
