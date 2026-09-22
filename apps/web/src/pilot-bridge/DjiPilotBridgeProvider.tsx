@@ -82,16 +82,6 @@ async function initialize(
       );
     }
 
-    if (config.workspaceId) {
-      client.setWorkspaceId(config.workspaceId);
-    }
-
-    client.setInformation(
-      config.platformName,
-      config.workspaceName,
-      config.workspaceDescription
-    );
-
     const version = client.getVersion();
     const identity = client.getIdentity();
 
