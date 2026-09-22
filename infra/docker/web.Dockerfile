@@ -1,4 +1,7 @@
-FROM node:22-bookworm-slim AS build
+FROM node:22.23.2-bookworm-slim AS build
+
+RUN npm install --global npm@11.19.1 --no-audit --no-fund \
+ && test "$(npm --version)" = "11.19.1"
 
 WORKDIR /app
 
