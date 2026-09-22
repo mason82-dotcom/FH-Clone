@@ -93,3 +93,23 @@ test("product description requires the full DJI identity", () => {
     "DJI product ?/99/0"
   );
 });
+
+test("Dock 3 and Matrice 4D family use DJI documented product identities", () => {
+  assert.equal(
+    describeDjiProduct({ domain: 3, type: 3, subType: 0 }),
+    "DJI Dock 3"
+  );
+  assert.equal(
+    describeDjiProduct({ domain: 0, type: 100, subType: 0 }),
+    "DJI Matrice 4D"
+  );
+  assert.equal(
+    describeDjiProduct({ domain: 0, type: 100, subType: 1 }),
+    "DJI Matrice 4TD"
+  );
+  assert.equal(
+    describeDjiProduct({ domain: 1, type: 100, subType: 1 }),
+    "DJI product 1/100/1"
+  );
+});
+
