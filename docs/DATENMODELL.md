@@ -93,7 +93,15 @@ media.read
 livestream.read
 ```
 
-Capabilities sind Laufzeitinformationen und keine Safety-Freigabe.
+Capabilities in `AdapterDevice.capabilities[]` sind **routbare
+Laufzeitinformationen** und keine Safety-Freigabe.
+
+Ein Hersteller kann eine Funktion unterstützen, ohne dass FH2 dafür bereits
+einen ausführbaren Adapterpfad besitzt. Solcher reine Produktsupport darf
+nicht als `AdapterDevice`-Capability gemeldet werden.
+
+Spezialisierte Runtime-Pfade, zum Beispiel M4-DRC, führen ihren
+Produktsupport separat und bleiben zusätzlich Safety-/Authority-gated.
 
 ## ControlLease
 
