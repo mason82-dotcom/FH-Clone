@@ -41,6 +41,22 @@ const rtk = new RtkTelemetryService({
   resolveMissionId: (deviceId) => missions.getActive(deviceId)?.missionId
 });
 
+if (missionStore.enabled) {
+  try {
+    const recovered = await missionStore.recoverOpenAutomaticSessions();
+    if (recovered > 0) {
+      console.warn(
+        `[Mission] ${recovered} offene automatische Session(s) nach Service-Neustart geschlossen.`
+      );
+    }
+  } catch (error) {
+    console.error(
+      "[Mission] Recovery offener Sessions fehlgeschlagen:",
+      errorMessage(error)
+    );
+  }
+}
+
 if (dji) {
   await dji.start({
     onDevice(device) {
