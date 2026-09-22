@@ -1,29 +1,94 @@
-# DJI MQTT Security- und Identity-Vertrag
+# DJI-MQTT – Sicherheits- und Identitätsvertrag
+
+## Zweck
+
+Dieses Dokument beschreibt den verbindlichen V3-Vertrag für die
+DJI-MQTT-Anbindung über EMQX.
+
+Die zentrale Sicherheitsregel lautet:
+
+```text
+MQTT clientid != Sicherheitsidentität
+```
+
+Die Client-ID ist Sitzungs- und Diagnoseinformation. Die vertrauenswürdige
+Geräteidentität entsteht serverseitig.
 
 ## Status
 
-Verbindlicher Zielvertrag für FH-Clone. Reale RC-Pro-Daten aus Issue #5
-verifizieren Session- und Reconnect-Verhalten, ändern aber nicht den
-Grundsatz, dass die MQTT Client-ID keine Security Identity ist.
+### Implementiert
 
-## 1. Identity
+- EMQX mit Default-Deny
+- interner HTTP-Authorizer `POST /internal/emqx/authz`
+- Gateway-/Sub-Device-Topologie über `update_topo`
+- statische Fallback-ACL
+- Basic-Link-/DRC-Trennung
+- keine permanenten DRC-Rechte in der Basic-Link-ACL
+- interner AuthZ-Service-Token
+- FC0 als Standard-Sicherheitsstufe
+
+### V3-Ziel
+
+- `POST /internal/emqx/authn`
+- eigener Gateway-Credential-Speicher
+- Passwort-Hashing
+- serverseitige Bindung Credential -> `gateway_sn`
+- vertrauenswürdige EMQX-Client-Attribute
+- vollständige Entkopplung der AuthZ von `clientid`
+- Audit-Persistenz
+
+### Real zu verifizieren
+
+Mit RC Pro Enterprise beziehungsweise RC Plus 2:
+
+- tatsächliche MQTT-Client-ID
+- Username-/Credential-Verhalten
+- Reconnect/Persistent Session
+- `update_topo`-Reihenfolge
+- Pair/Unpair
+- Fehlerverhalten bei ungültigen Zugangsdaten
+
+## Vertrauensmodell
 
 ```text
-credential principal
-  -> HTTP AuthN
-  -> trusted client_attrs.gateway_sn
-  -> HTTP AuthZ
-  -> TopologyRegistry
+Gateway-Credential
+  -> EMQX HTTP AuthN
+  -> serverseitig gebundener Principal
+  -> client_attrs.role=dji_gateway
+  -> client_attrs.gateway_sn=<vertraute SN>
+  -> EMQX HTTP AuthZ
+  -> DjiTopologyRegistry
   -> erlaubte Gateway-/Sub-Device-Topics
 ```
 
-`clientid` und `username` werden protokolliert und validiert, sind aber
-nicht alleinige Quelle der Geräteidentität.
+Weder `username` noch `clientid` dürfen allein eine `gateway_sn` festlegen.
 
-Ein Gateway erhält eigene Credentials. Shared Gateway-Credentials sind nicht
-zulässig.
+## Gateway-Credential
 
-## 2. EMQX Authentication
+V3 sieht ein eigenes Credential pro Gateway/Controller vor.
+
+Mindestmodell:
+
+```text
+principal_id
+username
+password_hash
+gateway_sn
+enabled
+created_at
+rotated_at
+```
+
+Regeln:
+
+- keine Shared Credentials für mehrere Gateways
+- Passwort niemals im Klartext persistieren
+- Rotation pro Gateway möglich
+- deaktivierbare Principals
+- keine Secrets in Logs
+- keine Secrets in öffentlichen API-Antworten
+
+## EMQX-Authentifizierung
 
 Zielendpunkt:
 
@@ -31,7 +96,7 @@ Zielendpunkt:
 POST /internal/emqx/authn
 ```
 
-Erfolgreiche DJI-Gateway-Authentifizierung liefert mindestens:
+Erfolgreiche Antwort soll mindestens enthalten:
 
 ```json
 {
@@ -39,73 +104,74 @@ Erfolgreiche DJI-Gateway-Authentifizierung liefert mindestens:
   "is_superuser": false,
   "client_attrs": {
     "role": "dji_gateway",
-    "gateway_sn": "..."
+    "gateway_sn": "GATEWAY_SN"
   }
 }
 ```
 
-Secrets werden serverseitig nur gehasht gespeichert.
+`is_superuser` bleibt immer `false`.
 
-`clientid_override` bleibt deaktiviert, bis reale Pilot-2-Tests zeigen, dass
-ein Override keine Session-/Reconnect-Probleme erzeugt.
+Ein `clientid_override` wird nicht verwendet, solange die reale
+Pilot-2-Sitzungslogik nicht ausreichend verifiziert ist.
 
-## 3. EMQX Authorization
+## EMQX-Autorisierung
 
-Zielendpunkt:
+Interner Endpunkt:
 
 ```http
 POST /internal/emqx/authz
 ```
 
-Der Authorizer erhält mindestens:
+V3-Zielparameter:
 
 ```text
 username
 clientid
+peerhost
 client_attrs.role
 client_attrs.gateway_sn
-peerhost
 action
 topic
 qos
 ```
 
-Die Authorisierung vergleicht Gateway-Topics mit
-`client_attrs.gateway_sn`, nicht mit einer vom MQTT-Client frei gewählten
-Client-ID.
+Die Entscheidung basiert auf:
 
-Sub-Device-Rechte werden ausschließlich über die gelernte
-`DjiTopologyRegistry` freigegeben.
+1. authentifizierter Rolle
+2. serverseitig gebundener `gateway_sn`
+3. gelernter Topologie
+4. Aktion
+5. Topic
+6. optional QoS
 
-## 4. Bootstrap und update_topo
+## Bootstrap und update_topo
 
-Der Produktionspfad provisioniert das Gateway vor der MQTT-Verbindung:
+Bevorzugter Produktionspfad:
 
 ```text
-Gateway-SN
- -> Gateway Credential
- -> Pilot2 MQTT Connect
- -> HTTP AuthN
- -> client_attrs.gateway_sn
- -> sys/product/{gateway_sn}/status
- -> update_topo
- -> device_sn-Zuordnungen
+Gateway wird provisioniert
+  -> gateway_sn ist serverseitig bekannt
+  -> Credential wird erzeugt und gebunden
+  -> Pilot 2 verbindet sich mit EMQX
+  -> AuthN setzt trusted gateway_sn
+  -> Gateway publiziert sys/product/{gateway_sn}/status
+  -> update_topo meldet Sub-Devices
+  -> TopologyRegistry erweitert die erlaubten device_sn
 ```
 
-`update_topo` erweitert die erlaubte Topologie. Es erzeugt nicht die
-Security Identity des MQTT-Principals.
+`update_topo` erweitert die Topologie. Es darf nicht die
+Sicherheitsidentität eines noch unbekannten Principals erzeugen.
 
-Falls reale Hardware zeigt, dass `gateway_sn` beim Provisioning noch nicht
-bekannt ist, wird dafür ein separater kurzlebiger Enrollment-Pfad entworfen.
-Der Produktionslistener erhält keinen offenen Wildcard-Bootstrap.
+Falls reale Hardware zeigt, dass die Gateway-SN vor der ersten Verbindung
+nicht bekannt sein kann, benötigt V3 einen separaten, kurzlebigen
+Enrollment-Pfad. Ein offener Wildcard-Bootstrap auf dem Produktionslistener
+ist nicht zulässig.
 
-## 5. Basic Link
+## Basic Link
 
-Der Basic-Link-Pfad verarbeitet dauerhaft nur die dafür erforderlichen
-Topic-Klassen.
+Der dauerhafte Basic-Link-Pfad umfasst nur die dafür benötigten Topic-Klassen.
 
-Gateway-/Device-Uplinks umfassen nach bestätigter Produktsemantik unter
-anderem:
+Typische Uplinks:
 
 ```text
 sys/product/{gateway_sn}/status
@@ -116,95 +182,119 @@ thing/product/{gateway_sn}/events
 thing/product/{gateway_sn}/services_reply
 ```
 
-Cloud-Downlinks werden capability- und safety-gated freigegeben, z. B.:
+Typische Cloud-Downlinks, sofern Capability und Safety dies erlauben:
 
 ```text
 thing/product/{gateway_sn}/services
 thing/product/{gateway_sn}/property/set
+thing/product/{gateway_sn}/events_reply
+thing/product/{gateway_sn}/requests_reply
+sys/product/{gateway_sn}/status_reply
 ```
 
-Die exakte Gateway-/Sub-Device-Zuordnung weiterer Event-/Service-Topics wird
-durch RC-Pro-Tests bestätigt.
+Die genaue Produktzuordnung wird mit realer Hardware bestätigt.
 
-## 6. DRC ist eine separate Session
+## DRC ist eine separate Sicherheitsdomäne
 
 DRC gehört nicht in die permanente Basic-Link-ACL.
 
 ```text
 Basic Link:
-  services / services_reply / status / state / osd / events
+  status
+  osd
+  state
+  requests
+  events
+  services
+  replies
 
-DRC Relay:
+DRC-Sitzung:
+  eigener Relay-/Credential-Kontext
   drc/down
   drc/up
   heartbeat
-  control frames
+  stick/control frames
 ```
 
-DRC wird nur aufgebaut, wenn alle Bedingungen erfüllt sind:
+DRC darf nur aktiv werden, wenn alle Bedingungen erfüllt sind:
 
 ```text
-Safety Stage FC3
-+ explizit unterstütztes Produktprofil
+Produkt unterstützt Cloud-Flugsteuerung
++ Safety Stage FC3
 + gültiger Control Lease
-+ erfolgreiche DJI Flight Authority
-+ erfolgreiche drc_mode_enter-Antwort
-+ eigene DRC-Relay-Credentials
++ gültige DJI Control Authority
++ drc_mode_enter erfolgreich
++ DRC-Relay verbunden
++ Dead-Man aktiv
 ```
 
-Default `FC0` hat keine DRC-Rechte.
+## Fail-Closed
 
-## 7. Fail Closed
-
-Verbindlich:
+Verbindliche Grundsätze:
 
 ```text
 authorization.no_match = deny
-authorization.ignore_backend_failures = false
 is_superuser = false
+unbekannter Principal = deny
+fehlende gateway_sn-Bindung = deny
+ungültiges Topic = deny
+AuthN/AuthZ-Fehler = deny für dynamische DJI-Rechte
 ```
 
-Für dynamische Gateway-Autorisierung wird zunächst kein oder nur ein sehr
-kurzer Authz-Cache verwendet, damit `update_topo` und Unpairing schnell
-wirksam werden.
+Die statische Datei-ACL endet mit `deny`.
 
-Die statische ACL endet für DJI-Gateway-Principals mit deny.
+Der dynamische AuthZ-Cache muss so kurz sein, dass Pair/Unpair und
+Topologieänderungen zeitnah wirksam werden.
 
-## 8. Interne Service-Sicherung
+## Interne Vertrauensgrenze
 
-Die AuthN/AuthZ-Endpunkte werden nicht über die öffentliche Control API
-exponiert.
+Die Endpunkte:
 
-EMQX -> Control API erhält zusätzlich eine interne Service-Authentisierung
-und läuft nur im privaten Servicenetz.
+```text
+/internal/emqx/authn
+/internal/emqx/authz
+```
 
-## 9. Audit
+dürfen nicht über die öffentliche FH2-API veröffentlicht werden.
 
-Erfasst werden:
+EMQX und Control API kommunizieren im privaten Servicenetz. Zusätzlich ist
+eine interne Service-Authentisierung erforderlich. Bei Überschreiten einer
+Netzwerk-Vertrauensgrenze ist TLS beziehungsweise mTLS vorzusehen.
 
-- Timestamp
+## Audit
+
+Mindestens zu protokollieren:
+
+- Zeitpunkt
 - Principal
-- Gateway-SN
-- Client-ID diagnostisch
+- Username
+- Client-ID nur diagnostisch
+- `gateway_sn`
 - Peer-IP
-- Action
+- Aktion
 - Topic
-- Allow/Deny
-- Reason
+- Entscheidung
+- Entscheidungsgrund
 - Request-/Correlation-ID
 
-Nicht protokolliert werden Passwörter, Tokens oder DJI-Secrets.
+Nicht protokollieren:
 
-## 10. Noch real zu verifizieren
+- Passwort
+- Token
+- DRC-Credential
+- andere DJI-Secrets
 
-Issue #5 liefert:
+## RC-Pro-Abnahme
 
-- echte Pilot-2-MQTT-Client-ID
-- echten Username
+Issue #5 muss vor V3-RC mindestens bestätigen:
+
+- reale Client-ID
+- realen Username
+- Verbindung und Reconnect
 - Bootstrap-Reihenfolge
-- Reconnect-/Persistent-Session-Verhalten
-- Gateway-/Sub-Device-Topic-Matrix
-- Credential-Fehlerverhalten
+- Gateway-/Aircraft-Topic-Matrix
+- Credential-Fehler
+- Pair/Unpair
 
-Diese Ergebnisse schärfen das Protokollprofil, aber FH-Clone bleibt auch bei
-`clientid != gateway_sn` sicher.
+Diese Ergebnisse präzisieren die Sitzungslogik. Sie ändern nicht den
+Grundsatz, dass `clientid` keine Sicherheitsidentität ist.
