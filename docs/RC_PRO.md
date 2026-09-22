@@ -51,6 +51,19 @@ Aktuell im FH2-Profil verwendete DJI-Produktwerte:
 Produkt-IDs müssen gegen die verwendete DJI-Cloud-API-Dokumentation geprüft
 werden, wenn neue Geräteprofile aufgenommen werden.
 
+### M3M-Hinweis
+
+Die aktuelle DJI-Cloud-API-Produktübersicht enumeriert in der
+Mavic-3-Enterprise-Reihe explizit M3E, M3T und M3TA. Die aktuelle WPML-Doku
+führt M3M gleichzeitig als unterstütztes Produkt.
+
+FH2 leitet daraus **keinen** nicht explizit dokumentierten M3M-`sub_type`
+ab. Für den Cloud-Runtime-Pfad gilt die reale `update_topo`-Meldung
+beziehungsweise eine eindeutige DJI-Enumeration als authoritative Quelle.
+
+Damit bleibt M3M fachlich für Media/WPML unterstützt, ohne eine unbestätigte
+Cloud-Geräte-ID in den Core oder das Capability-Profil einzubauen.
+
 ## Gateway- und Aircraft-Topics
 
 Aircraft-Telemetrie:
