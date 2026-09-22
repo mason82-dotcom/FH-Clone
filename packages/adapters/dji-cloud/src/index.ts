@@ -458,3 +458,5 @@ export * from "./rtk.js";
 export * from "./payloads.js";
 
 export * from "./cloud-authority.js";
+
+export * from "./drc-session.js";
