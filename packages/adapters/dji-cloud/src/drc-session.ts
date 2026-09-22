@@ -354,22 +354,10 @@ export class DrcSessionManager {
       throw new Error("Cannot activate DRC session while DRC transport is disconnected");
     }
 
-    const now = this.now();
     this.controller.resetControlSequence();
     this.controller.startHeartbeat(current.gatewaySn);
-
-    const record: DrcSessionRecord = {
-      ...current,
-      state: "controlling",
-      health: "healthy",
-      updatedAt: now,
-      lastInputAt: now
-    };
-
-    await this.persist(record);
-    this.startTimer(record.gatewaySn);
-    await this.audit(record, "activated");
-    return { ...record };
+    await this.audit(current, "activated");
+    return { ...current };
   }
 
   async sendStick(
@@ -379,7 +367,10 @@ export class DrcSessionManager {
   ): Promise<number> {
     this.assertGuards(guards, "send DRC stick input");
 
-    const current = await this.requireActive(gatewaySn);
+    const current = await this.require(gatewaySn);
+    if (current.state !== "drc_mode_active" && current.state !== "controlling" && current.state !== "degraded") {
+      throw new Error(`DRC session for gateway ${gatewaySn} cannot accept stick input (state=${current.state})`);
+    }
     if (!current.transportConnected) {
       throw new Error(`DRC transport for gateway ${gatewaySn} is disconnected`);
     }
@@ -395,6 +386,7 @@ export class DrcSessionManager {
     });
 
     await this.persist(record);
+    if (current.state === "drc_mode_active") this.startTimer(gatewaySn);
     await this.audit(record, "input");
     return seq;
   }
