@@ -56,6 +56,8 @@ export const DJI_M4D_PROPERTY_GROUPS = {
     "horizontal_speed",
     "mode_code",
     "mode_code_reason",
+    "current_rth_mode",
+    "rth_mode",
     "control_source",
     "wind_direction",
     "wind_speed"
@@ -77,6 +79,7 @@ export const DJI_M4D_PROPERTY_GROUPS = {
     "distance_limit_status",
     "rth_altitude"
   ],
+  connectivity: ["flysafe_database_version", "offline_map_enable", "dongle_infos"],
   maintenance: [
     "activation_time",
     "maintain_status",
