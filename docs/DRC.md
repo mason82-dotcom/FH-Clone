@@ -200,3 +200,76 @@ Vor einer produktiven FC3-Freigabe müssen mindestens getestet sein:
 
 Die Herstellerlinks und verifizierten Versionsstände werden zentral in
 [COMPATIBILITY.md](COMPATIBILITY.md) gepflegt.
+
+
+## Session-State-Machine
+
+FH-Clone führt DRC als serverseitige Zustandsmaschine:
+
+```text
+idle / closed
+     |
+     | FC3 + Lease + Capability
+     v
+requesting
+     |
+     | DJI Cloud-Control-Authority bestätigt
+     v
+active
+     |
+     | Operator-Close / Dead-man 2s / Lease- oder Capability-Verlust
+     v
+draining
+     |
+     | Neutral-Stick -> drc_mode_exit
+     v
+closed
+```
+
+`degraded` ist bewusst **kein sechster State**, sondern ein Health-Flag auf
+einer weiterhin aktiven Session.
+
+- nach 500 ms ohne neuen Stick-Input: `state=active`, `health=degraded`
+- nach 2 s ohne Input: `active -> draining -> closed`
+- DJI-Authority-Verlust: sofort `-> closed`, ohne erzwungenen Neutral-Publish
+- kein automatisches RTH
+
+Die Schwellen 500 ms und 2 s sind lokale FH-Clone-Safety-Policy und keine
+DJI-Protokollkonstanten.
+
+### Guards
+
+Für `requesting` werden verlangt:
+
+- FC3
+- aktiver FH-Clone Control Lease
+- passende Runtime-Capability
+
+DJI-Authority wird erst für `requesting -> active` verlangt. Dadurch kann die
+Authority im Requesting-State überhaupt erst am RC angefordert und bestätigt
+werden.
+
+### Persistenz
+
+Die State-Machine hängt an einem `DrcSessionStore`-Interface. Der aktuelle
+In-Memory-Store ist nur Referenz/Single-Instance-Fallback. Für mehrere
+Control-API-Instanzen wird ein gemeinsamer Redis-Store mit TTL verwendet.
+
+Der EMQX-Authorizer ist bereits asynchron ausgelegt, sodass
+`isDrcGatewayActive(gatewaySn)` später direkt den externen Store abfragen
+kann.
+
+### Audit
+
+Session-Kanten werden intern auditiert:
+
+- requesting
+- activated
+- degraded
+- input
+- draining
+- neutral_sent
+- closed / force_closed
+
+Es wird **kein** erfundenes `drc_session_closed`-Kommando an DJI publiziert.
+Die Close-Kante gehört in das interne Audit-Log, nicht in das DJI-Protokoll.
