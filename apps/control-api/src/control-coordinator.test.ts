@@ -12,6 +12,8 @@ function fixture(authorized = true) {
     async markAuthorityGrabbed() { calls.push("session.authorityGrabbed"); return {} as never; },
     async markDrcModeActive() { calls.push("session.drcModeActive"); return {} as never; },
     async activate() { calls.push("session.activate"); return { state: "drc_mode_active" } as never; },
+    async getDrcStatus() { calls.push("session.drcStatus"); return 2 as const; },
+    async setTransportConnected() { calls.push("session.transportConnected"); return {} as never; },
     async closeGracefully() { calls.push("session.close"); return { state: "closed" } as never; },
     async forceClose() { calls.push("session.forceClose"); return { state: "closed" } as never; }
   };
@@ -76,4 +78,72 @@ test("normal stop drains before authority release", async () => {
   const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => f.guards);
   await coordinator.stop("M4T-001");
   assert.deepEqual(f.calls, ["session.close", "transport.disconnect", "authority.release"]);
+});
+
+
+test("branch A reconnects only with fresh active DRC status and valid runtime guards", async () => {
+  const f = fixture(true);
+  const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => f.guards, {
+    credentialSafetyWindowS: 15
+  });
+  const expire = Math.floor(Date.now() / 1000) + 120;
+  await coordinator.start({
+    aircraftSn: "M4T-001",
+    holder: "operator-a",
+    authority: { userId: "u1", userCallsign: "OP-A" },
+    drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: expire, enable_tls: false } }
+  });
+  f.calls.length = 0;
+  assert.equal(await coordinator.recoverTransport("M4T-001"), true);
+  assert.deepEqual(f.calls, ["session.drcStatus", "transport.connect", "session.transportConnected"]);
+});
+
+test("branch A stays fail-closed when runtime guards are lost", async () => {
+  const f = fixture(true);
+  let current = f.guards;
+  const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => current);
+  const expire = Math.floor(Date.now() / 1000) + 120;
+  await coordinator.start({
+    aircraftSn: "M4T-001",
+    holder: "operator-a",
+    authority: { userId: "u1", userCallsign: "OP-A" },
+    drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: expire, enable_tls: false } }
+  });
+  f.calls.length = 0;
+  current = { ...current, controlLease: false };
+  assert.equal(await coordinator.recoverTransport("M4T-001"), false);
+  assert.deepEqual(f.calls, []);
+});
+
+test("branch A rejects stale or inactive DJI DRC status", async () => {
+  const f = fixture(true);
+  f.sessions.getDrcStatus = async () => { f.calls.push("session.drcStatus"); return "unknown"; };
+  const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => f.guards);
+  const expire = Math.floor(Date.now() / 1000) + 120;
+  await coordinator.start({
+    aircraftSn: "M4T-001",
+    holder: "operator-a",
+    authority: { userId: "u1", userCallsign: "OP-A" },
+    drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: expire, enable_tls: false } }
+  });
+  f.calls.length = 0;
+  assert.equal(await coordinator.recoverTransport("M4T-001"), false);
+  assert.deepEqual(f.calls, ["session.drcStatus"]);
+});
+
+test("branch A rejects credentials inside the expiry safety window", async () => {
+  const f = fixture(true);
+  const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => f.guards, {
+    credentialSafetyWindowS: 15
+  });
+  const expire = Math.floor(Date.now() / 1000) + 10;
+  await coordinator.start({
+    aircraftSn: "M4T-001",
+    holder: "operator-a",
+    authority: { userId: "u1", userCallsign: "OP-A" },
+    drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: expire, enable_tls: false } }
+  });
+  f.calls.length = 0;
+  assert.equal(await coordinator.recoverTransport("M4T-001"), false);
+  assert.deepEqual(f.calls, ["session.drcStatus"]);
 });
