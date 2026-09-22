@@ -204,6 +204,8 @@ Der Einstiegspunkt für alle Dokumente ist:
 - [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
 - [Medien und Multispektral](docs/MEDIEN_MULTISPEKTRAL.md)
 - [Glossar](docs/GLOSSAR.md)
+- [Sicherheitsmodell](docs/SICHERHEIT.md)
+- [Datenmodell und Persistenz](docs/DATENMODELL.md)
 
 ## Projektsteuerung
 
