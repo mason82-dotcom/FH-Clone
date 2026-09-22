@@ -242,7 +242,7 @@ test("DRC status becomes unknown when stale", async () => {
     drcStatusStaleAfterMs: 30_000,
     checkIntervalMs: 60_000
   });
-  await manager.request({ aircraftSn: "M4T-005", gatewaySn: "RC-PLUS2-005", guards: preAuthorityGuards });
+  await manager.request({ aircraftSn: "M4T-005", gatewaySn: "RC-PLUS2-005", holder: "operator-a", guards: preAuthorityGuards });
   await manager.applyDrcStatus("RC-PLUS2-005", 2);
   assert.equal(await manager.getDrcStatus("RC-PLUS2-005"), 2);
   now += 30_001;
@@ -251,7 +251,7 @@ test("DRC status becomes unknown when stale", async () => {
 
 test("transport loss revokes runtime DRC activity immediately", async () => {
   const manager = new DrcSessionManager(new FakeTransport(), new InMemoryDrcSessionStore(), { checkIntervalMs: 60_000 });
-  await manager.request({ aircraftSn: "M4T-006", gatewaySn: "RC-PLUS2-006", guards: preAuthorityGuards });
+  await manager.request({ aircraftSn: "M4T-006", gatewaySn: "RC-PLUS2-006", holder: "operator-a", guards: preAuthorityGuards });
   await advanceToControlling(manager, "RC-PLUS2-006");
   assert.equal(await manager.isActive("RC-PLUS2-006"), true);
   await manager.markTransportLost("RC-PLUS2-006", "mqtt_close");
