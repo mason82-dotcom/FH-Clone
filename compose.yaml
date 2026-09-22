@@ -9,7 +9,10 @@ services:
       POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:?TIMESCALE_PASSWORD fehlt}
     volumes:
       - timescale_data:/var/lib/postgresql/data
-      - ./infra/timescale/sql:/docker-entrypoint-initdb.d:ro
+      - ./infra/timescale/sql/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+      - ./infra/timescale/sql/002_rtk_fix_enum.sql:/docker-entrypoint-initdb.d/002_rtk_fix_enum.sql:ro
+      - ./infra/timescale/sql/003_authz_audit.sql:/docker-entrypoint-initdb.d/003_authz_audit.sql:ro
+      - ./infra/timescale/sql/004_gateway_credentials.sql:/docker-entrypoint-initdb.d/004_gateway_credentials.sql:ro
       - ./infra/postgres/migrations/001_dji_gateway_registry.sql:/docker-entrypoint-initdb.d/005_dji_gateway_registry.sql:ro
     healthcheck:
       test:
