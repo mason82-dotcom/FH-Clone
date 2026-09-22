@@ -107,6 +107,23 @@ In-Memory und dient zunächst der Korrelation von RTK-/Telemetriedaten.
 
 Details: [Missionen](../../docs/MISSIONEN.md).
 
+### Missionen
+
+```http
+GET /api/missions/active
+GET /api/devices/{device_sn}/mission
+```
+
+`/api/missions/active` liefert die aktuell erkannten Missionssitzungen.
+
+`/api/devices/{device_sn}/mission` liefert für ein Gerät:
+
+- aktive Mission, sofern vorhanden
+- zuletzt abgeschlossene Mission, sofern vorhanden
+
+Die Missionszuordnung stammt aus dem laufenden `MissionSessionTracker`.
+Persistente Missionshistorie ist Teil des V3-Persistenz-Gates.
+
 ### RTK/GNSS
 
 ```http
@@ -229,6 +246,13 @@ Bei fehlenden RTK-Werten prüfen:
 2. Payload enthält RTK-/GNSS-Felder
 3. `device_sn` wird korrekt erkannt
 4. Snapshot ist nicht nur `stale`
+
+## Lokale Betriebsdokumentation
+
+- [Betrieb](../../docs/BETRIEB.md)
+- [Konfiguration](../../docs/KONFIGURATION.md)
+- [Fehlersuche](../../docs/FEHLERSUCHE.md)
+- [Glossar](../../docs/GLOSSAR.md)
 
 ## V3-Grenze
 
