@@ -336,3 +336,57 @@ Vor V3-RC bleiben Hardwaretests erforderlich für:
   https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-pro/drc.html
 - WPML:
   https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/template-kml.html
+
+## Capability-Sicht der Control API
+
+V3 stellt den aktuellen Capability-Zustand pro Gerät read-only bereit:
+
+```http
+GET /api/devices/{device_sn}/capabilities
+```
+
+Die Antwort trennt drei Ebenen:
+
+### 1. Adapter-Capabilities
+
+`AdapterDevice.capabilities[]` enthält nur Fähigkeiten, die der jeweilige
+Adapter tatsächlich meldet. Dazu gehören beobachtungsbasierte
+Telemetrie-Capabilities und nur dann schreibende Capabilities, wenn
+`AircraftAdapter.execute()` sie wirklich bedienen kann.
+
+### 2. DJI-Produkt-/Control-Profil
+
+`controlProfile` beschreibt den bekannten DJI-Produktsupport hinter dem
+erkannten Gateway. Dazu gehören beispielsweise `flightControl`, `flyTo`,
+`pointingFlight`, `orbitFlight`, `payloadControl`, `drcProfile` und
+`requiresCloudControlAuthority`.
+
+Diese Werte beschreiben Produktsupport beziehungsweise spezialisierte
+Runtime-Pfade. Sie werden nicht automatisch in generische
+`AdapterDevice.capabilities[]` übertragen.
+
+### 3. Mission-/Wayline-Evidenz
+
+Die Capability-Sicht zeigt zusätzlich:
+
+```text
+observedInActiveMission
+observedInLastCompletedMission
+currentlyFlyingWayline
+executionCapabilityAdvertised
+managementImplemented
+```
+
+Damit kann die Oberfläche korrekt darstellen, dass das Aircraft gerade eine
+Wayline fliegt, ohne daraus fälschlich abzuleiten, dass FH2 Waylines
+hochladen oder starten darf.
+
+Für den aktuellen V3-DJI-Cloud-Adapter gilt weiterhin:
+
+```text
+mode_code == 5
+  -> Wayline-Telemetrieevidenz
+
+mission.wayline
+  -> nicht beworben
+```
