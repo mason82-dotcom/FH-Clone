@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
+import { DjiServiceError } from "./service.js";
 
 export type MqttQos = 0 | 1;
 
@@ -46,8 +48,7 @@ export interface FlyToRequest {
 
 export interface FlyToHandle {
   flyToId: string;
-  tid: string;
-  bid: string;
+  reply: DjiServiceReply;
 }
 
 export interface FlyToProgress {
@@ -79,14 +80,6 @@ export interface DrcControllerOptions {
   heartbeatIntervalMs?: number;
 }
 
-interface ServiceEnvelope {
-  tid: string;
-  bid: string;
-  timestamp: number;
-  method: string;
-  data: unknown;
-}
-
 function assertFiniteRange(name: string, value: number, min: number, max: number): void {
   if (!Number.isFinite(value) || value < min || value > max) {
     throw new RangeError(`${name} must be between ${min} and ${max}`);
@@ -99,7 +92,7 @@ function sameAxes(a: DrcAxes, b: DrcAxes): boolean {
 
 class DrcControlSequence {
   private seq = -1;
-  private lastAxes?: DrcAxes;
+  private lastAxes: DrcAxes | undefined;
 
   next(axes: DrcAxes): number {
     if (!this.lastAxes || !sameAxes(this.lastAxes, axes)) {
@@ -123,7 +116,7 @@ export class DrcController {
   private queue: Promise<void> = Promise.resolve();
   private lastControlAt = 0;
   private controlBlockedUntil = 0;
-  private heartbeatTimer?: NodeJS.Timeout;
+  private heartbeatTimer: NodeJS.Timeout | undefined;
 
   private readonly envelopeProfile: DrcEnvelopeProfile;
   private readonly minControlIntervalMs: number;
@@ -131,7 +124,8 @@ export class DrcController {
   private readonly heartbeatIntervalMs: number;
 
   constructor(
-    private readonly mqtt: DjiMqttPublisher,
+    private readonly services: DjiServiceRequester,
+    private readonly drc: DjiMqttPublisher,
     options: DrcControllerOptions = {}
   ) {
     this.envelopeProfile = options.envelopeProfile ?? "modern";
@@ -144,29 +138,29 @@ export class DrcController {
     this.controlSequence.reset();
   }
 
-  async grabFlightAuthority(gatewaySn: string): Promise<{ tid: string; bid: string }> {
-    return this.publishService(gatewaySn, "flight_authority_grab", {});
+  async grabFlightAuthority(gatewaySn: string): Promise<DjiServiceReply> {
+    return this.requestServiceOk(gatewaySn, "flight_authority_grab", {});
   }
 
   async enterDrcMode(
     gatewaySn: string,
     options: EnterDrcModeOptions
-  ): Promise<{ tid: string; bid: string }> {
+  ): Promise<DjiServiceReply> {
     const osd = options.osdFrequencyHz ?? 10;
     const hsi = options.hsiFrequencyHz ?? 1;
     assertFiniteRange("osdFrequencyHz", osd, 1, 30);
     assertFiniteRange("hsiFrequencyHz", hsi, 1, 30);
 
-    return this.publishService(gatewaySn, "drc_mode_enter", {
+    return this.requestServiceOk(gatewaySn, "drc_mode_enter", {
       mqtt_broker: options.mqttBroker,
       osd_frequency: osd,
       hsi_frequency: hsi
     });
   }
 
-  async exitDrcMode(gatewaySn: string): Promise<{ tid: string; bid: string }> {
+  async exitDrcMode(gatewaySn: string): Promise<DjiServiceReply> {
     this.stopHeartbeat();
-    return this.publishService(gatewaySn, "drc_mode_exit", {});
+    return this.requestServiceOk(gatewaySn, "drc_mode_exit", {});
   }
 
   async sendControl(gatewaySn: string, axes: DrcAxes): Promise<number> {
@@ -186,7 +180,7 @@ export class DrcController {
       }
 
       const seq = this.controlSequence.next(axes);
-      await this.mqtt.publish(
+      await this.drc.publish(
         `thing/product/${gatewaySn}/drc/down`,
         {
           method: "drone_control",
@@ -213,7 +207,7 @@ export class DrcController {
           ? { method: "drone_emergency_stop", data: {} }
           : { method: "drone_emergency_stop", data: {}, seq };
 
-      await this.mqtt.publish(
+      await this.drc.publish(
         `thing/product/${gatewaySn}/drc/down`,
         payload,
         1
@@ -239,7 +233,7 @@ export class DrcController {
               data: { seq, timestamp: Date.now() }
             };
 
-      await this.mqtt.publish(
+      await this.drc.publish(
         `thing/product/${gatewaySn}/drc/down`,
         payload,
         0
@@ -270,7 +264,7 @@ export class DrcController {
     }
 
     const flyToId = randomUUID();
-    const ids = await this.publishService(gatewaySn, "fly_to_point", {
+    const reply = await this.requestServiceOk(gatewaySn, "fly_to_point", {
       fly_to_id: flyToId,
       ...(request.maxSpeedMps !== undefined ? { max_speed: request.maxSpeedMps } : {}),
       points: [
@@ -282,29 +276,19 @@ export class DrcController {
       ]
     });
 
-    return { flyToId, ...ids };
+    return { flyToId, reply };
   }
 
-  private async publishService(
+  private async requestServiceOk(
     gatewaySn: string,
     method: string,
     data: unknown
-  ): Promise<{ tid: string; bid: string }> {
-    const envelope: ServiceEnvelope = {
-      tid: randomUUID(),
-      bid: randomUUID(),
-      timestamp: Date.now(),
-      method,
-      data
-    };
-
-    await this.mqtt.publish(
-      `thing/product/${gatewaySn}/services`,
-      envelope,
-      1
-    );
-
-    return { tid: envelope.tid, bid: envelope.bid };
+  ): Promise<DjiServiceReply> {
+    const reply = await this.services.requestService(gatewaySn, method, data);
+    if (reply.result !== 0) {
+      throw new DjiServiceError(method, reply.result, reply);
+    }
+    return reply;
   }
 
   private nextEnvelopeSeq(): number {

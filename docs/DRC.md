@@ -8,6 +8,21 @@ FH-Clone verwendet für DRC ausschließlich die Richtung der DJI Cloud API:
 - Service-Antworten: `thing/product/{gateway_sn}/services_reply`
 - Fortschrittsereignisse: `thing/product/{gateway_sn}/events`
 
+## Zwei MQTT-Pfade
+
+`drc_mode_enter` läuft über den normalen Cloud-Servicekanal. Sein Payload übermittelt dem Gerät die Zugangsdaten des DRC-MQTT-Relays.
+
+Deshalb trennt FH-Clone:
+
+1. **ServiceRequester** – normaler Cloud-Broker; `services` / `services_reply`, TID/BID-Korrelation.
+2. **DRC Publisher** – DRC-Relay; `drc/down` für Control und Heartbeat.
+
+Beide können technisch auf demselben EMQX laufen, werden im Code aber nicht als identisch vorausgesetzt.
+
+## Service ACK
+
+`DjiCloudAdapter.requestService()` erzeugt `tid`, `bid`, Timestamp und wartet auf das korrelierte `services_reply`. DRC-Mode-Enter, Authority-Grab, Exit und FlyTo sind daher keine Fire-and-Forget-Operationen.
+
 ## Sequenzen
 
 `drone_control` führt `seq` im `data`-Objekt. Wenn sich einer der Werte `x`, `y`, `h` oder `w` ändert, beginnt die Control-Sequenz wieder bei 0.

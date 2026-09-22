@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import mqtt, { type MqttClient } from "mqtt";
 import type {
   AdapterDevice,
@@ -10,6 +11,7 @@ import type {
 } from "@fh-clone/aircraft-core";
 import { normalizeDjiPayload } from "./normalizer.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
+import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
@@ -17,11 +19,19 @@ export interface DjiCloudAdapterOptions {
   password?: string;
   clientId?: string;
   topicFilters?: string[];
+  serviceTimeoutMs?: number;
   /**
    * Dokumentations-/Kompatibilitätsprofil. Dies ist keine MQTT-Protokollverhandlung.
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
    */
   apiVersion?: string;
+}
+
+interface PendingServiceRequest {
+  method: string;
+  timer: NodeJS.Timeout;
+  resolve: (reply: DjiServiceReply) => void;
+  reject: (error: Error) => void;
 }
 
 const DEFAULT_TOPICS = [
@@ -45,13 +55,18 @@ function deviceFromTopic(topic: string): string | undefined {
   return undefined;
 }
 
-export class DjiCloudAdapter implements AircraftAdapter {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   readonly id = "dji-cloud";
   private client?: MqttClient;
   private events?: AdapterEvents;
   private connected = false;
   private readonly devices = new Map<string, AdapterDevice>();
   private readonly capabilities = new Map<string, Set<Capability>>();
+  private readonly pendingServices = new Map<string, PendingServiceRequest>();
 
   constructor(private readonly options: DjiCloudAdapterOptions) {}
 
@@ -113,8 +128,14 @@ export class DjiCloudAdapter implements AircraftAdapter {
     const client = this.client;
     this.client = undefined;
     this.connected = false;
-    if (!client) return;
 
+    for (const [tid, pending] of this.pendingServices) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error(`DJI service request ${tid} cancelled because adapter stopped`));
+    }
+    this.pendingServices.clear();
+
+    if (!client) return;
     await new Promise<void>((resolve) => {
       client.end(false, {}, resolve);
     });
@@ -122,6 +143,49 @@ export class DjiCloudAdapter implements AircraftAdapter {
 
   async listDevices(): Promise<AdapterDevice[]> {
     return [...this.devices.values()];
+  }
+
+  async requestService(
+    gatewaySn: string,
+    method: string,
+    data: unknown,
+    timeoutMs = this.options.serviceTimeoutMs ?? 10_000
+  ): Promise<DjiServiceReply> {
+    const client = this.client;
+    if (!client || !this.connected) {
+      throw new Error("DJI Cloud MQTT adapter is not connected");
+    }
+
+    const tid = randomUUID();
+    const bid = randomUUID();
+    const envelope = {
+      tid,
+      bid,
+      timestamp: Date.now(),
+      method,
+      data
+    };
+
+    return new Promise<DjiServiceReply>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingServices.delete(tid);
+        reject(new Error(`DJI service ${method} timed out after ${timeoutMs} ms`));
+      }, timeoutMs);
+
+      this.pendingServices.set(tid, { method, timer, resolve, reject });
+
+      client.publish(
+        `thing/product/${gatewaySn}/services`,
+        JSON.stringify(envelope),
+        { qos: 1 },
+        (error?: Error) => {
+          if (!error) return;
+          clearTimeout(timer);
+          this.pendingServices.delete(tid);
+          reject(error);
+        }
+      );
+    });
   }
 
   async execute(_command: AircraftCommand): Promise<CommandResult> {
@@ -141,6 +205,10 @@ export class DjiCloudAdapter implements AircraftAdapter {
       payload = JSON.parse(bytes.toString("utf8"));
     } catch {
       payload = { raw: bytes.toString("utf8"), parseError: true };
+    }
+
+    if (topic.endsWith("/services_reply")) {
+      this.resolveServiceReply(payload);
     }
 
     const deviceId = deviceFromTopic(topic);
@@ -179,8 +247,39 @@ export class DjiCloudAdapter implements AircraftAdapter {
       await this.events?.onParameter?.(sample);
     }
   }
+
+  private resolveServiceReply(payload: unknown): void {
+    if (!isRecord(payload) || typeof payload.tid !== "string") return;
+    if (!isRecord(payload.data) || typeof payload.data.result !== "number") return;
+
+    const pending = this.pendingServices.get(payload.tid);
+    if (!pending) return;
+
+    clearTimeout(pending.timer);
+    this.pendingServices.delete(payload.tid);
+
+    const reply: DjiServiceReply = {
+      tid: payload.tid,
+      result: payload.data.result,
+      data: payload.data,
+      ...(typeof payload.bid === "string" ? { bid: payload.bid } : {}),
+      ...(typeof payload.method === "string" ? { method: payload.method } : {})
+    };
+
+    if (reply.method && reply.method !== pending.method) {
+      pending.reject(
+        new Error(
+          `DJI service reply method mismatch: expected ${pending.method}, received ${reply.method}`
+        )
+      );
+      return;
+    }
+
+    pending.resolve(reply);
+  }
 }
 
 export { normalizeDjiPayload } from "./normalizer.js";
 export * from "./version.js";
+export * from "./service.js";
 export * from "./drc.js";
