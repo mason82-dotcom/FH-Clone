@@ -351,3 +351,51 @@ Vor Release zu prüfen:
 - Raw Messages vollständig
 - normalisierte Daten nachvollziehbar
 - Audit ohne Secrets
+
+## Externe Missions- und Wayline-Referenzen
+
+Der Aircraft Core besitzt für V3 einen expliziten Referenzvertrag:
+
+```text
+MissionExternalReference
+  kind
+  id
+  source
+  confidence
+```
+
+Unterstützte Arten:
+
+```text
+wayline
+fh2_flight_task
+dji_mission
+ugcs_mission
+```
+
+Unterstützte Quellen:
+
+```text
+fh2_openapi_v2
+dji_pilot_wayline
+dji_wpml
+ugcs
+manual
+```
+
+Vertrauensstufen:
+
+```text
+authoritative
+derived
+heuristic
+```
+
+Eine Referenz-ID muss nicht leer sein und wird normalisiert.
+
+Wichtig:
+
+- ähnliche Zeitstempel allein sind niemals `authoritative`,
+- DJI-`mode_code == 5` erzeugt keine Wayline-ID,
+- FH2-Task-ID und DJI-Wayline-ID bleiben getrennte Referenzarten,
+- jede Korrelation muss ihre Quelle und Vertrauensstufe behalten.
