@@ -131,24 +131,30 @@ export class DjiTopologyRegistry {
 }
 
 export function describeDjiProduct(product: DjiProductRef): string {
-  if (product.type === 144) return "DJI RC Pro Enterprise";
-  if (product.type === 119) return "DJI RC Plus";
-  if (product.type === 174) return "DJI RC Plus 2";
+  const domain = String(product.domain ?? "");
 
-  if (product.type === 77) {
+  if (domain === "2" && product.type === 144 && product.subType === 0) {
+    return "DJI RC Pro Enterprise";
+  }
+  if (domain === "2" && product.type === 119 && product.subType === 0) {
+    return "DJI RC Plus";
+  }
+  if (domain === "2" && product.type === 174 && product.subType === 0) {
+    return "DJI RC Plus 2";
+  }
+
+  if (domain === "0" && product.type === 77) {
     if (product.subType === 0) return "DJI Mavic 3 Enterprise";
     if (product.subType === 1) return "DJI Mavic 3 Thermal";
     if (product.subType === 3) return "DJI Mavic 3TA";
-    return "DJI Mavic 3 Enterprise Series";
   }
 
-  if (product.type === 99) {
+  if (domain === "0" && product.type === 99) {
     if (product.subType === 0) return "DJI Matrice 4E";
     if (product.subType === 1) return "DJI Matrice 4T";
-    return "DJI Matrice 4 Series";
   }
 
-  return `DJI product ${product.type}/${product.subType}`;
+  return `DJI product ${product.domain ?? "?"}/${product.type}/${product.subType}`;
 }
 
 
