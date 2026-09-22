@@ -45,15 +45,15 @@ export interface AttachDrcSession {
 }
 
 export class DrcSessionManager {
-  private session?: DrcSessionSnapshot;
-  private timer?: NodeJS.Timeout;
+  private session: DrcSessionSnapshot | undefined;
+  private timer: NodeJS.Timeout | undefined;
   private tickRunning = false;
 
   private readonly neutralAfterMs: number;
   private readonly lostAfterMs: number;
   private readonly checkIntervalMs: number;
   private readonly now: () => number;
-  private readonly onStateChange?: (snapshot: DrcSessionSnapshot) => void;
+  private readonly onStateChange: ((snapshot: DrcSessionSnapshot) => void) | undefined;
 
   constructor(
     private readonly controller: DrcController,
@@ -127,11 +127,11 @@ export class DrcSessionManager {
     const seq = await this.controller.sendStickControl(session.gatewaySn, channels);
     const now = this.now();
 
+    const { reason: _reason, ...rest } = session;
     this.session = {
-      ...session,
+      ...rest,
       state: "active",
-      lastInputAt: now,
-      reason: undefined
+      lastInputAt: now
     };
     this.emit();
     return seq;
