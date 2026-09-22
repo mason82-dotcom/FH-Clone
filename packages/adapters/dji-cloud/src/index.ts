@@ -15,7 +15,8 @@ import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import {
   DjiTopologyRegistry,
   describeDjiProduct,
-  parseDjiTopologyUpdate
+  parseDjiTopologyUpdate,
+  toPublicDjiTopologyPayload
 } from "./topology.js";
 import { getDjiCloudControlProfile } from "./capabilities.js";
 
@@ -46,6 +47,7 @@ const DEFAULT_TOPICS = [
   "thing/product/+/events",
   "thing/product/+/services_reply",
   "thing/product/+/drc/up",
+  "thing/product/+/status",
   "sys/product/+/status"
 ];
 
@@ -255,18 +257,25 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     const deviceId = deviceFromTopic(topic);
 
-    if (deviceId && topic.startsWith("sys/product/") && topic.endsWith("/status")) {
-      const topology = parseDjiTopologyUpdate(deviceId, payload, receivedAt);
-      if (topology) {
-        await this.applyTopology(topology, payload);
-      }
+    const isTopologyStatusTopic =
+      topic.endsWith("/status") &&
+      (topic.startsWith("sys/product/") || topic.startsWith("thing/product/"));
+
+    const topology =
+      deviceId && isTopologyStatusTopic
+        ? parseDjiTopologyUpdate(deviceId, payload, receivedAt)
+        : undefined;
+
+    if (topology) {
+      await this.applyTopology(topology, payload);
     }
+
     const raw: RawMessage = {
       adapterId: this.id,
       ...(deviceId ? { deviceId } : {}),
       receivedAt,
       channel: topic,
-      payload
+      payload: topology ? toPublicDjiTopologyPayload(topology) : payload
     };
     await this.events?.onRawMessage?.(raw);
 

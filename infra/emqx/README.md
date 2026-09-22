@@ -85,3 +85,19 @@ static role ACL
 ## Interner Port
 
 Der Control-Service-Port `8081` ist nur für EMQX bestimmt und darf nicht über den öffentlichen Reverse Proxy veröffentlicht werden.
+
+
+## Implementierungsstatus des HTTP-Authorizers
+
+`base.hocon` verweist bereits auf:
+
+```text
+POST http://control-api:8081/internal/emqx/authz
+```
+
+Der dazugehörige Control-Service-Endpunkt ist im aktuellen Repository noch
+nicht implementiert. Die HTTP-Authorizer-Konfiguration darf deshalb nicht als
+bereits produktionsbereit betrachtet werden.
+
+Bis zur Implementierung bleibt die sichere Haltung: fehlende dynamische
+Sub-Device-Freigabe führt zu **deny**, nicht zu einer globalen Wildcard.
