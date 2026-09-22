@@ -1,8 +1,9 @@
 import { useRtkLive } from "../../hooks/useRtkLive.js";
 import { RtkStatusCard } from "./RtkStatusCard.js";
+import { RtkSatelliteChart } from "./RtkSatelliteChart.js";
 
 export function RtkDashboard() {
-  const { devices, transitions, connected, error } = useRtkLive();
+  const { devices, transitions, history, connected, error } = useRtkLive();
 
   return (
     <section className="dashboard">
@@ -36,6 +37,32 @@ export function RtkDashboard() {
           </div>
         )}
       </div>
+
+      {devices.length > 0 ? (
+        <section className="chart-panel">
+          <div className="events-panel__header">
+            <div>
+              <p className="eyebrow">Verlauf</p>
+              <h2>Satelliten & Fix-Stabilität</h2>
+            </div>
+            <span className="muted">Live-Puffer · max. 120 Samples</span>
+          </div>
+
+          <div className="chart-stack">
+            {devices.map((device) => (
+              <div className="chart-device" key={device.deviceId}>
+                <div className="chart-device__title">
+                  <strong>{device.deviceId}</strong>
+                  <span className="muted">
+                    RTK {device.rtkSatellites ?? "—"} · GPS {device.gpsSatellites ?? "—"}
+                  </span>
+                </div>
+                <RtkSatelliteChart samples={history[device.deviceId] ?? []} />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="events-panel">
         <div className="events-panel__header">
