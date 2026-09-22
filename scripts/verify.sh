@@ -102,7 +102,7 @@ cleanup_verify_credential() {
     return 0
   fi
 
-  if ! docker compose --env-file .env exec -T \
+  if docker compose --env-file .env exec -T \
     -e VERIFY_USER="$verify_user" \
     control-api \
     node --input-type=module -e '
@@ -118,11 +118,15 @@ cleanup_verify_credential() {
       }
     '
   then
-    echo "WARNUNG: temporäres Verify-Credential konnte nicht entfernt werden: $verify_user" >&2
+    verify_credential_created=0
+    return 0
   fi
+
+  echo "WARNUNG: temporäres Verify-Credential konnte nicht entfernt werden: $verify_user" >&2
+  return 1
 }
 
-trap 'status=$?; trap - EXIT; cleanup_verify_credential; exit "$status"' EXIT
+trap 'status=$?; trap - 0; cleanup_verify_credential || true; exit "$status"' 0
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
@@ -266,8 +270,10 @@ if [ "$authz_revoked" != "200:deny" ]; then
   exit 1
 fi
 
-cleanup_verify_credential
-verify_credential_created=0
+if ! cleanup_verify_credential; then
+  echo "FEHLER: temporäres Verify-Credential blieb in der Datenbank: $verify_user" >&2
+  exit 1
+fi
 
 echo "[9/10] Statische ACL darf keine permanenten DRC-Rechte enthalten"
 if grep -Eq 'drc/(up|down)' infra/emqx/acl.conf; then
