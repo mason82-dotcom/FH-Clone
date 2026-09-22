@@ -44,6 +44,29 @@ export function useRtkLive(): RtkLiveState {
       setDevices(
         Object.fromEntries(list.map((snapshot) => [snapshot.deviceId, snapshot]))
       );
+
+      setHistory(
+        Object.fromEntries(
+          list.map((snapshot) => [
+            snapshot.deviceId,
+            [
+              {
+                sampledAt: snapshot.sampledAt,
+                fixState: snapshot.fixState,
+                ...(snapshot.gpsSatellites !== undefined
+                  ? { gpsSatellites: snapshot.gpsSatellites }
+                  : {}),
+                ...(snapshot.rtkSatellites !== undefined
+                  ? { rtkSatellites: snapshot.rtkSatellites }
+                  : {}),
+                ...(snapshot.isFixed !== undefined
+                  ? { isFixed: snapshot.isFixed }
+                  : {})
+              }
+            ]
+          ])
+        )
+      );
     });
 
     source.addEventListener("rtk-status", (event) => {
