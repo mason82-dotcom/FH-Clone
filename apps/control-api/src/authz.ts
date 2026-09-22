@@ -16,7 +16,7 @@ export interface EmqxAuthorizationPolicy {
    * Dynamic DRC gate. This must represent an active FH-Clone DRC session
    * (FC3 + control lease + DJI authority), not merely an active mission.
    */
-  isDrcGatewayActive?: (gatewaySn: string) => boolean;
+  isDrcGatewayActive?: (gatewaySn: string) => boolean | Promise<boolean>;
 }
 
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
@@ -37,11 +37,11 @@ function splitProductTopic(topic: string): {
   };
 }
 
-export function authorizeEmqx(
+export async function authorizeEmqx(
   topology: DjiTopologyRegistry,
   request: EmqxAuthorizationRequest,
   policy: EmqxAuthorizationPolicy = {}
-): EmqxAuthorizationResult {
+): Promise<EmqxAuthorizationResult> {
   if (request.username.startsWith("dji-gateway-")) {
     return authorizeDjiGateway(topology, request, policy);
   }
@@ -55,11 +55,11 @@ export function authorizeEmqx(
   return "ignore";
 }
 
-export function authorizeDjiGateway(
+export async function authorizeDjiGateway(
   topology: DjiTopologyRegistry,
   request: EmqxAuthorizationRequest,
   policy: EmqxAuthorizationPolicy = {}
-): EmqxAuthorizationResult {
+): Promise<EmqxAuthorizationResult> {
   if (!request.username.startsWith("dji-gateway-")) return "ignore";
   if (!SAFE_GATEWAY_USERNAME.test(request.username)) return "deny";
   if (!SAFE_ID.test(request.clientid)) return "deny";
@@ -97,7 +97,7 @@ export function authorizeDjiGateway(
       parsed.sn === request.clientid &&
       parsed.suffix === "drc/up"
     ) {
-      return policy.isDrcGatewayActive?.(request.clientid) ? "allow" : "deny";
+      return (await policy.isDrcGatewayActive?.(request.clientid)) ? "allow" : "deny";
     }
 
     if (
@@ -130,7 +130,7 @@ export function authorizeDjiGateway(
       parsed.family === "thing" &&
       parsed.suffix === "drc/down"
     ) {
-      return policy.isDrcGatewayActive?.(request.clientid) ? "allow" : "deny";
+      return (await policy.isDrcGatewayActive?.(request.clientid)) ? "allow" : "deny";
     }
 
     if (
@@ -146,18 +146,18 @@ export function authorizeDjiGateway(
   return "deny";
 }
 
-function authorizeBackendDrc(
+async function authorizeBackendDrc(
   topology: DjiTopologyRegistry,
   request: EmqxAuthorizationRequest,
   policy: EmqxAuthorizationPolicy
-): EmqxAuthorizationResult {
+): Promise<EmqxAuthorizationResult> {
   const parsed = splitProductTopic(request.topic);
   if (!parsed || parsed.family !== "thing") return "ignore";
 
   const isKnownGateway = Boolean(topology.getGateway(parsed.sn));
   const drcActive =
     isKnownGateway &&
-    (policy.isDrcGatewayActive?.(parsed.sn) ?? false);
+    ((await policy.isDrcGatewayActive?.(parsed.sn)) ?? false);
 
   if (request.action === "publish" && parsed.suffix === "drc/down") {
     return drcActive ? "allow" : "deny";
