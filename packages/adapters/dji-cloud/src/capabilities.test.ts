@@ -155,3 +155,36 @@ test("Pilot Cloud profiles never advertise mission.wayline without an execution 
     assert.equal(profile.capabilities.includes("mission.wayline"), false);
   }
 });
+
+test("M4D/M4TD behind Dock 3 are recognized but remain read-only in V3", () => {
+  const dock3 = { domain: 3, type: 3, subType: 0 };
+
+  for (const subType of [0, 1]) {
+    const profile = getDjiCloudControlProfile(
+      { domain: 0, type: 100, subType },
+      dock3
+    );
+
+    assert.equal(profile.flightControl, false);
+    assert.equal(profile.flyTo, false);
+    assert.equal(profile.pointingFlight, false);
+    assert.equal(profile.orbitFlight, false);
+    assert.equal(profile.payloadControl, false);
+    assert.equal(profile.requiresCloudControlAuthority, false);
+    assert.equal(profile.drcProfile, "none");
+    assert.deepEqual(profile.capabilities, []);
+    assert.equal(profile.reason.includes("Dock-to-Cloud property contract"), true);
+  }
+});
+
+test("M4D/M4TD do not inherit Pilot M4 control from RC Plus 2", () => {
+  const profile = getDjiCloudControlProfile(
+    { domain: 0, type: 100, subType: 1 },
+    { domain: 2, type: 174, subType: 0 }
+  );
+
+  assert.equal(profile.flightControl, false);
+  assert.equal(profile.drcProfile, "none");
+  assert.deepEqual(profile.capabilities, []);
+});
+
