@@ -53,7 +53,7 @@ test("starts on active flight and ends after stable standby grace", () => {
   const completed = tracker.getLastCompleted("AIRCRAFT-1");
   assert.equal(completed?.missionId, started.missionId);
   assert.equal(completed?.endReason, "standby");
-  assert.equal(completed?.endedAt, 18_100);
+  assert.equal(completed?.endedAt, 13_000);
 });
 
 test("ends active mission after telemetry timeout", () => {
@@ -68,6 +68,7 @@ test("ends active mission after telemetry timeout", () => {
   assert.equal(ended.length, 1);
   assert.equal(ended[0]?.missionId, started.missionId);
   assert.equal(ended[0]?.endReason, "telemetry_timeout");
+  assert.equal(ended[0]?.endedAt, 130_000);
 });
 
 test("new flight gets a new mission id", () => {
@@ -93,4 +94,78 @@ test("keeps gateway identity on the mission session", () => {
 
   const started = tracker.observe(message(300_000, 18));
   assert.equal(started?.gatewaySn, "RC-PRO-1");
+});
+
+
+test("mode_code 18 starts an airborne RTK mission", () => {
+  const tracker = new MissionSessionTracker({
+    resolveGatewaySn: () => "RC-PRO-RTK"
+  });
+
+  const started = tracker.observe(message(400_000, 18));
+
+  assert.ok(started);
+  assert.equal(started.startedAt, 400_000);
+  assert.equal(started.lastModeCode, 18);
+  assert.equal(started.gatewaySn, "RC-PRO-RTK");
+});
+
+test("active telemetry cancels a pending standby end", () => {
+  const tracker = new MissionSessionTracker({ standbyGraceMs: 5_000 });
+
+  const started = tracker.observe(message(500_000, 5));
+  assert.ok(started);
+
+  tracker.observe(message(501_000, 0));
+  tracker.observe(message(503_000, 5));
+  tracker.observe(message(504_000, 0));
+  tracker.observe(message(509_001, 0));
+
+  const completed = tracker.getLastCompleted("AIRCRAFT-1");
+  assert.equal(completed?.missionId, started.missionId);
+  assert.equal(completed?.endedAt, 504_000);
+  assert.equal(completed?.endReason, "standby");
+});
+
+test("disconnect grace records the first disconnected timestamp", () => {
+  const tracker = new MissionSessionTracker({
+    disconnectedGraceMs: 30_000
+  });
+
+  const started = tracker.observe(message(600_000, 3));
+  assert.ok(started);
+
+  tracker.observe(message(601_000, 14));
+  tracker.observe(message(631_001, 14));
+
+  const completed = tracker.getLastCompleted("AIRCRAFT-1");
+  assert.equal(completed?.endedAt, 601_000);
+  assert.equal(completed?.endReason, "device_disconnected");
+});
+
+test("sweep timestamp is independent of scheduler delay", () => {
+  const tracker = new MissionSessionTracker({
+    telemetryTimeoutMs: 30_000
+  });
+
+  tracker.observe(message(700_000, 5));
+  const ended = tracker.sweep(745_000);
+
+  assert.equal(ended.length, 1);
+  assert.equal(ended[0]?.endedAt, 730_000);
+});
+
+test("new flight after telemetry timeout receives a new mission id", () => {
+  const tracker = new MissionSessionTracker({
+    telemetryTimeoutMs: 30_000
+  });
+
+  const first = tracker.observe(message(800_000, 5));
+  assert.ok(first);
+
+  tracker.sweep(831_000);
+
+  const second = tracker.observe(message(832_000, 5));
+  assert.ok(second);
+  assert.notEqual(second.missionId, first.missionId);
 });

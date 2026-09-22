@@ -32,6 +32,7 @@ Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. De
 - Columnstore-Policy nach 7 Tagen
 - Rohdaten-Retention nach 24 Monaten
 - Continuous Aggregate `telemetry_1m`
+- `002_rtk_fix_enum.sql` erzwingt für `is_fixed` ausschließlich `0/1/2/3` oder `NULL`
 
 ## Produktkennung
 
@@ -74,6 +75,17 @@ Persistiert werden nur Statuswerte wie:
 - `gps_number`
 - `rtk_number`
 - `mode_code`
+
+`is_fixed` ist ausdrücklich das DJI-Vier-Zustands-Enum:
+
+```text
+0 = not started
+1 = fixing
+2 = fixed successfully
+3 = fixing failed
+```
+
+`quality` bleibt davon getrennt; `quality = 10` kennzeichnet RTK-Fix-Qualität.
 
 NTRIP Host, Port, Mountpoint, Benutzername und Passwort werden nicht gespeichert.
 
