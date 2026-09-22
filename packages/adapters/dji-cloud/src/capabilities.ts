@@ -19,20 +19,40 @@ export interface DjiCloudControlProfile {
   reason: string;
 }
 
+function hasDomain(product: DjiProductRef | undefined, domain: number): boolean {
+  return product?.domain === domain || product?.domain === String(domain);
+}
+
 function isMavic3Enterprise(product: DjiProductRef): boolean {
-  return product.type === 77;
+  return (
+    hasDomain(product, 0) &&
+    product.type === 77 &&
+    [0, 1, 3].includes(product.subType)
+  );
 }
 
 function isMatrice4Enterprise(product: DjiProductRef): boolean {
-  return product.type === 99;
+  return (
+    hasDomain(product, 0) &&
+    product.type === 99 &&
+    [0, 1].includes(product.subType)
+  );
 }
 
 function isRcProEnterprise(product?: DjiProductRef): boolean {
-  return product?.type === 144;
+  return (
+    hasDomain(product, 2) &&
+    product?.type === 144 &&
+    product.subType === 0
+  );
 }
 
 function isRcPlus2(product?: DjiProductRef): boolean {
-  return product?.type === 174;
+  return (
+    hasDomain(product, 2) &&
+    product?.type === 174 &&
+    product.subType === 0
+  );
 }
 
 export function getDjiCloudControlProfile(
