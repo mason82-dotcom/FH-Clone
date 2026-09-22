@@ -85,6 +85,10 @@ export class InMemoryDrcSessionStore implements DrcSessionStore {
 
   constructor(private readonly now: () => number = Date.now) {}
 
+  async listOpenSessions(): Promise<DrcSessionRecord[]> {
+    return this.store.listOpen();
+  }
+
   async get(gatewaySn: string): Promise<DrcSessionRecord | undefined> {
     const entry = this.records.get(gatewaySn);
     if (!entry) return undefined;
