@@ -47,13 +47,13 @@ export function getDjiCloudControlProfile(
       pointingFlight: false,
       orbitFlight: false,
       payloadControl: supportedGateway,
-      requiresCloudControlAuthority: false,
+      requiresCloudControlAuthority: supportedGateway,
       drcProfile: supportedGateway ? "pilot-m3-payload" : "none",
       capabilities: supportedGateway
         ? ["control.camera", "control.gimbal", "payload.control"]
         : [],
       reason: supportedGateway
-        ? "DJI Pilot Cloud documents Mavic 3 Enterprise Series behind RC Pro Enterprise as payload-control only; RC joystick flight control remains active."
+        ? "DJI Pilot Cloud documents Mavic 3 Enterprise Series behind RC Pro Enterprise as payload-control only; cloud control still requires RC authorization, while the physical RC joystick remains available for flight."
         : "Mavic 3 Enterprise Pilot-Cloud capabilities are only enabled after a supported RC Pro Enterprise gateway is identified."
     };
   }
