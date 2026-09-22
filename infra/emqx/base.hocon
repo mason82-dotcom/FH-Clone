@@ -9,6 +9,28 @@ authorization {
 
   sources = [
     {
+      type = http
+      enable = true
+
+      # Only provisioned DJI gateway identities need dynamic topology checks.
+      precondition = "regex_match(username, '^dji-gateway-.+$')"
+
+      method = post
+      url = "http://control-api:8081/internal/emqx/authz"
+
+      headers {
+        "Content-Type" = "application/json"
+      }
+
+      body {
+        username = "${username}"
+        clientid = "${clientid}"
+        action = "${action}"
+        topic = "${topic}"
+        qos = "${qos}"
+      }
+    },
+    {
       type = file
       enable = true
       path = "/opt/emqx/etc/fh-clone-acl.conf"

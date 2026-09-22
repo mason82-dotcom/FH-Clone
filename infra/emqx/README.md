@@ -1,78 +1,87 @@
 # EMQX für FH-Clone
 
-## Sicherheitsmodell
+## Warum dynamische DJI-Autorisierung?
 
-Die Topic-Richtung folgt der DJI Cloud API:
+Bei DJI Pilot 2 ist die Fernsteuerung das Gateway, das Aircraft ist ein Sub-Device.
 
-| Pfad | Richtung aus Cloud-Sicht | Verwendung |
-| --- | --- | --- |
-| `thing/product/{sn}/drc/down` | Cloud → Gerät | DRC-Kommandos/Heartbeat |
-| `thing/product/{sn}/drc/up` | Gerät → Cloud | DRC-Antworten/Push |
-| `thing/product/{sn}/services` | Cloud → Gerät | Service-Kommandos |
-| `thing/product/{sn}/services_reply` | Gerät → Cloud | Service-Antworten |
-| `thing/product/{sn}/events` | Gerät → Cloud | Events/Fortschritt |
+Die Cloud-API trennt dabei Topic-Identitäten:
+
+- `sys/product/{gateway_sn}/status` – Gateway-Topologie
+- `thing/product/{device_sn}/osd` – Eigenschaften des jeweiligen Geräts, z. B. Aircraft
+- `thing/product/{device_sn}/state` – Zustandsänderungen des jeweiligen Geräts
+- `thing/product/{gateway_sn}/services` – Cloud → Gateway
+- `thing/product/{gateway_sn}/drc/down` – Cloud → Gateway, DRC
+- `thing/product/{gateway_sn}/drc/up` – Gateway → Cloud, DRC-Rückkanal
+
+Eine reine Datei-Regel wie `thing/product/${clientid}/#` reicht deshalb nicht: Sie würde Aircraft-OSD unter der Aircraft-SN blockieren. Eine pauschale Freigabe `thing/product/+/osd` für jedes Gateway wäre dagegen zu breit.
+
+FH-Clone verwendet deshalb zwei Authorizer:
+
+1. **HTTP-Authorizer** für `dji-gateway-*`
+2. **File-Authorizer** für Backend, optionale WebUI-Diagnose und Dashboard
+
+Am Ende gilt immer Default-Deny.
+
+## Dynamische Gateway-Prüfung
+
+EMQX ruft intern auf:
+
+```text
+POST http://control-api:8081/internal/emqx/authz
+```
+
+Der Control-Service prüft die durch `update_topo` gelernte Zuordnung:
+
+```text
+RC-Pro-SN
+  └── Aircraft-SN
+```
+
+Erlaubt wird unter anderem:
+
+- Gateway publiziert eigenes `sys/product/{gateway_sn}/status` als Bootstrap
+- Gateway publiziert eigene Gateway-Upstream-Topics
+- Gateway publiziert Aircraft `osd/state` nur für aktuell zugeordnete Sub-Devices
+- Gateway subscribed ausschließlich seine eigenen Downstream-/Control-Topics
+
+Bei Ausfall oder fehlender Topologie fällt keine breite Freigabe zurück; die statische ACL endet mit Deny.
 
 ## Rollen
 
 ### `webui-operator`
 
-Nur lesend. Die Browser-Anwendung darf keine DJI-Control-Topics publizieren.
-
-Produktiv sollte die WebUI bevorzugt überhaupt keine MQTT-Credentials erhalten und Telemetrie über den FH-Clone-WebSocket konsumieren. Der Account bleibt nur für Diagnose-/Entwicklungsfälle vorgesehen.
+Read-only. Produktiv sollte die React-WebUI bevorzugt keine MQTT-Credentials erhalten und über FH-Clone API/WebSocket arbeiten.
 
 ### `backend-service`
 
-Darf Telemetrie und Antworten abonnieren und die explizit freigegebenen Cloud→Device-Topics publizieren. Der Backend-Prozess muss vor DRC-Befehlen zusätzlich den FH-Clone-`ControlAuthority`/`CommandCoordinator` passieren.
+Der einzige allgemeine Cloud-Control-Publisher. DRC/Services werden zusätzlich in der Anwendung durch `ControlAuthority` und `CommandCoordinator` geschützt.
 
-### DJI-Gateway
+### `dji-gateway-*`
 
-Für file-basierte ACLs gilt der Provisioning-Vertrag:
+Wird dynamisch gegen Gateway-SN und `update_topo` geprüft. Die MQTT-Client-ID muss die echte Gateway-SN sein.
 
-```text
-MQTT clientid = gateway_sn
-username      = dji-gateway-<provisioned-id>
-```
+### `dashboard`
 
-Die ACL verwendet anschließend `${clientid}` als Topic-Template. **Die Authentifizierung muss die ausgegebenen Zugangsdaten an genau diese Client-ID/Gateway-SN binden.** Eine ACL-Datei allein ist kein Ersatz für diese Identitätsbindung.
+Read-only auf MQTT-/Systemdiagnose.
 
-Client-ID und Benutzername dürfen keine MQTT-Wildcards enthalten.
+## Konfiguration
 
-## Installation
-
-`acl.conf` wird read-only nach
+Die Authorizer-Reihenfolge in `base.hocon` ist sicherheitsrelevant:
 
 ```text
-/opt/emqx/etc/fh-clone-acl.conf
+DJI HTTP topology authz
+        ↓ ignore
+static role ACL
+        ↓ no match
+      DENY
 ```
 
-gemountet. `base.hocon` wird in die EMQX-Konfiguration eingebunden.
-
-Die Regeln werden von oben nach unten ausgewertet; die erste passende Regel entscheidet. Das Ende bleibt deshalb immer:
+`authorization.no_match = deny` bleibt explizit gesetzt. Die statische Datei endet zusätzlich mit:
 
 ```erlang
 {deny, all}.
 ```
 
-und zusätzlich:
+## Interner Port
 
-```hocon
-authorization.no_match = deny
-```
-
-## Cache
-
-Der Authorization-Cache verwendet nur 5 Sekunden TTL. Ein längerer Cache ist für Control-Topics ungünstig, weil geänderte/revozierte Berechtigungen sonst länger wirksam bleiben können.
-
-## Keine Browser-Steuerung
-
-DRC, Emergency Stop, FlyTo, RTH und spätere Mission-Control-Publishes laufen nicht direkt aus React/MQTT.js. Der Pfad ist:
-
-```text
-WebUI
-  -> HTTPS/WebSocket
-  -> Command Service
-  -> ControlAuthority / CommandCoordinator
-  -> DjiCloud DRC/Service Publisher
-  -> EMQX
-  -> DJI Gateway
-```
+Der Control-Service-Port `8081` ist nur für EMQX bestimmt und darf nicht über den öffentlichen Reverse Proxy veröffentlicht werden.
