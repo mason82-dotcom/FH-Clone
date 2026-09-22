@@ -114,3 +114,50 @@ Eine frei eingegebene Bezeichnung der verwendeten RTK-/CORS-Quelle kann später 
 M3E/M3T benötigen für RTK die entsprechende Hardwareausstattung; M3M besitzt RTK-Funktionalität bereits im Produktkonzept.
 
 Die tatsächliche Capability wird in FH-Clone trotzdem aus realer Geräte-/Telemetrieinformation abgeleitet und nicht allein anhand des Modellnamens angenommen.
+
+
+## Live-Verlauf in der WebUI
+
+Die React-WebUI hält pro Aircraft die letzten 120 RTK/GNSS-Samples im Speicher und visualisiert:
+
+- RTK-Satelliten
+- GPS-Satelliten
+- aktuellen Fix-Zustand
+- Fix-Verlust-Zeitpunkte
+
+Der Verlauf ist bewusst flüchtig. Persistente Flugauswertung wird später über die zentrale Telemetrie-/Timeseries-Schicht realisiert.
+
+## Sichere RTK-Quellenreferenz in Missionsmetadaten
+
+FH-Clone kann eine **nicht-sensitive** Referenz auf die verwendete Korrekturquelle dokumentieren.
+
+Beispiel:
+
+```json
+{
+  "label": "SAPOS BW",
+  "provider": "Landesdienst",
+  "configuredVia": "dji-pilot-2",
+  "note": "Projektstandard"
+}
+```
+
+Erlaubt sind nur beschreibende Felder:
+
+- `label`
+- optional `provider`
+- optional `note`
+- `configuredVia = dji-pilot-2`
+
+Nicht Bestandteil dieses Modells sind:
+
+- Host/IP
+- Port
+- Mountpoint
+- Benutzername
+- Passwort
+- Token
+
+Diese Felder sind im typisierten Core-Modell absichtlich nicht repräsentierbar.
+
+Der Missionskontext kann zusätzlich sichere RTK-Snapshots für Start/Landung sowie aggregierte Werte wie minimale RTK-Satellitenzahl und Fix-Loss-Anzahl tragen.
