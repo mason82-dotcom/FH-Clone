@@ -59,7 +59,10 @@ function fixStateFromCode(code: number | undefined): DjiRtkFixState {
  *   2 = fixed successfully
  *   3 = fixing failed
  *
- * position_state.quality = 10 also denotes an RTK-fixed acquisition mode.
+ * position_state.is_fixed is the generic satellite-acquisition state.
+ * It is not, by itself, proof of an RTK fix.
+ *
+ * DJI explicitly defines position_state.quality = 10 as "RTK fixed".
  * mode_code = 18 is an aircraft operating mode ("Airborne RTK fixing mode"),
  * not the fix-success flag itself.
  */
@@ -88,23 +91,24 @@ export function parseDjiRtkStatus(
     numeric(source.rtk_number);
   const modeCode = numeric(host.mode_code) ?? numeric(source.mode_code);
 
-  if (
-    fixStateCode === undefined &&
-    qualityCode === undefined &&
-    gpsSatellites === undefined &&
-    rtkSatellites === undefined &&
-    modeCode === undefined
-  ) {
+  // GPS satellite count and the generic acquisition state are GNSS evidence,
+  // not RTK capability. Emit an RTK status only after an RTK-specific signal
+  // has actually been observed.
+  const hasRtkEvidence =
+    rtkSatellites !== undefined ||
+    qualityCode === 10 ||
+    modeCode === 18;
+
+  if (!hasRtkEvidence) {
     return undefined;
   }
 
   const fixState = fixStateFromCode(fixStateCode);
   const isFixed =
-    fixStateCode !== undefined
-      ? fixStateCode === 2
-      : qualityCode === 10
-        ? true
-        : undefined;
+    qualityCode !== undefined
+      ? qualityCode === 10 &&
+        (fixStateCode === undefined || fixStateCode === 2)
+      : undefined;
 
   return {
     fixState,
