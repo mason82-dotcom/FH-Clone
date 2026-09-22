@@ -17,6 +17,11 @@ export interface WpmlPayloadInfo {
   model?: string;
 }
 
+export interface WpmlAutoRerouteInfo {
+  missionAutoRerouteMode?: boolean;
+  transitionalAutoRerouteMode?: boolean;
+}
+
 export interface WpmlMissionConfig {
   rawXml: string;
   flyToWaylineMode?: string;
@@ -29,6 +34,7 @@ export interface WpmlMissionConfig {
   globalTransitionalSpeedMps?: number;
   /** Required by DJI in waylines.wpml; kept read-only and never implies RTH authority. */
   globalRthHeightM?: number;
+  autoReroute?: WpmlAutoRerouteInfo;
   drone?: WpmlDroneInfo;
   payload?: WpmlPayloadInfo;
 }
@@ -65,6 +71,15 @@ export interface WpmlWaypoint {
   actionGroups: WpmlActionGroup[];
 }
 
+export interface WpmlTemplatePayloadParam {
+  rawXml: string;
+  positionIndex?: number;
+  /** DJI raw comma-separated imageFormat value, preserved losslessly. */
+  imageFormat?: string;
+  /** Parsed convenience view of imageFormat. Unknown values stay intact. */
+  imageFormats: string[];
+}
+
 export interface WpmlTemplateFolder {
   rawXml: string;
   templateType: string;
@@ -73,6 +88,7 @@ export interface WpmlTemplateFolder {
   coordinateMode?: string;
   heightMode?: string;
   positioningType?: string;
+  payloadParam?: WpmlTemplatePayloadParam;
   waypoints: WpmlWaypoint[];
 }
 
