@@ -25,7 +25,7 @@ Java 17
 Maven
 ```
 
-Für den V3-Gesamtstack werden Docker und Docker Compose benötigt.
+Für den V3-Gesamtstack werden Docker und Docker Compose sowie TimescaleDB/PostgreSQL benötigt.
 
 ## Lokale Node.js-Prüfung
 
@@ -70,6 +70,17 @@ DJI_CLOUD_API_VERSION=1.16.1
 EMQX_AUTHZ_TOKEN=...
 ```
 
+### Missionspersistenz
+
+```env
+TIMESCALE_URL=postgresql://...
+RTK_SOURCE_LABEL=...
+RTK_SOURCE_PROVIDER=...
+```
+
+Ohne `TIMESCALE_URL` läuft die automatische Missionssitzung weiterhin
+In-Memory.
+
 Secrets niemals committen.
 
 ## Health
@@ -96,7 +107,7 @@ Der finale Stack muss mindestens enthalten:
 control-api
 emqx
 web
-postgres
+timescaledb
 ```
 
 UgCS bleibt optional.
