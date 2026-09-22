@@ -24,7 +24,7 @@ import {
 import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
-import { createFh2OpenApiFromEnv, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
+import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 
@@ -288,7 +288,14 @@ const publicServer = createServer(async (request, response) => {
 
     return json(response, 404, { error: "not_found" });
   } catch (error) {
-    return json(response, 500, { error: errorMessage(error) });
+    const message = errorMessage(error);
+    if (message.startsWith("invalid_query_")) {
+      return json(response, 400, { error: message });
+    }
+    if (error instanceof Fh2OpenApiError) {
+      return json(response, 502, { error: "fh2_upstream_error" });
+    }
+    return json(response, 500, { error: message });
   }
 });
 
