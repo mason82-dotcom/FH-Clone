@@ -1,7 +1,7 @@
 export interface DjiPayloadProfile {
   payloadIndex: string;
   name: string;
-  family: "mavic-3-enterprise" | "matrice-4";
+  family: "mavic-3-enterprise" | "matrice-4" | "matrice-4d";
   thermal: boolean;
 }
 
@@ -40,6 +40,18 @@ export const DJI_PAYLOAD_PROFILES: Readonly<Record<string, DjiPayloadProfile>> =
     payloadIndex: "89-0-0",
     name: "DJI Matrice 4T Camera",
     family: "matrice-4",
+    thermal: true
+  },
+  "98-0-0": {
+    payloadIndex: "98-0-0",
+    name: "DJI Matrice 4D Camera",
+    family: "matrice-4d",
+    thermal: false
+  },
+  "99-0-0": {
+    payloadIndex: "99-0-0",
+    name: "DJI Matrice 4TD Camera",
+    family: "matrice-4d",
     thermal: true
   }
 };
