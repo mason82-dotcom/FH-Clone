@@ -57,13 +57,16 @@ export class ControlCoordinator {
       await this.dji.drc.requestCloudControlAuthority(gatewaySn, input.authority);
       authorityRequested = true;
       await this.waitForAuthority(gatewaySn);
+      await this.sessions.markAuthorized(gatewaySn);
 
       const authorized = this.guards(input.aircraftSn, input.holder);
       if (!authorized.fc3 || !authorized.controlLease || !authorized.capability || !authorized.djiAuthority) {
         throw new Error("drc_guards_changed_before_enter");
       }
+      await this.sessions.markAuthorityGrabbed(gatewaySn);
       await this.dji.drc.enterDrcMode(gatewaySn, input.drc);
       drcEntered = true;
+      await this.sessions.markDrcModeActive(gatewaySn);
       const finalGuards = this.guards(input.aircraftSn, input.holder);
       return await this.sessions.activate({ gatewaySn, guards: finalGuards });
     } catch (error) {
