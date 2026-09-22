@@ -71,15 +71,15 @@ export function getDjiCloudControlProfile(
       flyTo: false,
       pointingFlight: false,
       orbitFlight: false,
-      payloadControl: supportedGateway,
-      requiresCloudControlAuthority: supportedGateway,
-      drcProfile: supportedGateway ? "pilot-m3-payload" : "none",
+      payloadControl: false,
+      requiresCloudControlAuthority: false,
+      drcProfile: "none",
       // DJI documents payload control, but FH2 V3 has no generic
       // AircraftAdapter.execute() payload implementation yet.
       capabilities: [],
       reason: supportedGateway
-        ? "DJI Pilot Cloud documents Mavic 3 Enterprise Series behind RC Pro Enterprise as payload-control only; cloud control still requires RC authorization, while the physical RC joystick remains available for flight."
-        : "Mavic 3 Enterprise Pilot-Cloud capabilities are only enabled after a supported RC Pro Enterprise gateway is identified."
+        ? "DJI documents Mavic 3 Enterprise Series payload control behind RC Pro Enterprise, but FH2 V3 does not yet implement a routable camera/gimbal/payload command path; runtime write support therefore remains disabled."
+        : "Mavic 3 Enterprise Pilot-Cloud runtime support remains disabled until a supported RC Pro Enterprise gateway and an implemented payload command path are available."
     };
   }
 
@@ -88,9 +88,9 @@ export function getDjiCloudControlProfile(
     return {
       flightControl: supportedGateway,
       flyTo: supportedGateway,
-      pointingFlight: supportedGateway,
-      orbitFlight: supportedGateway,
-      payloadControl: supportedGateway,
+      pointingFlight: false,
+      orbitFlight: false,
+      payloadControl: false,
       requiresCloudControlAuthority: supportedGateway,
       drcProfile: supportedGateway ? "pilot-m4-stick" : "none",
       // M4 flight control is implemented through the dedicated
@@ -100,8 +100,8 @@ export function getDjiCloudControlProfile(
       // advertised to CapabilityRouter here.
       capabilities: [],
       reason: supportedGateway
-        ? "DJI Pilot Cloud documents Matrice 4 Series behind RC Plus 2 as supporting cloud flight and payload control, including pointing/orbit modes; flight control still requires explicit authority and FH-Clone FC3."
-        : "Matrice 4 Pilot-Cloud flight capabilities are only enabled after a supported RC Plus 2 gateway is identified."
+        ? "FH2 V3 implements Matrice 4 stick/DRC and FlyTo through the dedicated ControlCoordinator/DRC path. DJI also documents RTH, pointing/orbit and payload control, but those paths are not implemented in FH2 V3 and therefore remain disabled."
+        : "Matrice 4 runtime control is only enabled after a supported RC Plus 2 gateway is identified."
     };
   }
 
