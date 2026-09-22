@@ -5,7 +5,7 @@
 FH2 trennt Laufzeitmodelle im Aircraft Core von der geplanten V3-Persistenz.
 
 Die In-Memory-Registries bleiben für schnelle Laufzeitentscheidungen wichtig.
-PostgreSQL ergänzt sie um Historie und Neustartfestigkeit.
+TimescaleDB/PostgreSQL ergänzt sie um Historie und Neustartfestigkeit.
 
 ## Aktuell implementierte Core-Typen
 
@@ -168,9 +168,16 @@ Nicht im Typ repräsentierbar:
 - Passwort
 - Token
 
-## V3-Persistenzziel
+## V3-Persistenz
 
-PostgreSQL soll mindestens folgende fachliche Bereiche abbilden.
+Ein erstes TimescaleDB-/PostgreSQL-Schema ist implementiert:
+
+- relationale Tabelle `missions`
+- Hypertable `telemetry`
+- kontinuierliches Aggregat `telemetry_1m`
+- MissionStore für automatische Missionssitzungen
+
+Weitere fachliche Bereiche bleiben V3-Ziel:
 
 ### Geräte
 
@@ -275,7 +282,7 @@ Mindestens relevant:
 Wichtiges V3-Prinzip:
 
 ```text
-PostgreSQL = Historie / Inventar / Neustartdaten
+TimescaleDB/PostgreSQL = Historie / Inventar / Neustartdaten
 Runtime Registry = aktuelle Autorisierungswahrheit
 ```
 
@@ -284,6 +291,11 @@ erzeugen, wenn die Runtime-Topologie ihn nicht bestätigt.
 
 Dasselbe gilt für aktive DRC-Sitzungen: eine alte persistierte Sitzung darf
 nach Neustart nicht automatisch wieder als aktiv gelten.
+
+Für automatische Flugsitzungen ist dieses Prinzip bereits umgesetzt:
+offene Datenbankzeilen werden beim Dienstneustart mit
+`end_reason = service_restart` abgeschlossen; sie werden nicht als aktive
+Laufzeitsitzung rehydriert.
 
 ## Zeitstempel
 
