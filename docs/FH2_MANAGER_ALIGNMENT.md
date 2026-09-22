@@ -83,13 +83,26 @@ Die dokumentierte DJI-Semantik bleibt nur Referenz:
   getrennte Zustände.
 
 Diese Deaktivierung betrifft ausdrücklich den FlightHub-2-/SIKONG-CE-
-Bezahlpfad. Die technisch getrennte DJI Cloud API mit eigener
-`url_type`-/RTMP-/GB28181-/WebRTC-/Agora-Semantik bleibt als Herstellervertrag
-dokumentiert, ist dadurch aber **nicht automatisch als FH2-V3-Produktfunktion
-freigegeben**.
+Bezahlpfad.
 
-Eine spätere Aktivierung dieses Bezahlfeatures erfordert einen neuen
-ausdrücklichen Auftrag des Projektinhabers.
+Für FH2 ist stattdessen der kostenfreie Self-Hosted-Pfad verbindlich:
+
+```text
+DJI Cloud API / Pilot 2
+  -> RTMP ingest
+  -> MediaMTX
+  -> WebRTC
+  -> FH2 WebUI
+```
+
+HLS ist nur Fallback. Der Start erfolgt über `live_start_push` mit
+`url_type=1` und einer eigenen MediaMTX-RTMP-Zieladresse. Stop, Qualität und
+Lens-Wechsel verwenden die dokumentierten DJI-Services. Die Browserseite erhält
+keine DJI- oder RTMP-Publish-Credentials.
+
+Der Standard ist dokumentiert in `docs/LIVESTREAM.md`. Die Capability
+`livestream.read` wird erst nach End-to-End-Implementierung und realer
+Hardwareabnahme beworben.
 
 
 ## DJI Cloud API
