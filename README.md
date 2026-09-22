@@ -42,7 +42,7 @@ FH2-Control-API
       +-- Audit
       +-- Safety / Control Authority
       |
-      +------ PostgreSQL
+      +------ TimescaleDB/PostgreSQL
       |
       v
 SDK-neutraler Aircraft Core
@@ -87,7 +87,7 @@ Auf `main` sind unter anderem vorhanden:
 Noch nicht als V3 freigegeben sind insbesondere:
 
 - finaler Root-Compose-Gesamtstack
-- vollständige PostgreSQL-Persistenz
+- vollständige TimescaleDB-/PostgreSQL-Persistenz
 - endgültige EMQX-Authentifizierung mit Gateway-Credential-Bindung
 - reale RC-Pro-Verifikation des MQTT-Sitzungsverhaltens
 - finaler Multispektral-/Media-Vertrag
@@ -192,6 +192,8 @@ Der Einstiegspunkt für alle Dokumente ist:
 - [DRC](docs/DRC.md)
 - [RTK und NTRIP](docs/RTK_NTRIP.md)
 - [Medien und Multispektral](docs/MULTISPEKTRAL.md)
+- [Missionen und Flugsitzungen](docs/MISSIONEN.md)
+- [Persistenz mit TimescaleDB/PostgreSQL](docs/PERSISTENZ.md)
 - [Betrieb und Fehlersuche](docs/BETRIEB.md)
 - [Kompatibilität](docs/COMPATIBILITY.md)
 - [FH2-Manager-Abgleich](docs/FH2_MANAGER_ALIGNMENT.md)
