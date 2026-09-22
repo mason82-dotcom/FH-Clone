@@ -8,6 +8,8 @@ import {
   DjiCloudAdapter,
   DrcSessionManager,
   InMemoryDrcSessionStore,
+  isDjiM3mMediaInput,
+  normalizeDjiM3mMediaMetadata,
   type DjiCloudAdapterOptions,
   type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
@@ -410,6 +412,36 @@ const internalServer = createServer(async (request, response) => {
         return json(response, 200, {
           result: "deny",
           is_superuser: false
+        });
+      }
+    }
+
+    if (request.method === "POST" && request.url === "/internal/media/dji-m3m") {
+      try {
+        if (!hasValidBearerToken(request, mediaIngestToken)) {
+          return json(response, 401, { error: "media_ingest_unauthorized" });
+        }
+
+        const body = await readJson<unknown>(request, 2_000_000);
+        if (!isDjiM3mMediaInput(body)) {
+          return json(response, 400, { error: "invalid_m3m_media_input" });
+        }
+
+        const normalized = normalizeDjiM3mMediaMetadata(body);
+        const overlay = mediaOverlays.upsert(normalized.asset);
+
+        return json(response, 200, {
+          asset: normalized.asset,
+          captureUuid: normalized.captureUuid ?? null,
+          conflicts: normalized.conflicts,
+          radiometry: normalized.radiometry,
+          sourceKeys: normalized.sourceKeys,
+          overlayed: Boolean(overlay)
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "m3m_media_normalization_failed",
+          detail: errorMessage(error)
         });
       }
     }
