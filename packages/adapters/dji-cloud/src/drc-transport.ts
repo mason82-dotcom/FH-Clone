@@ -95,11 +95,15 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
         return;
       }
 
-      void this.options.onMessage?.({
-        ...context,
-        topic: receivedTopic,
-        payload,
-        receivedAt: Date.now()
+      void Promise.resolve(
+        this.options.onMessage?.({
+          ...context,
+          topic: receivedTopic,
+          payload,
+          receivedAt: Date.now()
+        })
+      ).catch((error: unknown) => {
+        console.error("DJI DRC inbound processing failed", error);
       });
     });
 
@@ -125,7 +129,7 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
       };
 
       const onConnect = () => {
-        client.subscribe(topic, { qos: 0 }, (error?: Error) => {
+        client.subscribe(topic, { qos: 0 }, (error?: Error | null) => {
           if (error) return fail(error);
           if (settled) return;
           if (generation !== this.generation) {
