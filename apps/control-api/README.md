@@ -249,6 +249,7 @@ Bei fehlenden RTK-Werten prüfen:
 
 ## Lokale Betriebsdokumentation
 
+- [API-Referenz](../../docs/API.md)
 - [Betrieb](../../docs/BETRIEB.md)
 - [Konfiguration](../../docs/KONFIGURATION.md)
 - [Fehlersuche](../../docs/FEHLERSUCHE.md)
