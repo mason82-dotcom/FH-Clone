@@ -83,6 +83,8 @@ Regeln:
 
 - keine Shared Credentials für mehrere Gateways
 - Passwort niemals im Klartext persistieren
+- Verifikation über starkes Passwort-Hashing
+- Credential-Status darf von AuthN/AuthZ gelesen werden
 - Rotation pro Gateway möglich
 - deaktivierbare Principals
 - keine Secrets in Logs
@@ -110,6 +112,15 @@ Erfolgreiche Antwort soll mindestens enthalten:
 ```
 
 `is_superuser` bleibt immer `false`.
+
+Für das EMQX-5.7-Profil wird `expire_at` nicht verwendet; dieses Feld steht
+für HTTP-Authentifizierung erst ab EMQX 5.8 zur Verfügung. Credential-
+Deaktivierung muss deshalb zusätzlich in der laufenden AuthZ-Prüfung wirksam
+werden und darf nicht erst auf einen Reconnect warten.
+
+Unbekannter Principal, falsches Passwort, deaktiviertes Credential,
+ungültige Gateway-Bindung und interne Fehler liefern HTTP 200 + `result=deny`.
+4xx/5xx werden nicht als Sicherheitsentscheidung verwendet.
 
 Ein `clientid_override` wird nicht verwendet, solange die reale
 Pilot-2-Sitzungslogik nicht ausreichend verifiziert ist.
