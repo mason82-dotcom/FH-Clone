@@ -128,6 +128,8 @@ export class InMemoryDrcSessionStore implements DrcSessionStore {
 }
 
 export interface DrcSessionManagerOptions {
+  /** Maximum age of drc_status_notify before the RC-side DRC state becomes unknown. */
+  drcStatusStaleAfterMs?: number;
   /** Local FH-Clone dead-man threshold; not a DJI protocol constant. */
   degradeAfterMs?: number;
   /** Local FH-Clone close threshold; not a DJI protocol constant. */
@@ -216,6 +218,7 @@ export class DrcSessionManager {
   private readonly closeAfterMs: number;
   private readonly checkIntervalMs: number;
   private readonly sessionTtlMs: number;
+  private readonly drcStatusStaleAfterMs: number;
   private readonly now: () => number;
   private readonly onStateChange:
     | ((record: DrcSessionRecord) => void | Promise<void>)
@@ -232,6 +235,7 @@ export class DrcSessionManager {
     this.degradeAfterMs = options.degradeAfterMs ?? 500;
     this.closeAfterMs = options.closeAfterMs ?? 2_000;
     this.checkIntervalMs = options.checkIntervalMs ?? 100;
+    this.drcStatusStaleAfterMs = options.drcStatusStaleAfterMs ?? 30_000;
     this.sessionTtlMs = Math.min(
       options.sessionTtlMs ?? 24 * 60 * 60 * 1_000,
       24 * 60 * 60 * 1_000
@@ -248,6 +252,9 @@ export class DrcSessionManager {
     }
     if (this.checkIntervalMs <= 0) {
       throw new RangeError("checkIntervalMs must be greater than zero");
+    }
+    if (this.drcStatusStaleAfterMs <= 0) {
+      throw new RangeError("drcStatusStaleAfterMs must be greater than zero");
     }
     if (this.sessionTtlMs <= 0) {
       throw new RangeError("sessionTtlMs must be greater than zero");
@@ -313,6 +320,23 @@ export class DrcSessionManager {
       lastDrcStatusAt: this.now(),
       updatedAt: this.now()
     };
+    await this.persist(record);
+    return { ...record };
+  }
+
+  async getDrcStatus(gatewaySn: string): Promise<0 | 1 | 2 | "unknown"> {
+    const current = await this.store.get(gatewaySn);
+    if (!current || current.lastDrcStatus === undefined || current.lastDrcStatusAt === undefined) {
+      return "unknown";
+    }
+    if (this.now() - current.lastDrcStatusAt > this.drcStatusStaleAfterMs) return "unknown";
+    return current.lastDrcStatus;
+  }
+
+  async markTransportLost(gatewaySn: string, reason = "transport_lost"): Promise<DrcSessionRecord | undefined> {
+    const current = await this.store.get(gatewaySn);
+    if (!current || current.state === "closed" || current.state === "idle") return current;
+    const record = { ...current, transportConnected: false, updatedAt: this.now(), reason };
     await this.persist(record);
     return { ...record };
   }
