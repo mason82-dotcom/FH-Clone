@@ -13,7 +13,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: director-v3-validation
@@ -25,7 +25,7 @@ jobs:
     if: ${{ github.event_name == 'push' || inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Repository auschecken
         uses: actions/checkout@v4
@@ -65,6 +65,20 @@ jobs:
 
       - name: Tests
         run: npm test
+
+      - name: Validiertes Lockfile im Director-Branch sichern
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "FH2 Director"
+          git config user.email "actions@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "package-lock.json ist bereits identisch."
+          else
+            git commit -m "build: add validated package-lock [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
 
       - name: Erfolgreichen Lockfile als Artefakt sichern
         uses: actions/upload-artifact@v4
