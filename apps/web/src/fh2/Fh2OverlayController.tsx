@@ -41,6 +41,57 @@ interface AircraftPosition {
   heightM?: number;
 }
 
+interface MediaOverlayPoint {
+  id: string;
+  layer: "thermal" | "multispectral";
+  deviceId: string;
+  sensorKind: string;
+  profile: string;
+  latitudeDeg: number;
+  longitudeDeg: number;
+  heightM?: number;
+  capturedAt?: number;
+  missionId?: string;
+  payloadId?: string;
+  band?: string;
+  fileName?: string;
+}
+
+interface MediaOverlayResponse {
+  thermal: MediaOverlayPoint[];
+  multispectral: MediaOverlayPoint[];
+}
+
+interface UgcsRoutePoint {
+  latitudeDeg: number;
+  longitudeDeg: number;
+  altitudeM?: number;
+  aglAltitudeM?: number;
+}
+
+interface UgcsRoute {
+  id: string;
+  name: string;
+  segments?: Array<{
+    id?: string;
+    figureType?: string;
+    points: UgcsRoutePoint[];
+  }>;
+}
+
+interface UgcsTelemetryValue {
+  time?: number;
+  value: unknown;
+  semantic?: string;
+  subsystem?: string;
+  code?: string;
+}
+
+type UgcsTelemetrySnapshot = Record<
+  string,
+  Record<string, UgcsTelemetryValue>
+>;
+
 const OVERLAY_KINDS: readonly Fh2OverlayKind[] = [
   "rtk",
   "thermal",
@@ -50,7 +101,7 @@ const OVERLAY_KINDS: readonly Fh2OverlayKind[] = [
 
 const OVERLAY_LABELS: Record<Fh2OverlayKind, string> = {
   rtk: "RTK",
-  thermal: "M4T Thermal",
+  thermal: "Thermal",
   multispectral: "Multispektral",
   ugcs: "UgCS"
 };
@@ -76,6 +127,9 @@ export function Fh2OverlayController({
   const bridgeRef = useRef<Fh2CesiumOverlayBridge | undefined>(undefined);
 
   useEffect(() => subscribeFh2Overlays(setSnapshot), []);
+
+  useMediaOverlayFeed();
+  useUgcsOverlayFeed();
 
   useEffect(() => {
     const features: Fh2OverlayFeature[] = rtkDevices.flatMap((status) => {
@@ -139,6 +193,246 @@ export function Fh2OverlayController({
     setFh2OverlayFeatures("thermal", "m4t-platform", features);
     return () => clearFh2OverlayProducer("thermal", "m4t-platform");
   }, [positions, topology]);
+
+
+function useMediaOverlayFeed(): void {
+  useEffect(() => {
+    let cancelled = false;
+
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/media/overlays", {
+          headers: { accept: "application/json" }
+        });
+        if (!response.ok) throw new Error(`media overlays HTTP ${response.status}`);
+
+        const data = (await response.json()) as MediaOverlayResponse;
+        if (cancelled) return;
+
+        setFh2OverlayFeatures(
+          "thermal",
+          "media-captures",
+          toMediaFeatures(data.thermal ?? [])
+        );
+        setFh2OverlayFeatures(
+          "multispectral",
+          "media-captures",
+          toMediaFeatures(data.multispectral ?? [])
+        );
+      } catch {
+        if (cancelled) return;
+        clearFh2OverlayProducer("thermal", "media-captures");
+        clearFh2OverlayProducer("multispectral", "media-captures");
+      }
+    };
+
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      clearFh2OverlayProducer("thermal", "media-captures");
+      clearFh2OverlayProducer("multispectral", "media-captures");
+    };
+  }, []);
+}
+
+function useUgcsOverlayFeed(): void {
+  useEffect(() => {
+    let cancelled = false;
+
+    const refresh = async () => {
+      try {
+        const [routesResponse, telemetryResponse] = await Promise.all([
+          fetch("/api/ugcs/routes", { headers: { accept: "application/json" } }),
+          fetch("/api/ugcs/telemetry", { headers: { accept: "application/json" } })
+        ]);
+
+        if (!routesResponse.ok || !telemetryResponse.ok) {
+          throw new Error("UgCS bridge unavailable");
+        }
+
+        const routes = (await routesResponse.json()) as UgcsRoute[];
+        const telemetry =
+          (await telemetryResponse.json()) as UgcsTelemetrySnapshot;
+
+        if (cancelled) return;
+
+        setFh2OverlayFeatures("ugcs", "routes", toUgcsRouteFeatures(routes));
+        setFh2OverlayFeatures(
+          "ugcs",
+          "vehicles",
+          toUgcsTelemetryFeatures(telemetry)
+        );
+      } catch {
+        if (cancelled) return;
+        clearFh2OverlayProducer("ugcs", "routes");
+        clearFh2OverlayProducer("ugcs", "vehicles");
+      }
+    };
+
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 2_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      clearFh2OverlayProducer("ugcs", "routes");
+      clearFh2OverlayProducer("ugcs", "vehicles");
+    };
+  }, []);
+}
+
+function toMediaFeatures(
+  points: readonly MediaOverlayPoint[]
+): Fh2OverlayFeature[] {
+  return points.map((point) => ({
+    type: "point",
+    id: point.id,
+    position: {
+      longitudeDeg: point.longitudeDeg,
+      latitudeDeg: point.latitudeDeg,
+      ...(point.heightM !== undefined ? { heightM: point.heightM } : {})
+    },
+    label:
+      point.layer === "thermal"
+        ? `Thermal · ${point.deviceId}`
+        : `${point.profile} · ${point.deviceId}`,
+    description: [
+      `Asset: ${point.id}`,
+      `Gerät: ${point.deviceId}`,
+      `Profil: ${point.profile}`,
+      point.band ? `Band: ${point.band}` : undefined,
+      point.fileName ? `Datei: ${point.fileName}` : undefined,
+      point.payloadId ? `Payload: ${point.payloadId}` : undefined,
+      point.missionId ? `Mission: ${point.missionId}` : undefined,
+      point.capturedAt
+        ? `Aufnahme: ${new Date(point.capturedAt).toISOString()}`
+        : undefined
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join("<br>")
+  }));
+}
+
+function toUgcsRouteFeatures(
+  routes: readonly UgcsRoute[]
+): Fh2OverlayFeature[] {
+  return routes.flatMap((route) =>
+    (route.segments ?? []).flatMap((segment, segmentIndex) => {
+      const positions = segment.points
+        .filter(
+          (point) =>
+            Number.isFinite(point.latitudeDeg) &&
+            Number.isFinite(point.longitudeDeg)
+        )
+        .map((point) => ({
+          latitudeDeg: point.latitudeDeg,
+          longitudeDeg: point.longitudeDeg,
+          ...(point.altitudeM !== undefined
+            ? { heightM: point.altitudeM }
+            : {})
+        }));
+
+      if (positions.length === 0) return [];
+
+      const id = `${route.id}:${segment.id ?? segmentIndex}`;
+      const description = segment.points.some(
+        (point) =>
+          point.aglAltitudeM !== undefined &&
+          point.altitudeM === undefined
+      )
+        ? "UgCS-Route; AGL-Höhen werden ohne Terrainreferenz bewusst nur als 2D-Geometrie dargestellt."
+        : "UgCS-Route aus UCS Segment/Figure-Geometrie.";
+
+      if (segment.figureType === "FT_POLYGON" && positions.length >= 3) {
+        return [{
+          type: "polygon",
+          id,
+          positions,
+          label: route.name,
+          description
+        } satisfies Fh2OverlayFeature];
+      }
+
+      if (positions.length === 1) {
+        return [{
+          type: "point",
+          id,
+          position: positions[0]!,
+          label: route.name,
+          description
+        } satisfies Fh2OverlayFeature];
+      }
+
+      return [{
+        type: "line",
+        id,
+        positions,
+        label: route.name,
+        description
+      } satisfies Fh2OverlayFeature];
+    })
+  );
+}
+
+function toUgcsTelemetryFeatures(
+  snapshot: UgcsTelemetrySnapshot
+): Fh2OverlayFeature[] {
+  const features: Fh2OverlayFeature[] = [];
+
+  for (const [vehicleId, values] of Object.entries(snapshot)) {
+    const latitude = findUgcsSemantic(values, "S_LATITUDE");
+    const longitude = findUgcsSemantic(values, "S_LONGITUDE");
+    if (latitude === undefined || longitude === undefined) continue;
+
+    const latitudeDeg = radiansToDegrees(latitude);
+    const longitudeDeg = radiansToDegrees(longitude);
+    if (
+      latitudeDeg < -90 ||
+      latitudeDeg > 90 ||
+      longitudeDeg < -180 ||
+      longitudeDeg > 180
+    ) {
+      continue;
+    }
+
+    const altitudeM =
+      findUgcsSemantic(values, "S_ALTITUDE_AMSL") ??
+      findUgcsSemantic(values, "S_ALTITUDE_RAW");
+
+    features.push({
+      type: "point",
+      id: `vehicle:${vehicleId}`,
+      position: {
+        latitudeDeg,
+        longitudeDeg,
+        ...(altitudeM !== undefined ? { heightM: altitudeM } : {})
+      },
+      label: `UgCS · ${vehicleId}`,
+      description: "Live-Position aus UCS-Telemetrie."
+    });
+  }
+
+  return features;
+}
+
+function findUgcsSemantic(
+  values: Record<string, UgcsTelemetryValue>,
+  semantic: string
+): number | undefined {
+  for (const value of Object.values(values)) {
+    if (value.semantic !== semantic) continue;
+    const numeric = numberValue(value.value);
+    if (numeric !== undefined) return numeric;
+  }
+  return undefined;
+}
+
+function radiansToDegrees(value: number): number {
+  return (value * 180) / Math.PI;
+}
 
   useEffect(() => {
     bridgeRef.current?.destroy();
