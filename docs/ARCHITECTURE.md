@@ -118,8 +118,14 @@ Beispiele:
 - `control.flight`
 - `control.rth`
 
-Eine Capability darf nur gemeldet werden, wenn der aktive Adapter sie für das
-konkrete Gerät tatsächlich unterstützt.
+Eine Capability in `AdapterDevice.capabilities[]` darf nur gemeldet werden,
+wenn der aktive Adapter sie für das konkrete Gerät über seinen vorgesehenen
+Adapterpfad tatsächlich erfüllen kann.
+
+Herstellerseitig dokumentierter Produktsupport ist davon getrennt. Spezielle
+Runtime-Pfade wie der M4-`ControlCoordinator`/DRC-Flow dürfen eigene
+Support-Flags besitzen, ohne dadurch eine nicht ausführbare generische
+`AircraftAdapter.execute()`-Capability vorzutäuschen.
 
 ## Gateway- und Geräteidentität
 
