@@ -60,6 +60,10 @@ services:
       RTK_SOURCE_LABEL: ${RTK_SOURCE_LABEL:-}
       RTK_SOURCE_PROVIDER: ${RTK_SOURCE_PROVIDER:-}
       LOG_RAW_DJI: ${LOG_RAW_DJI:-0}
+
+      UGCS_BRIDGE_URL: ${UGCS_BRIDGE_URL:-}
+      UGCS_BRIDGE_TIMEOUT_MS: ${UGCS_BRIDGE_TIMEOUT_MS:-5000}
+      MEDIA_INGEST_TOKEN: ${MEDIA_INGEST_TOKEN:-}
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -103,6 +107,26 @@ services:
     networks:
       - backend
       - mqtt_edge
+
+  ugcs-bridge:
+    profiles: ["ugcs"]
+    build:
+      context: ./services/ugcs-bridge
+      dockerfile: Dockerfile
+    environment:
+      UGCS_HOST: ${UGCS_HOST:-host.docker.internal}
+      UGCS_PORT: ${UGCS_PORT:-3334}
+      UGCS_USER: ${UGCS_USER:-}
+      UGCS_PASSWORD: ${UGCS_PASSWORD:-}
+      BRIDGE_BIND: 0.0.0.0
+      BRIDGE_PORT: 8092
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "8092"
+    restart: unless-stopped
+    networks:
+      - backend
 
   web:
     build:
