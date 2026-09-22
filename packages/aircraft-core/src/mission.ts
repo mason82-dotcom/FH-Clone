@@ -1,3 +1,40 @@
+export type MissionReferenceKind =
+  | "wayline"
+  | "fh2_flight_task"
+  | "dji_mission"
+  | "ugcs_mission";
+
+export type MissionReferenceSource =
+  | "fh2_openapi_v2"
+  | "dji_pilot_wayline"
+  | "dji_wpml"
+  | "ugcs"
+  | "manual";
+
+export type MissionReferenceConfidence =
+  | "authoritative"
+  | "derived"
+  | "heuristic";
+
+export interface MissionExternalReference {
+  kind: MissionReferenceKind;
+  id: string;
+  source: MissionReferenceSource;
+  confidence: MissionReferenceConfidence;
+}
+
+export function createMissionExternalReference(
+  input: MissionExternalReference
+): MissionExternalReference {
+  const id = input.id.trim();
+  if (!id) throw new Error("Mission reference id is required");
+
+  return {
+    ...input,
+    id
+  };
+}
+
 export interface RtkCorrectionSourceReference {
   /**
    * Human-readable label only, e.g. "SAPOS BW" or "Company CORS".
