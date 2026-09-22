@@ -30,6 +30,23 @@ interface DevicePair {
   label: string;
 }
 
+function pilotBridgeLabel(
+  state: "disabled" | "unavailable" | "initializing" | "ready" | "error"
+): string {
+  switch (state) {
+    case "disabled":
+      return "deaktiviert";
+    case "unavailable":
+      return "nicht in Pilot 2";
+    case "initializing":
+      return "wird initialisiert";
+    case "ready":
+      return "bereit";
+    case "error":
+      return "Fehler";
+  }
+}
+
 function productName(type: number, subType: number): string {
   if (type === 144 && subType === 0) return "RC Pro Enterprise";
   if (type === 174 && subType === 0) return "RC Plus 2";
@@ -145,7 +162,7 @@ export function Fh2Workspace() {
             className={`fh2-runtime-pill fh2-runtime-pill--${pilotBridge.state}`}
             title={pilotBridge.error ?? pilotBridge.identity.remoteControllerSn ?? "DJI Pilot 2 JSBridge"}
           >
-            Pilot JSBridge {pilotBridge.state === "ready" ? "bereit" : pilotBridge.state === "unavailable" ? "–" : pilotBridge.state}
+            Pilot JSBridge {pilotBridgeLabel(pilotBridge.state)}
           </span>
         </div>
       </div>

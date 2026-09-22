@@ -76,6 +76,12 @@ async function initialize(
       verified = true;
     }
 
+    if (!verified) {
+      throw new Error(
+        "DJI Pilot 2 JSBridge ist nicht verifiziert; License-Prüfung bleibt fail-closed"
+      );
+    }
+
     if (config.workspaceId) {
       client.setWorkspaceId(config.workspaceId);
     }
