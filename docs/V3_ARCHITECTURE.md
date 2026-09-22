@@ -81,8 +81,9 @@ timescaledb
 
 UgCS bleibt ein optionaler Adapterdienst.
 
-**Aktueller Status:** Einzelkomponenten existieren; der finale Root-Compose-
-Gesamtstart ist noch ein offenes Release-Gate.
+**Aktueller Status:** Root-Compose und die vier Pflichtdienste sind implementiert.
+Der reale gemeinsame Build-/Start-/Restart-Nachweis bleibt wegen des offenen
+R1-Lockfile-/Toolchain-Gates ausstehend.
 
 ## Persistenz-Ziel
 
@@ -103,7 +104,7 @@ PostgreSQL soll mindestens persistieren:
 
 ### Authentifizierung
 
-Zielendpunkt:
+Implementierter interner Endpunkt:
 
 ```http
 POST /internal/emqx/authn
@@ -121,7 +122,7 @@ Credential
 
 ### Autorisierung
 
-Zielendpunkt:
+Implementierter interner Endpunkt:
 
 ```http
 POST /internal/emqx/authz
