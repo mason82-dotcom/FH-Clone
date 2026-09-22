@@ -8,25 +8,24 @@ import type {
 export interface DjiControlRuntime {
   resolveGatewaySn(deviceSn: string): string | undefined;
   supportsFlightControl(deviceSn: string): boolean;
-  isCloudControlAuthorized(deviceOrGatewaySn: string): boolean;
   connectDrcTransport(credentials: EnterDrcModeOptions["mqttBroker"]): Promise<void>;
   disconnectDrcTransport(): Promise<void>;
+  pilotAuthority: {
+    requestFlightAuthority(gatewaySn: string, request: CloudControlAuthRequest): Promise<unknown>;
+    releaseFlightAuthority(gatewaySn: string): Promise<unknown>;
+  };
   drc: {
-    requestCloudControlAuthority(gatewaySn: string, request: CloudControlAuthRequest): Promise<unknown>;
-    releaseCloudControlAuthority(gatewaySn: string): Promise<unknown>;
     enterDrcMode(gatewaySn: string, options: EnterDrcModeOptions): Promise<unknown>;
   };
 }
 
 export interface ControlCoordinatorOptions {
   authorityTimeoutMs?: number;
-  authorityPollMs?: number;
   credentialSafetyWindowS?: number;
 }
 
 export class ControlCoordinator {
   private readonly authorityTimeoutMs: number;
-  private readonly authorityPollMs: number;
   private readonly credentialSafetyWindowS: number;
   private readonly runtime = new Map<string, { holder: string; credentials: EnterDrcModeOptions["mqttBroker"] }>();
 
@@ -37,7 +36,6 @@ export class ControlCoordinator {
     options: ControlCoordinatorOptions = {}
   ) {
     this.authorityTimeoutMs = options.authorityTimeoutMs ?? 15_000;
-    this.authorityPollMs = options.authorityPollMs ?? 100;
     this.credentialSafetyWindowS = options.credentialSafetyWindowS ?? 15;
   }
 
@@ -60,9 +58,8 @@ export class ControlCoordinator {
     let authorityRequested = false;
     let drcEntered = false;
     try {
-      await this.dji.drc.requestCloudControlAuthority(gatewaySn, input.authority);
       authorityRequested = true;
-      await this.waitForAuthority(gatewaySn);
+      await this.dji.pilotAuthority.requestFlightAuthority(gatewaySn, { ...input.authority, timeoutMs: this.authorityTimeoutMs });
       await this.sessions.markAuthorized(gatewaySn);
 
       const authorized = this.guards(input.aircraftSn, input.holder);
@@ -86,7 +83,7 @@ export class ControlCoordinator {
       }
       await this.dji.disconnectDrcTransport().catch(() => undefined);
       if (authorityRequested) {
-        await this.dji.drc.releaseCloudControlAuthority(gatewaySn).catch(() => undefined);
+        await this.dji.pilotAuthority.releaseFlightAuthority(gatewaySn).catch(() => undefined);
       }
       throw error;
     }
