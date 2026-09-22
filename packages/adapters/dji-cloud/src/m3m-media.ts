@@ -312,8 +312,10 @@ export function normalizeDjiM3mMediaMetadata(
     ...(calibratedHMatrix ? { calibratedHMatrix } : {})
   };
 
-  const sensorConfidence: SourceConfidence =
-    imageSource?.startsWith("MS_") ? "authoritative" : "derived";
+  const hasKnownBand = Boolean(band && band.name !== "UNKNOWN");
+  const sensorConfidence: SourceConfidence = hasKnownBand
+    ? "authoritative"
+    : "unavailable";
 
   const asset: MediaAsset = {
     id: input.assetId,
@@ -321,13 +323,13 @@ export function normalizeDjiM3mMediaMetadata(
     ...(input.fileName ? { fileName: input.fileName } : {}),
     sensor: {
       id: input.sensorId,
-      kind: "multispectral",
+      kind: hasKnownBand ? "multispectral" : "unknown",
       confidence: sensorConfidence,
       ...(imageSource ? { label: imageSource } : {})
     },
     ...(band ? { band } : {}),
     capture,
-    profile: "MULTISPECTRAL",
+    profile: hasKnownBand ? "MULTISPECTRAL" : "GENERIC",
     metadata: { ...input.metadata }
   };
 
