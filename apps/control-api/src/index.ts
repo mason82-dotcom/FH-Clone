@@ -208,6 +208,22 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, { deviceId, active, lastCompleted });
     }
 
+    const capabilitiesMatch = url.pathname.match(
+      /^\/api\/devices\/([^/]+)\/capabilities$/
+    );
+    if (request.method === "GET" && capabilitiesMatch) {
+      const deviceId = decodeURIComponent(capabilitiesMatch[1] ?? "");
+      return json(response, 200, getDeviceCapabilityView(deviceId));
+    }
+
+    const waylineMatch = url.pathname.match(
+      /^\/api\/devices\/([^/]+)\/wayline$/
+    );
+    if (request.method === "GET" && waylineMatch) {
+      const deviceId = decodeURIComponent(waylineMatch[1] ?? "");
+      return json(response, 200, getWaylineObservation(deviceId));
+    }
+
     if (request.method === "GET" && url.pathname === "/api/rtk") {
       return json(response, 200, rtk.list());
     }
@@ -559,6 +575,77 @@ function enqueueAuthzAudit(
 
 function elapsedUs(startedAt: bigint): number {
   return Number((process.hrtime.bigint() - startedAt) / 1000n);
+}
+
+function getDeviceCapabilityView(deviceId: string) {
+  const adapterDevices = devices.get(deviceId);
+  const djiDevice = adapterDevices.find((device) => device.adapterId === "dji-cloud");
+  const adapterCapabilities = djiDevice?.capabilities ?? [];
+  const controlProfile = dji?.getControlProfile(deviceId);
+  const activeMission = missions.getActive(deviceId);
+  const lastCompletedMission = missions.getLastCompleted(deviceId);
+
+  return {
+    deviceId,
+    adapters: adapterDevices.map((device) => ({
+      adapterId: device.adapterId,
+      connected: device.connected,
+      lastSeenAt: device.lastSeenAt,
+      capabilities: device.capabilities
+    })),
+    djiCloud: {
+      controlProfile: controlProfile ?? null,
+      genericAdapterCapabilities: adapterCapabilities,
+      specializedRuntime: controlProfile
+        ? {
+            flightControl: controlProfile.flightControl,
+            flyTo: controlProfile.flyTo,
+            pointingFlight: controlProfile.pointingFlight,
+            orbitFlight: controlProfile.orbitFlight,
+            payloadControl: controlProfile.payloadControl,
+            drcProfile: controlProfile.drcProfile,
+            requiresCloudControlAuthority:
+              controlProfile.requiresCloudControlAuthority
+          }
+        : null,
+      wayline: {
+        observedInActiveMission: activeMission?.waylineObserved ?? false,
+        observedInLastCompletedMission:
+          lastCompletedMission?.waylineObserved ?? false,
+        currentlyFlyingWayline: activeMission?.lastActivity === "wayline",
+        executionCapabilityAdvertised:
+          adapterCapabilities.includes("mission.wayline"),
+        managementImplemented:
+          adapterCapabilities.includes("mission.wayline")
+      }
+    }
+  };
+}
+
+function getWaylineObservation(deviceId: string) {
+  const activeMission = missions.getActive(deviceId);
+  const lastCompletedMission = missions.getLastCompleted(deviceId);
+  const adapterCapabilities = devices
+    .get(deviceId)
+    .flatMap((device) => device.capabilities);
+
+  return {
+    deviceId,
+    source: "dji_mode_code",
+    currentlyFlyingWayline: activeMission?.lastActivity === "wayline",
+    observedInActiveMission: activeMission?.waylineObserved ?? false,
+    ...(activeMission ? { activeMissionId: activeMission.missionId } : {}),
+    ...(lastCompletedMission?.waylineObserved
+      ? { lastCompletedWaylineMissionId: lastCompletedMission.missionId }
+      : {}),
+    waylineId: null,
+    executionCapabilityAdvertised:
+      adapterCapabilities.includes("mission.wayline"),
+    managementImplemented:
+      adapterCapabilities.includes("mission.wayline"),
+    note:
+      "mode_code=5 is telemetry evidence of a Wayline flight; it does not prove that FH2 can manage, upload or execute Waylines."
+  };
 }
 
 async function persistSweptMissionEnds(): Promise<void> {
