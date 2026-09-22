@@ -319,8 +319,10 @@ function toMediaFeatures(
 function toUgcsRouteFeatures(
   routes: readonly UgcsRoute[]
 ): Fh2OverlayFeature[] {
-  return routes.flatMap((route) =>
-    (route.segments ?? []).flatMap((segment, segmentIndex) => {
+  const features: Fh2OverlayFeature[] = [];
+
+  for (const route of routes) {
+    for (const [segmentIndex, segment] of (route.segments ?? []).entries()) {
       const positions = segment.points
         .filter(
           (point) =>
@@ -335,7 +337,7 @@ function toUgcsRouteFeatures(
             : {})
         }));
 
-      if (positions.length === 0) return [];
+      if (positions.length === 0) continue;
 
       const id = `${route.id}:${segment.id ?? segmentIndex}`;
       const description = segment.points.some(
@@ -347,34 +349,41 @@ function toUgcsRouteFeatures(
         : "UgCS-Route aus UCS Segment/Figure-Geometrie.";
 
       if (segment.figureType === "FT_POLYGON" && positions.length >= 3) {
-        return [{
+        features.push({
           type: "polygon",
           id,
           positions,
           label: route.name,
           description
-        } satisfies Fh2OverlayFeature];
+        });
+        continue;
       }
+
+      const first = positions[0];
+      if (!first) continue;
 
       if (positions.length === 1) {
-        return [{
+        features.push({
           type: "point",
           id,
-          position: positions[0]!,
+          position: first,
           label: route.name,
           description
-        } satisfies Fh2OverlayFeature];
+        });
+        continue;
       }
 
-      return [{
+      features.push({
         type: "line",
         id,
         positions,
         label: route.name,
         description
-      } satisfies Fh2OverlayFeature];
-    })
-  );
+      });
+    }
+  }
+
+  return features;
 }
 
 function toUgcsTelemetryFeatures(
