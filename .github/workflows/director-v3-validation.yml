@@ -287,6 +287,7 @@ jobs:
           sed -i 's/^FH2_API_BIND=.*/FH2_API_BIND=127.0.0.1/' .env
           sed -i 's/^FH2_WEB_BIND=.*/FH2_WEB_BIND=127.0.0.1/' .env
           sed -i 's/^MQTT_BIND=.*/MQTT_BIND=127.0.0.1/' .env
+          sed -i 's/^EMQX_NODE_COOKIE=.*/EMQX_NODE_COOKIE=ci-emqx-node-cookie-A7-safe/' .env
           sed -i 's/^TIMESCALE_PASSWORD=.*/TIMESCALE_PASSWORD=ci-timescale-A7-safe/' .env
           sed -i 's/^MQTT_BACKEND_PASSWORD=.*/MQTT_BACKEND_PASSWORD=ci-backend-A7-safe/' .env
           sed -i 's/^EMQX_AUTHN_TOKEN=.*/EMQX_AUTHN_TOKEN=ci-authn-A7-safe/' .env
