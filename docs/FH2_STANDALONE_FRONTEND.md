@@ -382,27 +382,60 @@ Solange kein verifizierter Media-/Radiometrie-Feed mit räumlichem Footprint
 vorliegt, erzeugt FH-Clone ausdrücklich **keine** erfundenen Temperaturflächen,
 Isothermen oder Kamera-Footprints.
 
-### Multispektral
+### Thermal-/Multispektral-Medien
 
-Der Multispektral-Layer ist als eigener Producer-/Rendering-Slot vollständig
-registriert.
+Georeferenzierte `MediaAsset`-Objekte können über den internen Media-Ingest
+eingespielt werden. Der Kartenfeed verwendet ausschließlich reale
+`CaptureContext.latitudeDeg/longitudeDeg`-Werte.
 
-Geometrien dürfen erst erzeugt werden, wenn reale `MediaAsset`-/
-`CaptureContext`-Daten eine belastbare Position oder Fläche liefern.
+Öffentlich read-only:
 
-Insbesondere darf aus einem ProcessingProfile oder aus der bloßen Anwesenheit
-eines M3M keine künstliche NDVI-Fläche konstruiert werden.
+```text
+GET /api/media/overlays
+```
+
+Intern:
+
+```text
+POST /internal/media/assets
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+```
+
+Thermal-, MULTISPECTRAL- und NDVI-Assets erscheinen als Capture-Punkte. Ein
+Asset ohne belastbare GPS-Koordinate bleibt im Registry-Kontext erhalten, wird
+aber nicht auf der Karte dargestellt.
+
+Aus einem ProcessingProfile oder aus der bloßen Anwesenheit eines M3M/M4T wird
+weiterhin **keine** künstliche Fläche, kein Kamera-Footprint und kein
+Temperaturraster konstruiert.
 
 ### UgCS
 
-Der UgCS-Layer ist ebenfalls vollständig im gemeinsamen Viewer registriert.
+Die UCS-Bridge liefert jetzt echte Route-Geometrie:
 
-Die aktuelle UCS-Bridge liefert Routen derzeit nur als ID/Name und keine
-Waypoints/Segmente. Deshalb rendert FH-Clone daraus noch keine erfundene
-Route.
+```text
+Route
+ -> SegmentDefinition
+    -> Figure
+       -> FigurePoint[]
+```
 
-Sobald die Bridge explizite normalisierte Koordinaten bereitstellt, kann sie
-über denselben Producer-Vertrag Linien/Polygone hinzufügen.
+Latitude/Longitude werden in der Bridge von UgCS-Radiant nach Grad normiert.
+Absolute WGS84-Höhen werden als `altitudeM` geführt. Reine AGL-Höhen werden
+nicht fälschlich als absolute Cesium-Höhen behandelt; solche Routen werden als
+2D-/terrain-gebundene Geometrie dargestellt.
+
+Die Control API stellt read-only bereit:
+
+```text
+GET /api/ugcs/status
+GET /api/ugcs/vehicles
+GET /api/ugcs/routes
+GET /api/ugcs/telemetry
+```
+
+Die UgCS-Liveposition nutzt Telemetrie-Semantik statt Feldnamenraten:
+`S_LATITUDE`, `S_LONGITUDE`, optional `S_ALTITUDE_AMSL`.
 
 ### Producer-Vertrag
 
