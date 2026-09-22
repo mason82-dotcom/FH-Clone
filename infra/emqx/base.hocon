@@ -1,0 +1,17 @@
+authorization {
+  no_match = deny
+  deny_action = ignore
+
+  cache {
+    max_size = 1024
+    ttl = 5s
+  }
+
+  sources = [
+    {
+      type = file
+      enable = true
+      path = "/opt/emqx/etc/fh-clone-acl.conf"
+    }
+  ]
+}
