@@ -89,7 +89,11 @@ CREATE INDEX IF NOT EXISTS telemetry_drone_time_idx
   ON telemetry (drone_sn, time DESC);
 
 -- Move cold raw chunks to the Hypercore columnstore after seven days.
-CALL add_columnstore_policy('telemetry', after => INTERVAL '7 days');
+CALL add_columnstore_policy(
+  'telemetry',
+  after => INTERVAL '7 days',
+  if_not_exists => true
+);
 
 -- Raw telemetry retention. Mission metadata and continuous aggregates remain.
 SELECT add_retention_policy(
