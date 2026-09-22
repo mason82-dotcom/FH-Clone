@@ -142,8 +142,8 @@ const m3tMqtt = readJson(m3tMqttPath);
 add("M3T_RC_PRO", "REQUIRED_MAIN", "reales redigiertes MQTT-Evidence-Manifest", realEvidence(m3tMqtt), m3tMqttPath);
 if (realEvidence(m3tMqtt)) {
   add("M3T_RC_PRO", "REQUIRED_MAIN", "keine Secrets im öffentlichen M3T-Fixture", !sensitiveValueLeaked(m3tMqtt));
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "RC Pro update_topo auf sys/product/.../status",
-    hasMethod(m3tMqtt, "update_topo") && hasTopic(m3tMqtt, /^sys\/product\/[^/]+\/status$/));
+  add("M3T_RC_PRO", "REQUIRED_MAIN", "RC Pro update_topo auf thing/product/.../status",
+    hasMethod(m3tMqtt, "update_topo") && hasTopic(m3tMqtt, /^thing\/product\/[^/]+\/status$/));
   const gateway = findRecord(m3tMqtt, (v) => Number(v.type) === 144 && Number(v.sub_type ?? v.subType) === 0);
   const aircraft = findRecord(m3tMqtt, (v) => Number(v.type) === 77 && Number(v.sub_type ?? v.subType) === 1);
   add("M3T_RC_PRO", "REQUIRED_MAIN", "Produktidentität RC Pro Enterprise 144/0", Boolean(gateway));
