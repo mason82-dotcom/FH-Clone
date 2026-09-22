@@ -16,7 +16,7 @@ export interface DrcBrokerTransportOptions {
  * reports a successful connect event.
  */
 export class DrcBrokerTransport implements DjiMqttPublisher {
-  private client?: MqttClient;
+  private client: MqttClient | undefined;
   private connected = false;
   private generation = 0;
 
@@ -87,7 +87,11 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
     ++this.generation;
     if (!client) return;
     client.removeAllListeners();
-    await new Promise<void>((resolve) => client.end(false, {}, resolve));
+    await new Promise<void>((resolve, reject) => {
+      client.end(false, {}, (error?: Error) =>
+        error ? reject(error) : resolve()
+      );
+    });
   }
 
   async publish(topic: string, payload: unknown, qos: MqttQos): Promise<void> {
