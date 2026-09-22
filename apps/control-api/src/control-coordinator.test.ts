@@ -5,7 +5,12 @@ import { ControlCoordinator } from "./control-coordinator.js";
 
 function fixture(authorized = true) {
   const calls: string[] = [];
-  const guards: DrcSessionGuards = { fc3: true, controlLease: true, capability: true, djiAuthority: authorized };
+  const guards: DrcSessionGuards = {
+    fc3: true,
+    controlLease: true,
+    capability: true,
+    djiAuthority: false
+  };
   const sessions = {
     async listOpenSessions() { return []; },
     async request() { calls.push("session.request"); return {} as never; },
@@ -29,10 +34,19 @@ function fixture(authorized = true) {
     pilotAuthority: {
       async requestFlightAuthority() {
         calls.push("authority.request");
-        if (!authorized) throw new Error("Pilot cloud-control authorization ended with status timeout");
+        if (!authorized) {
+          throw new Error(
+            "Pilot cloud-control authorization ended with status timeout"
+          );
+        }
+        guards.djiAuthority = true;
         return {};
       },
-      async releaseFlightAuthority() { calls.push("authority.release"); return {}; }
+      async releaseFlightAuthority() {
+        calls.push("authority.release");
+        guards.djiAuthority = false;
+        return {};
+      }
     },
     drc: { async enterDrcMode() { calls.push("drc.enter"); } }
   };
