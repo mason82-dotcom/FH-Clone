@@ -105,6 +105,20 @@ services:
     build:
       context: .
       dockerfile: infra/docker/web.Dockerfile
+      args:
+        VITE_FH2_STANDALONE_ENABLED: ${VITE_FH2_STANDALONE_ENABLED:-false}
+        VITE_FH2_NATIVE_COCKPIT_ENABLED: ${VITE_FH2_NATIVE_COCKPIT_ENABLED:-false}
+        VITE_FH2_HOST_URL: ${VITE_FH2_HOST_URL:-}
+        VITE_FH2_SERVER_URL: ${VITE_FH2_SERVER_URL:-}
+        VITE_FH2_WSS_URL: ${VITE_FH2_WSS_URL:-}
+        VITE_FH2_PROJECT_ID: ${VITE_FH2_PROJECT_ID:-}
+        VITE_FH2_PROJECT_TOKEN: ${VITE_FH2_PROJECT_TOKEN:-}
+        VITE_FH2_PAAS_URL: ${VITE_FH2_PAAS_URL:-}
+        VITE_FH2_COCKPIT_PROP_STYLE: ${VITE_FH2_COCKPIT_PROP_STYLE:-camel}
+        VITE_FH2_GATEWAY_SN: ${VITE_FH2_GATEWAY_SN:-}
+        VITE_FH2_DRONE_SN: ${VITE_FH2_DRONE_SN:-}
+        VITE_FH2_WAYLINE_ID: ${VITE_FH2_WAYLINE_ID:-}
+        VITE_FH2_FLIGHT_PATH_ID: ${VITE_FH2_FLIGHT_PATH_ID:-}
     depends_on:
       control-api:
         condition: service_healthy
