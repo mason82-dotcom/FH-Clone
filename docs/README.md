@@ -57,6 +57,7 @@ Hardwareabnahme missverstanden werden.
 | [KONFIGURATION.md](KONFIGURATION.md) | Umgebungsvariablen und Secrets |
 | [FEHLERSUCHE.md](FEHLERSUCHE.md) | systematische Diagnose |
 | [TESTS_UND_ABNAHME.md](TESTS_UND_ABNAHME.md) | Teststand und V3-Release-Gates |
+| [RELEASE_STATUS.md](RELEASE_STATUS.md) | aktueller V3-Release-Status und offene Gates |
 | [GLOSSAR.md](GLOSSAR.md) | zentrale Begriffe und Abkürzungen |
 
 ## Komponentenunterlagen

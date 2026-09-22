@@ -196,6 +196,8 @@ Wichtige Kernunterlagen:
 - [API-Referenz](docs/API.md)
 - [Betrieb und Konfiguration](docs/BETRIEB.md)
 - [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
+- [Aktueller Release-Status](docs/RELEASE_STATUS.md)
+- [Changelog](CHANGELOG.md)
 
 Fachunterlagen zu RC Pro, DRC, RTK, Missionen, Medien/Multispektral, UgCS und
 Kompatibilität sind über den Dokumentationsindex verlinkt.
