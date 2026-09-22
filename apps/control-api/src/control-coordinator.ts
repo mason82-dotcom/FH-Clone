@@ -1,5 +1,5 @@
 import type {
-  CloudControlAuthRequest,
+  PilotCloudAuthorityRequest,
   DrcSessionGuards,
   DrcSessionManager,
   EnterDrcModeOptions
@@ -11,7 +11,7 @@ export interface DjiControlRuntime {
   connectDrcTransport(credentials: EnterDrcModeOptions["mqttBroker"]): Promise<void>;
   disconnectDrcTransport(): Promise<void>;
   pilotAuthority: {
-    requestFlightAuthority(gatewaySn: string, request: CloudControlAuthRequest): Promise<unknown>;
+    requestFlightAuthority(gatewaySn: string, request: PilotCloudAuthorityRequest): Promise<unknown>;
     releaseFlightAuthority(gatewaySn: string): Promise<unknown>;
   };
   drc: {
@@ -42,7 +42,7 @@ export class ControlCoordinator {
   async start(input: {
     aircraftSn: string;
     holder: string;
-    authority: CloudControlAuthRequest;
+    authority: PilotCloudAuthorityRequest;
     drc: EnterDrcModeOptions;
   }) {
     const gatewaySn = this.dji.resolveGatewaySn(input.aircraftSn);
@@ -71,6 +71,7 @@ export class ControlCoordinator {
       drcEntered = true;
       await this.dji.connectDrcTransport(input.drc.mqttBroker);
       await this.sessions.markDrcModeActive(gatewaySn);
+      await this.sessions.setTransportConnected(gatewaySn, true);
       const finalGuards = this.guards(input.aircraftSn, input.holder);
       const activated = await this.sessions.activate({ gatewaySn, guards: finalGuards });
       this.runtime.set(gatewaySn, { holder: input.holder, credentials: input.drc.mqttBroker });
