@@ -114,16 +114,25 @@ cache {
 }
 ```
 
-Die kurze TTL ist bewusst konservativ. Bei einem `update_topo`-Wechsel kann
-ein bereits gecachter Allow-Entscheid noch höchstens bis zum Ablauf der TTL
-bestehen.
+Die kurze TTL ist bewusst konservativ. Zusätzlich werden die steuerungsrelevanten
+Topic-Filter vollständig vom Authorization-Cache ausgeschlossen:
 
-Nächster Schritt vor echter DRC-Freigabe:
+```text
+thing/product/+/services
+thing/product/+/property/set
+thing/product/+/drc/down
+```
 
-1. Cache-Invalidierung unmittelbar nach relevanten Topology-Änderungen
-2. DRC-/Service-Topics gegebenenfalls aus dem Authorization-Cache ausschließen
-3. Authz-Latenz und Cache-Hit-Rate messen
-4. Failure-Test: Control API stoppen; DJI-Gateway muss blockiert bleiben
+Damit werden FlyTo/Service-Kommandos, Property-Set und DRC-Downlink bei jeder
+Operation neu autorisiert.
+
+Bei einem `update_topo`-Wechsel können gecachte Telemetrieentscheidungen
+(`osd/state`) weiterhin höchstens bis zum Ablauf der 5-Sekunden-TTL bestehen.
+Vor produktiver DRC-Freigabe folgen zusätzlich:
+
+1. gezielte Cache-Invalidierung unmittelbar nach relevanten Topology-Änderungen
+2. Authz-Latenz und Cache-Hit-Rate messen
+3. Failure-Test: Control API stoppen; DJI-Gateway muss blockiert bleiben
 
 ## Transport
 
@@ -131,3 +140,19 @@ Solange EMQX und Control API ausschließlich in einem privaten
 Container-/Host-Netz kommunizieren, ist HTTP als interner Transport
 vertretbar. Sobald dieser Pfad ein Host-/Trust-Boundary überschreitet, wird
 HTTPS/mTLS verwendet.
+
+
+## Gateway-Identität
+
+Für den aktuellen Provisionierungsmodus ist Username und MQTT-`clientid`
+explizit gekoppelt:
+
+```text
+clientid = RC-PRO-001
+username = dji-gateway-RC-PRO-001
+```
+
+Die Autorisierung verweigert einen Request, wenn der Username nicht exakt
+`dji-gateway-<clientid>` entspricht. Dadurch kann ein gültiger
+`dji-gateway-*`-Account nicht einfach eine fremde Gateway-SN als Client-ID
+verwenden.
