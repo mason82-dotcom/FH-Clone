@@ -82,6 +82,8 @@ abgedeckt sein:
 - RTK-Fix-Verlust
 - Media-/NDVI-Validierung
 - Persistenz-/Restart-Verhalten
+- offene automatische Mission wird bei Service-Neustart mit `service_restart` abgeschlossen
+- TimescaleDB-Schema und Initialisierung sind idempotent
 
 ## Build-Gate
 
@@ -102,7 +104,7 @@ Der finale Root-Compose muss gemeinsam starten:
 control-api
 emqx
 web
-postgres
+timescaledb
 ```
 
 Zu prüfen:
@@ -110,6 +112,7 @@ Zu prüfen:
 - [ ] Health aller Pflichtdienste
 - [ ] Readiness
 - [ ] Neustart ohne Verlust persistenter Daten
+- [ ] offene automatische Missionszeilen werden beim Neustart sicher abgeschlossen, nicht still als aktive Sitzung rehydriert
 - [ ] interner Port 8081 nicht öffentlich
 - [ ] WebUI ohne MQTT-Credentials
 - [ ] Standard-Safety-Stufe FC0
@@ -209,6 +212,7 @@ Build
  -> Multispektral
  -> Safety
  -> Dokumentationsprüfung
+ -> TimescaleDB-/Restart-Abnahme
  -> Direktor-CI
  -> V3.0 Release
 ```
