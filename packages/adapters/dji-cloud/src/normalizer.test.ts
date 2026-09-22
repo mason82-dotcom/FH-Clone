@@ -178,3 +178,25 @@ test("media-looking raw metadata does not advertise media.read without media int
 
   assert.equal(result.capabilities.includes("media.read"), false);
 });
+
+
+test("wayline flight mode is observation, not mission.wayline capability", () => {
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    {
+      data: {
+        mode_code: 5,
+        latitude: 49.0,
+        longitude: 8.5
+      }
+    },
+    1_000
+  );
+
+  assert.equal(result.capabilities.includes("telemetry.flight"), true);
+  assert.equal(result.capabilities.includes("mission.wayline"), false);
+  assert.equal(
+    result.samples.find((sample) => sample.key === "flight.mode.code")?.value,
+    5
+  );
+});
