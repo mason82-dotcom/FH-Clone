@@ -4,9 +4,10 @@
 
 Dieses Dokument beschreibt den verbindlichen V3-Fachrahmen.
 
-Die vollständige Feld-/Quellenmatrix aus dem Multispektral-Arbeitspaket ist
-noch ein offenes V3-Gate. Daher werden hier keine unbestätigten DJI-Felder als
-bereits verfügbar dargestellt.
+Die physikalische Banddefinition, die DJI-M3M-EXIF/XMP-Feldnamen und die
+fachliche Media-/NDVI-Zuordnung sind inzwischen herstellerseitig dokumentiert.
+Offen bleibt die Verifikation an realen M3M-Dateien sowie die konkrete
+Cloud-API-Payload-Zuordnung, falls sie für den Runtime-Pfad benötigt wird.
 
 ## Ziel
 
@@ -195,22 +196,95 @@ bestätigt ist.
 Insbesondere wird aus einer WPML-Payload-Type-Enumeration kein
 `type-subtype-gimbalindex` geraten.
 
-### Noch real beziehungsweise dateiseitig zu verifizieren
+### Offizieller M3M-EXIF/XMP-Vertrag
 
-Vor einer automatischen Bandzuordnung müssen reale M3M-Mediendateien oder
-eindeutige DJI-Metadaten bestätigen:
+DJIs `Mavic 3M Image Processing Guide` dokumentiert für M3M-Aufnahmen
+konkrete EXIF- und XMP-Felder. Diese Feldnamen gelten für V3 als
+**authoritative Herstellerquelle**.
 
-- welches EXIF-/XMP-/Media-Feld das konkrete Einzelband authoritative benennt,
-- wie RGB und Narrow-Band-Dateien eines Capture-Satzes eindeutig korreliert
-  werden,
-- welche Irradiance-/Sonnensensorfelder tatsächlich in den Dateien vorliegen,
-- welche radiometrischen Kalibrierungsfelder verfügbar sind,
-- wie RTK/GPS, Aufnahmezeit, Aircraft-Pose und Gimbal-Pose in den
-  Medienmetadaten repräsentiert werden.
+| DJI-Metadatenfeld | Bedeutung | FH2-Verwendung | Vertrauensklasse |
+| --- | --- | --- | --- |
+| `ImageSource` | Kamera-/Bildquelle, z. B. `MS_NIR_CAMERA` | Sensorquelle | authoritative |
+| `BandName` | `Green` / `Red` / `RedEdge` / `NIR` | `SpectralBand.name` | authoritative |
+| `BandFreq` | zentrale Wellenlänge + Halbbreite | `centerNm` / `toleranceNm` | authoritative |
+| `SensorIndex` | Green=1, Red=2, RedEdge=3, NIR=4 | Konsistenzprüfung | authoritative |
+| `CaptureUUID` | UUID V4 einer Aufnahme | primärer Capture-Set-Schlüssel | authoritative |
+| `UTCAtExposure` | UTC-Zeitpunkt der Belichtung | Aufnahmezeit | authoritative |
+| `GPSDateStamp` / `GPSTimeStamp` | GPS-Aufnahmezeit | Zeit-Quervergleich | authoritative |
+| `GpsLatitude` / `GpsLongitude` | Aufnahmeposition | CaptureContext | authoritative |
+| `AbsoluteAltitude` / `RelativeAltitude` | absolute/relative Höhe | CaptureContext | authoritative |
+| `GpsStatus` / `RtkFlag` | GNSS-/RTK-Status | CaptureContext/Qualität | authoritative |
+| `GimbalRollDegree` / `GimbalPitchDegree` / `GimbalYawDegree` | Gimbal-Pose | CaptureContext | authoritative |
+| `FlightRollDegree` / `FlightPitchDegree` / `FlightYawDegree` | Aircraft-Pose | CaptureContext | authoritative |
+| `Irradiance` | kompensierter Sonnenlichtsensorwert | radiometrische Verarbeitung | authoritative |
+| `LS_status` | Status des Sonnenlichtsensors | Radiometrie-Gültigkeit | authoritative |
+| `RawData` | Sonnenlichtsensor-Rohwerte in Reihenfolge Green/Red/RedEdge/NIR | Diagnose/Kalibrierung | authoritative |
+| `SensorGain` | Gain des Multispektralsensors | Radiometrie | authoritative |
+| `SensorGainAdjustment` | Gain-Kompensation relativ zum Standard-NIR-Modul | Radiometrie | authoritative |
+| `ExposureTime` | Belichtungszeit des Multispektralsensors | Radiometrie | authoritative |
+| `BlackLevel` / `BlackCurrent` | Schwarzpegel | Radiometrie | authoritative |
+| `VignettingData` | Vignettierungskoeffizienten | Bildkorrektur | authoritative |
+| `DewarpData` | intrinsische Kamera-/Verzeichnungsparameter | Bildkorrektur | authoritative |
+| `CalibratedHMatrix` | projektive Transformationsmatrix | Band-Ausrichtung | authoritative |
+| `CameraSerialNumber` | Kameraseriennummer | Sensor-/Asset-Korrelation | authoritative |
+| `DroneSerialNumber` / `DroneID` | Aircraft-Seriennummer | `device_sn`-Abgleich | authoritative |
 
-Bis dahin darf FH2 zwar einen Datensatz als **M3M/multispektral** erkennen,
-aber keine einzelne Datei allein anhand von Dateiname, Reihenfolge oder
-Produktname als RED/NIR/GREEN/RED_EDGE markieren.
+Die exakte Schreibweise im Dateiparser muss den ursprünglichen
+`drone-dji`-Namespace und den Rohschlüssel erhalten. Ein Parser darf aus
+Darstellungsvarianten wie Leerzeichen oder CamelCase **keine neue Semantik
+erfinden**.
+
+### Capture-Set-Korrelation
+
+Für M3M ist `CaptureUUID` der bevorzugte authoritative Schlüssel zur
+Gruppierung der gleichzeitig aufgenommenen Dateien. DJI bestätigt außerdem,
+dass die fünf Kameras zeitlich synchronisiert sind.
+
+Damit gilt für V3:
+
+```text
+gleiche CaptureUUID
+  -> gleicher Capture-Satz
+  -> RGB + G + R + RE + NIR nach vorhandenen authoritative Bandfeldern
+```
+
+Zeitstempel, Position und Pose dienen als Konsistenzprüfung beziehungsweise als
+`derived`-Fallback, nicht als Ersatz für eine vorhandene `CaptureUUID`.
+
+### Radiometrische NDVI-Voraussetzung
+
+Die M3M-TIFFs dürfen nicht allein aufgrund vorhandener Red-/NIR-Dateien direkt
+als radiometrisch verarbeitungsfertig gelten. DJI beschreibt vor der
+NDVI-Berechnung mindestens:
+
+1. Vignettierungskorrektur,
+2. Verzeichnungskorrektur,
+3. geometrische Band-Ausrichtung,
+4. Ausgleich von Belichtungsunterschieden,
+5. Sonnenlichtsensor-/Gain-Kompensation.
+
+`radiometricallySuitable=true` darf in FH2 deshalb erst gesetzt werden, wenn
+der gewählte Verarbeitungsweg die für den Datensatz erforderlichen
+Korrektur-/Kalibrierungsinformationen erfolgreich angewandt beziehungsweise
+explizit validiert hat.
+
+### Noch real dateiseitig zu verifizieren
+
+Vor V3-RC müssen reale M3M-Dateien nur noch bestätigen:
+
+- dass die dokumentierten DJI-Felder in der tatsächlich verwendeten
+  Firmware-/Aufnahmekonfiguration vorhanden und vom gewählten Parser lesbar
+  sind,
+- dass alle Dateien eines realen Capture-Satzes dieselbe `CaptureUUID`
+  tragen,
+- dass `BandName`, `BandFreq` und `SensorIndex` widerspruchsfrei sind,
+- dass Sonnenlichtsensor-/Kalibrierungswerte in realen Fixtures plausibel
+  vorliegen,
+- wie fehlende/ungültige Felder bei beschädigten oder unvollständigen
+  Datensätzen aussehen.
+
+Eine einzelne Datei darf weiterhin **nicht** allein anhand von Dateiname,
+Reihenfolge oder Produktname als RED/NIR/GREEN/RED_EDGE markiert werden.
 
 ## Media-Korrelation
 
@@ -245,7 +319,7 @@ Für jede Kante wird die Vertrauensklasse gespeichert:
 | Asset -> Mission | aktive Mission + Zeitfenster + device_sn | – | derived, sofern keine direkte Task-ID vorliegt |
 | Asset -> Payload | explizite Payload-/Sensor-ID | Produktkontext | Produktkontext allein höchstens heuristic |
 | Asset -> SpectralBand | explizites DJI-/EXIF-/XMP-Bandfeld | – | kein Dateiname-/Reihenfolge-Fallback als authoritative |
-| Assets -> CaptureSet | eindeutiger DJI-Capture-Identifier | device + enger Zeitbezug + Pose | heuristische Gruppe bleibt als solche markiert |
+| Assets -> CaptureSet | `CaptureUUID` | device + enger Zeitbezug + Pose | `CaptureUUID` authoritative; Fallback höchstens derived/heuristic |
 | CaptureSet -> ProcessingProfile | validierte Sensor-/Bandmenge | GENERIC | Profil darf Vertrauensklasse nicht erhöhen |
 
 ### Konfliktpriorität
@@ -411,11 +485,11 @@ Erwartete Statusbeispiele:
 
 ## Noch offen vor V3-RC
 
-- tatsächliche DJI-Media-/EXIF-/XMP-Feldnamen an realen M3M-Dateien
-- reale Hardwarefixtures
+- reale Hardwarefixtures gegen den dokumentierten EXIF/XMP-Vertrag
+- parserseitige Verifikation der konkreten Namespace-/Tag-Darstellung
 - endgültige kanonische Normalisierungskeys für diese Dateifelder
 - Persistenzschema für MediaAsset/SensorSource/SpectralBand/CaptureContext
-- automatisierte NDVI-Validierungstests
+- reale Ausführung der vorhandenen NDVI-Validierungstests nach R1
 - exakter M3M-Cloud-`payload_index`, sofern er im Runtime-Pfad benötigt wird
 
 Die **physikalische M3M-Banddefinition und NDVI-Entscheidungsregeln sind
