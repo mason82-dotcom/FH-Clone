@@ -83,15 +83,20 @@ Auf `main` sind unter anderem vorhanden:
 - UgCS-Groundstation-Adapter und UCS-Bridge
 - EMQX-HTTP-Autorisierung mit Default-Deny
 - dokumentierte Trennung von Basic Link und DRC
+- EMQX HTTP AuthN mit serverseitiger Credential-→-`gateway_sn`-Bindung
+- Root-Compose für Control API, EMQX, Web und TimescaleDB
+- lokale Runtime-Verify-Suite
+- FlightHub-2-OpenAPI-V2-Client für Waylines und Flight Tasks (read-only)
+- read-only Mission-/Wayline-/Capability-APIs
 
 Noch nicht als V3 freigegeben sind insbesondere:
 
-- finaler Root-Compose-Gesamtstack
-- vollständige TimescaleDB-/PostgreSQL-Persistenz
-- endgültige EMQX-Authentifizierung mit Gateway-Credential-Bindung
+- Root-`package-lock.json` und reproduzierbarer `npm ci`-Nachweis
+- vollständige lokale Root-Compose-/Restart-/Verify-Abnahme
+- vollständige TimescaleDB-/PostgreSQL-Persistenz für alle V3-Zieldaten
 - reale RC-Pro-Verifikation des MQTT-Sitzungsverhaltens
-- finaler Multispektral-/Media-Vertrag
-- finale lokale Abnahme und Direktor-CI
+- finaler Multispektral-/Media-Vertrag mit realen M3M-Fixtures
+- finale Safety-/Hardware-Abnahme und Direktor-CI
 
 ## Sicherheitsmodell
 
