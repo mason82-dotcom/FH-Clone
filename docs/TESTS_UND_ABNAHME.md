@@ -155,8 +155,11 @@ Annahme reduzieren.
 
 Zu prüfen:
 
-- [ ] `is_fixed == 2` wird als Fix erkannt
-- [ ] andere Enum-Werte werden nicht als Fix behandelt
+- [ ] GPS-only erzeugt keine RTK-Capability
+- [ ] `rtk_number` wird als RTK-spezifische Telemetrie erkannt
+- [ ] `quality == 10` + konsistenter Fixstatus ergibt RTK fixed
+- [ ] `is_fixed == 2` allein ergibt **nicht** RTK fixed
+- [ ] widersprüchliche Quality-/Fixwerte bleiben fail-closed
 - [ ] Fix-Wechsel korrekt
 - [ ] Stale-Status korrekt
 - [ ] Reconnect
@@ -191,13 +194,16 @@ Zu prüfen:
 
 ## GitHub-CI
 
-Im FH-Clone-Repository existiert derzeit **noch kein Workflow unter
-`.github/workflows/`**.
+Die manuelle Direktor-CI liegt unter:
 
-Das ist kein bestandener CI-Nachweis.
+```text
+.github/workflows/director-v3-validation.yml
+```
 
-Die zentrale CI wird erst vom Direktor eingerichtet beziehungsweise gestartet,
-wenn die lokalen V3-Gates erfüllt sind.
+Sie wird ausschließlich über `workflow_dispatch` gestartet.
+
+Das Vorhandensein des Workflows ist noch kein bestandener CI-Nachweis. Der
+Direktor startet ihn erst nach belegten lokalen V3-Gates.
 
 ## Freigabe
 
