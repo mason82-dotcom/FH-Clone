@@ -176,36 +176,36 @@ npm test
 ```
 
 Der vollständige V3-Gesamtstart wird erst als Release-Gate freigegeben, wenn
-Root-Compose, EMQX, PostgreSQL, Control API und Weboberfläche gemeinsam
+Root-Compose, EMQX, TimescaleDB, Control API und Weboberfläche gemeinsam
 reproduzierbar starten.
 
 ## Dokumentation
 
-Der Einstiegspunkt für alle Dokumente ist:
+Der verbindliche Einstiegspunkt ist
+[docs/README.md](docs/README.md).
 
-- [Dokumentationsübersicht](docs/README.md)
+Kernunterlagen:
+
 - [V3-Zielarchitektur](docs/V3_ARCHITECTURE.md)
 - [Gesamtarchitektur](docs/ARCHITECTURE.md)
+- [API-Referenz](docs/API.md)
+- [Konfiguration](docs/KONFIGURATION.md)
+- [Betrieb](docs/BETRIEB.md)
+- [Fehlersuche](docs/FEHLERSUCHE.md)
+- [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
+- [Sicherheitsmodell](docs/SICHERHEIT.md)
 - [DJI-MQTT-Sicherheit](docs/DJI_MQTT_SECURITY.md)
 - [EMQX-Authentifizierung und -Autorisierung](docs/EMQX-AUTHZ.md)
 - [RC Pro Enterprise](docs/RC_PRO.md)
 - [DRC](docs/DRC.md)
 - [RTK und NTRIP](docs/RTK_NTRIP.md)
-- [Medien und Multispektral](docs/MULTISPEKTRAL.md)
 - [Missionen und Flugsitzungen](docs/MISSIONEN.md)
-- [Persistenz mit TimescaleDB/PostgreSQL](docs/PERSISTENZ.md)
-- [Betrieb und Fehlersuche](docs/BETRIEB.md)
-- [Kompatibilität](docs/COMPATIBILITY.md)
-- [FH2-Manager-Abgleich](docs/FH2_MANAGER_ALIGNMENT.md)
-- [API-Referenz](docs/API.md)
-- [Betrieb](docs/BETRIEB.md)
-- [Konfiguration](docs/KONFIGURATION.md)
-- [Fehlersuche](docs/FEHLERSUCHE.md)
-- [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
+- [Persistenz mit TimescaleDB](docs/PERSISTENZ.md)
+- [Datenmodell](docs/DATENMODELL.md)
 - [Medien und Multispektral](docs/MEDIEN_MULTISPEKTRAL.md)
+- [Kompatibilität](docs/COMPATIBILITY.md)
+- [FH2-/M4-Abgleich](docs/FH2_MANAGER_ALIGNMENT.md)
 - [Glossar](docs/GLOSSAR.md)
-- [Sicherheitsmodell](docs/SICHERHEIT.md)
-- [Datenmodell und Persistenz](docs/DATENMODELL.md)
 
 ## Projektsteuerung
 
