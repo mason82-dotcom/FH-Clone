@@ -48,6 +48,7 @@ export class ControlCoordinator {
     }
 
     const initial = this.guards(input.aircraftSn, input.holder);
+    if (initial.djiAuthority) throw new Error("dji_cloud_authority_already_held");
     await this.sessions.request({ aircraftSn: input.aircraftSn, gatewaySn, guards: initial });
 
     let authorityRequested = false;
@@ -58,9 +59,13 @@ export class ControlCoordinator {
       await this.waitForAuthority(gatewaySn);
 
       const authorized = this.guards(input.aircraftSn, input.holder);
+      if (!authorized.fc3 || !authorized.controlLease || !authorized.capability || !authorized.djiAuthority) {
+        throw new Error("drc_guards_changed_before_enter");
+      }
       await this.dji.drc.enterDrcMode(gatewaySn, input.drc);
       drcEntered = true;
-      return await this.sessions.activate({ gatewaySn, guards: authorized });
+      const finalGuards = this.guards(input.aircraftSn, input.holder);
+      return await this.sessions.activate({ gatewaySn, guards: finalGuards });
     } catch (error) {
       if (drcEntered) {
         await this.sessions.closeGracefully(gatewaySn, "activation_failed").catch(() => undefined);
