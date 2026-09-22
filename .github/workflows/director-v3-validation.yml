@@ -50,12 +50,17 @@ jobs:
           docker compose -f "$COMPOSE_FILE" --env-file .env config >/tmp/fh2-compose.yml
           services="$(docker compose -f "$COMPOSE_FILE" --env-file .env config --services)"
 
-          for service in control-api emqx web postgres; do
+          for service in control-api emqx web; do
             echo "$services" | grep -Fx "$service" >/dev/null || {
               echo "::error::Pflichtdienst '$service' fehlt im Root-Compose."
               exit 1
             }
           done
+
+          if ! echo "$services" | grep -Ex 'postgres|timescaledb' >/dev/null; then
+            echo "::error::Persistenzdienst 'postgres' oder 'timescaledb' fehlt im Root-Compose."
+            exit 1
+          fi
 
   node:
     name: Node / TypeScript / Tests
