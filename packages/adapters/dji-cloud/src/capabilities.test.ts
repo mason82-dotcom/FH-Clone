@@ -20,11 +20,7 @@ test("M3E/M3T/M3TA behind RC Pro are payload-control only", () => {
     assert.equal(profile.payloadControl, true);
     assert.equal(profile.requiresCloudControlAuthority, true);
     assert.equal(profile.drcProfile, "pilot-m3-payload");
-    assert.deepEqual(profile.capabilities, [
-      "control.camera",
-      "control.gimbal",
-      "payload.control"
-    ]);
+    assert.deepEqual(profile.capabilities, []);
   }
 });
 
@@ -43,17 +39,7 @@ test("Matrice 4E/4T behind RC Plus 2 expose documented live-control set", () => 
     assert.equal(profile.requiresCloudControlAuthority, true);
     assert.equal(profile.drcProfile, "pilot-m4-stick");
 
-    for (const capability of [
-      "control.flight",
-      "control.rth",
-      "control.pointing",
-      "control.orbit",
-      "control.camera",
-      "control.gimbal",
-      "payload.control"
-    ]) {
-      assert.equal(profile.capabilities.includes(capability), true);
-    }
+    assert.deepEqual(profile.capabilities, []);
   }
 });
 
@@ -111,4 +97,27 @@ test("wrong or incomplete gateway identity fails closed", () => {
   assert.deepEqual(wrongDomain.capabilities, []);
   assert.deepEqual(wrongSubtype.capabilities, []);
   assert.deepEqual(missingDomain.capabilities, []);
+});
+
+
+test("documented product support does not imply generic adapter execution", () => {
+  const m3 = getDjiCloudControlProfile(
+    { domain: 0, type: 77, subType: 0 },
+    rcPro
+  );
+  const m4 = getDjiCloudControlProfile(
+    { domain: 0, type: 99, subType: 1 },
+    rcPlus2
+  );
+
+  assert.equal(m3.payloadControl, true);
+  assert.equal(m3.flightControl, false);
+  assert.deepEqual(m3.capabilities, []);
+
+  assert.equal(m4.payloadControl, true);
+  assert.equal(m4.flightControl, true);
+  assert.equal(m4.flyTo, true);
+  assert.equal(m4.pointingFlight, true);
+  assert.equal(m4.orbitFlight, true);
+  assert.deepEqual(m4.capabilities, []);
 });
