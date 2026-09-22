@@ -72,9 +72,18 @@ Die Auswahl basiert auf Topologie und bestätigten Produktfähigkeiten.
 
 ### Mavic 3 Enterprise + RC Pro Enterprise
 
-Keine automatische `control.flight`-Capability.
+DJI dokumentiert Payload-/Kamera-/Gimbal-Steuerung, FH2 V3 implementiert dafür
+aber noch keinen ausführbaren Command-Pfad.
 
-Payload-, Kamera- und Gimbal-Funktionen werden separat bewertet.
+Daher gilt aktuell:
+
+```text
+DjiDrcProfile = none
+keine schreibende AdapterDevice-Capability
+keine Cloud-Flugsteuerung
+```
+
+Die Herstellerunterstützung bleibt in der Capability-Matrix dokumentiert.
 
 ### Matrice 4 + RC Plus 2
 
@@ -387,10 +396,15 @@ und keine allgemeine DJI-Protokollkonstante.
 
 ## FlyTo und weitere Flugfunktionen
 
-`fly_to_point` läuft über den Servicekanal.
+`fly_to_point` ist in FH2 V3 im `DrcController` implementiert und läuft
+über den Servicekanal.
 
-FlyTo, Pointing, Orbit oder andere Flugfunktionen benötigen das passende
-Produktprofil sowie die zentralen Safety-/Authority-Prüfungen.
+DJI dokumentiert für Matrice 4 zusätzlich unter anderem RTH, Pointing/POI und
+Orbit. Diese Pfade sind in FH2 V3 **nicht implementiert** und werden deshalb
+runtime-seitig nicht als ausführbare Capabilities gemeldet.
+
+Vorhandene M4-Steuerpfade benötigen weiterhin das passende Produktprofil sowie
+die zentralen FC3-/Lease-/Authority-/Session-Prüfungen.
 
 ## V3-Abnahme
 
