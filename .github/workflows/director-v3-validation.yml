@@ -315,6 +315,7 @@ jobs:
         run: node scripts/hardware-evidence-audit.mjs
 
       - name: Evidence-Vertrag muss vorhanden sein
+        if: always()
         run: test -s docs/HARDWARE_EVIDENCE.md
 
   draft-analysis:
@@ -360,18 +361,19 @@ jobs:
           ahead="$(git rev-list --count "origin/main..origin/${{ matrix.ref }}")"
           merge_base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
           {
-            echo "## Draft #${{ matrix.pr }} – ${{ matrix.label }}"
-            echo
-            echo "- Branch: `${{ matrix.ref }}`"
-            echo "- Ahead gegenüber main: **$ahead**"
-            echo "- Behind gegenüber main: **$behind**"
-            echo "- Merge-Base: `$merge_base`"
+            printf '## Draft #%s – %s\n\n' '${{ matrix.pr }}' '${{ matrix.label }}'
+            printf -- '- Branch: %s\n' '${{ matrix.ref }}'
+            printf -- '- Ahead gegenüber main: **%s**\n' "$ahead"
+            printf -- '- Behind gegenüber main: **%s**\n' "$behind"
+            printf -- '- Merge-Base: %s\n' "$merge_base"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Ephemeren main+Draft-Stand erzeugen
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "FH2 Director CI"
+          git config user.email "director-ci@users.noreply.github.com"
           git checkout -B "ci-draft-${{ matrix.pr }}" "origin/${{ matrix.ref }}"
           if ! git merge --no-commit --no-ff origin/main; then
             {
