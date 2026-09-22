@@ -238,8 +238,10 @@ Beispiel:
 RC Pro Enterprise
   gateway_sn
      |
-     +-- M3E/M3T/M3M
+     +-- M3E/M3T/M3TA im aktuellen Pilot-to-Cloud-Produktprofil
          device_sn
+
+M3M wird separat als MSDK/WPML-/Media-Fall behandelt.
 ```
 
 Aircraft-`osd/state` wird nach `device_sn` verarbeitet. Gateway-Services
