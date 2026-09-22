@@ -20,8 +20,7 @@ export const AUTHZ_REASONS = [
   "drc_session_active",
   "drc_session_inactive",
   "drc_backend_publish",
-  "internal_error",
-  "internal_token_mismatch"
+  "internal_error"
 ] as const;
 
 export type AuthzReason = (typeof AUTHZ_REASONS)[number];
