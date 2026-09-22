@@ -9,9 +9,12 @@ Safety Stage = FC0
 DRC = nicht freigegeben
 ```
 
-Der EMQX-Authorizer ist derzeit absichtlich so verdrahtet, dass
-`isDrcGatewayActive()` immer `false` liefert. Damit besitzt der Broker im
-aktuellen Stand keine dynamisch aktive DRC-Sitzung.
+Der EMQX-Authorizer vergibt DRC-Rechte nur für eine **aktuelle Runtime-Sitzung**.
+Im Standardbetrieb unter FC0 existiert keine solche Sitzung; dadurch bleiben
+`drc/up` und `drc/down` brokerseitig gesperrt.
+
+Persistierte Inventar-, Missions- oder Auditdaten dürfen eine DRC-Sitzung
+niemals wiederherstellen oder autorisieren.
 
 ## Trennung von Basic Link und DRC
 
@@ -47,7 +50,11 @@ Gateway -> Cloud
 thing/product/{gateway_sn}/drc/up
 ```
 
-Diese Topics stehen nicht in der permanenten Basic-Link-ACL.
+Diese Topics stehen nicht in der permanenten Basic-Link-ACL und werden auch
+nicht mehr als Default-Subscriptions des Basic-Link-Adapters geführt.
+
+Der Datenpfad für DRC ist `DrcBrokerTransport`; der normale DJI-Basic-Link
+bleibt davon getrennt.
 
 ## Produktprofile
 
@@ -207,38 +214,54 @@ werden.
 
 ## DRC-Sitzungszustandsmaschine
 
-Im DJI-Adapter ist eine serverseitige Zustandsmaschine implementiert:
+Im DJI-Adapter ist eine explizite Runtime-Zustandsmaschine implementiert:
 
 ```text
-idle / closed
-      |
-      | FC3 + Lease + Capability
-      v
-requesting
-      |
-      | DJI Authority bestätigt
-      v
-active
-      |
-      | Bedienende beendet / Dead-Man / Guard-Verlust
-      v
-draining
-      |
-      | Neutral-Stick + drc_mode_exit
-      v
-closed
+idle
+  -> requesting
+  -> authorized
+  -> authority_grabbed
+  -> drc_mode_active
+  -> controlling
+  -> degraded
+  -> draining
+  -> closed
+       |
+       +-> requesting
 ```
 
-Es gibt fünf Zustände:
+Zulässige Übergänge:
+
+```text
+idle              -> requesting
+requesting        -> authorized | closed
+authorized        -> authority_grabbed | closed
+authority_grabbed -> drc_mode_active | draining | closed
+drc_mode_active   -> controlling | draining | closed
+controlling       -> degraded | draining | closed
+degraded          -> controlling | draining | closed
+draining          -> closed
+closed            -> requesting
+```
+
+Damit existieren neun explizite Zustände:
 
 - `idle`
 - `requesting`
-- `active`
+- `authorized`
+- `authority_grabbed`
+- `drc_mode_active`
+- `controlling`
+- `degraded`
 - `draining`
 - `closed`
 
-`degraded` ist kein sechster Zustand, sondern ein Gesundheitsstatus einer
-weiterhin aktiven Sitzung.
+Zusätzlich führt die Session einen Gesundheitsstatus
+`healthy | degraded`.
+
+Jede Runtime-Sitzung besitzt eine eigene `sessionId`. Diese ID dient Audit
+und Korrelation und wird nach einem Prozessneustart **nicht** als
+Autorisierungszustand rehydriert.
 
 ## Guards
 
@@ -301,9 +324,16 @@ Aktuell vorhanden:
 
 - `InMemoryDrcSessionStore`
 
-Für einen mehrinstanzfähigen V3-Betrieb ist ein gemeinsamer persistenter oder
-verteilter Store erforderlich. Eine konkrete Redis-Abhängigkeit ist **nicht**
-verbindlich festgelegt.
+Für V3 ist entscheidend:
+
+- aktive DRC-Rechte stammen ausschließlich aus dem aktuellen Runtime-Zustand,
+- PostgreSQL/TimescaleDB ist keine Quelle für aktive Control-Rechte,
+- ein Prozessneustart rehydriert keine DRC-Sitzung,
+- gespeicherte Auditdaten dürfen keine Sitzung wieder aktivieren.
+
+Ein späterer Mehrinstanzbetrieb würde einen explizit dafür freigegebenen
+gemeinsamen Runtime-Store benötigen. Eine konkrete Redis-Abhängigkeit ist für
+V3 nicht festgelegt.
 
 ## Audit
 
@@ -316,9 +346,13 @@ degraded
 input
 draining
 neutral_sent
+transport_lost
+transport_recovered
 closed
 force_closed
 ```
+
+Jedes Ereignis trägt die Runtime-`sessionId`, Gateway-SN und Aircraft-SN.
 
 Diese Ereignisse sind interne FH2-Auditdaten.
 
