@@ -55,8 +55,7 @@ export function authorizeDjiGateway(
         "state",
         "events",
         "requests",
-        "services_reply",
-        "drc/up"
+        "services_reply"
       ].includes(parsed.suffix)
     ) {
       return "allow";
@@ -82,8 +81,7 @@ export function authorizeDjiGateway(
         "services",
         "property/set",
         "events_reply",
-        "requests_reply",
-        "drc/down"
+        "requests_reply"
       ].includes(parsed.suffix)
     ) {
       return "allow";
