@@ -13,14 +13,19 @@ import {
   isEmqxAuthorizationRequest
 } from "./authz.js";
 import { RtkTelemetryService } from "./rtk-service.js";
+import { MissionSessionTracker } from "./mission-session.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 
 const djiOptions = getDjiOptions();
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
-const rtk = new RtkTelemetryService({
+const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
+});
+const rtk = new RtkTelemetryService({
+  resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId),
+  resolveMissionId: (deviceId) => missions.getActive(deviceId)?.missionId
 });
 
 if (dji) {
@@ -32,6 +37,7 @@ if (dji) {
       parameters.update(sample);
     },
     onRawMessage(message) {
+      missions.observe(message);
       rtk.observe(message);
       if (process.env.LOG_RAW_DJI === "1") {
         console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
@@ -45,6 +51,10 @@ const internalPort = envInt("INTERNAL_PORT", 8081);
 const bind = process.env.BIND ?? "0.0.0.0";
 const internalBind = process.env.INTERNAL_BIND ?? "0.0.0.0";
 const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
+const missionSweepTimer = setInterval(() => {
+  missions.sweep();
+}, 5_000);
+missionSweepTimer.unref();
 
 if (!emqxAuthzToken) {
   console.warn(
@@ -64,6 +74,9 @@ const publicServer = createServer(async (request, response) => {
           enabled: Boolean(dji),
           connected: dji?.isConnected ?? false,
           apiVersion: dji?.apiVersion
+        },
+        missions: {
+          active: missions.listActive().length
         }
       });
     }
@@ -74,6 +87,18 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/dji/topology") {
       return json(response, 200, dji?.topology.listGateways() ?? []);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/missions/active") {
+      return json(response, 200, missions.listActive());
+    }
+
+    const missionMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/mission$/);
+    if (request.method === "GET" && missionMatch) {
+      const deviceId = decodeURIComponent(missionMatch[1] ?? "");
+      const active = missions.getActive(deviceId);
+      const lastCompleted = missions.getLastCompleted(deviceId);
+      return json(response, 200, { deviceId, active, lastCompleted });
     }
 
     if (request.method === "GET" && url.pathname === "/api/rtk") {
@@ -174,6 +199,7 @@ internalServer.listen(internalPort, internalBind, () => {
 });
 
 async function shutdown(): Promise<void> {
+  clearInterval(missionSweepTimer);
   publicServer.close();
   internalServer.close();
   await dji?.stop();
