@@ -63,6 +63,12 @@ Der Adapter bildet die von DJI dokumentierten Grundfunktionen ab:
 - `platformIsComponentLoaded`
 - API-Token lesen/setzen
 - API-Host lesen
+- Thing-Verbindungsstatus / Connect / Disconnect / Callback
+- WebSocket-Verbindungsstatus / Connect / Disconnect / Send
+- Map-Username und Elementpräfix
+- Media-Auto-Upload/Download-Owner lesen und setzen
+- App-Installation prüfen
+- Pilot-Log-Pfad und Log-Encrypt-Key
 - Pilot-Plattform schließen
 
 Zusätzlich existieren typisierte Loader für:
@@ -150,6 +156,7 @@ liveshareSetConfig(
 Der Low-Level-Adapter stellt dafür bereit:
 
 ```text
+setVideoPublishType()
 configureRtmpLivestream()
 startManualLivestream()
 stopManualLivestream()

@@ -216,6 +216,15 @@ export class DjiPilotBridgeClient {
     );
   }
 
+  isAppInstalled(packageName: string): boolean {
+    return asBoolean(
+      unwrap(
+        runtime().platformIsAppInstalled(packageName),
+        "platformIsAppInstalled"
+      )
+    );
+  }
+
   loadThing(config: DjiThingModuleConfig): void {
     this.loadComponent("thing", config as unknown as Record<string, unknown>);
   }
@@ -264,6 +273,157 @@ export class DjiPilotBridgeClient {
 
   getApiHost(): string | undefined {
     return asString(unwrap(runtime().apiGetHost(), "apiGetHost"));
+  }
+
+  getThingConnectState(): boolean {
+    return asBoolean(
+      unwrap(runtime().thingGetConnectState(), "thingGetConnectState")
+    );
+  }
+
+  connectThing(
+    userName: string,
+    password: string,
+    callbackName: string
+  ): void {
+    unwrap(
+      runtime().thingConnect(userName, password, callbackName),
+      "thingConnect"
+    );
+  }
+
+  disconnectThing(): void {
+    unwrap(runtime().thingDisconnect(), "thingDisconnect");
+  }
+
+  setThingConnectCallback(callbackName: string): void {
+    unwrap(
+      runtime().thingSetConnectCallback(callbackName),
+      "thingSetConnectCallback"
+    );
+  }
+
+  getThingConfigs(): unknown {
+    return unwrap(runtime().thingGetConfigs(), "thingGetConfigs");
+  }
+
+  getWsConnectState(): boolean {
+    return asBoolean(unwrap(runtime().wsGetConnectState(), "wsGetConnectState"));
+  }
+
+  connectWs(host: string, token: string, callbackName: string): void {
+    unwrap(
+      runtime().wsConnect(host, token, callbackName),
+      "wsConnect"
+    );
+  }
+
+  disconnectWs(): void {
+    unwrap(runtime().wsDisconnect(), "wsDisconnect");
+  }
+
+  sendWs(message: string): void {
+    unwrap(runtime().wsSend(message), "wsSend");
+  }
+
+  setMapUserName(userName: string): void {
+    unwrap(runtime().mapSetUserName(userName), "mapSetUserName");
+  }
+
+  setMapElementPrefix(prefix: string): void {
+    unwrap(runtime().mapSetElementPreName(prefix), "mapSetElementPreName");
+  }
+
+  setMediaAutoUploadPhoto(auto: boolean): void {
+    unwrap(
+      runtime().mediaSetAutoUploadPhoto(auto),
+      "mediaSetAutoUploadPhoto"
+    );
+  }
+
+  getMediaAutoUploadPhoto(): boolean {
+    return asBoolean(
+      unwrap(runtime().mediaGetAutoUploadPhoto(), "mediaGetAutoUploadPhoto")
+    );
+  }
+
+  setMediaUploadPhotoType(type: 0 | 1): void {
+    unwrap(
+      runtime().mediaSetUploadPhotoType(type),
+      "mediaSetUploadPhotoType"
+    );
+  }
+
+  getMediaUploadPhotoType(): number | undefined {
+    const value = unwrap(
+      runtime().mediaGetUploadPhotoType(),
+      "mediaGetUploadPhotoType"
+    );
+    return typeof value === "number" ? value : undefined;
+  }
+
+  setMediaAutoUploadVideo(auto: boolean): void {
+    unwrap(
+      runtime().mediaSetAutoUploadVideo(auto),
+      "mediaSetAutoUploadVideo"
+    );
+  }
+
+  getMediaAutoUploadVideo(): boolean {
+    return asBoolean(
+      unwrap(runtime().mediaGetAutoUploadVideo(), "mediaGetAutoUploadVideo")
+    );
+  }
+
+  setMediaDownloadOwner(owner: 0 | 1): void {
+    unwrap(
+      runtime().mediaSetDownloadOwner(owner),
+      "mediaSetDownloadOwner"
+    );
+  }
+
+  getMediaDownloadOwner(): number | undefined {
+    const value = unwrap(
+      runtime().mediaGetDownloadOwner(),
+      "mediaGetDownloadOwner"
+    );
+    return typeof value === "number" ? value : undefined;
+  }
+
+  setLogEncryptKey(key: string): void {
+    unwrap(
+      runtime().platformSetLogEncryptKey(key),
+      "platformSetLogEncryptKey"
+    );
+  }
+
+  clearLogEncryptKey(): void {
+    unwrap(
+      runtime().platformClearLogEncryptKey(),
+      "platformClearLogEncryptKey"
+    );
+  }
+
+  getLogPath(): string | undefined {
+    return asString(
+      unwrap(runtime().platformGetLogPath(), "platformGetLogPath")
+    );
+  }
+
+  setVideoPublishType(
+    type:
+      | "video-on-demand"
+      | "video-by-manual"
+      | "video-demand-aux-manual"
+  ): void {
+    const liveshare = window.liveshare;
+    if (!liveshare?.setVideoPublishType) {
+      throw new Error("DJI Pilot 2 liveshare Runtime ist nicht verfügbar");
+    }
+    unwrap(
+      liveshare.setVideoPublishType(type),
+      "liveshare.setVideoPublishType"
+    );
   }
 
   /**
