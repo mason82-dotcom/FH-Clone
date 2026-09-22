@@ -432,7 +432,8 @@ export class DrcSessionManager {
   }
 
   /**
-   * Graceful close: active/requesting -> draining -> neutral -> DRC exit -> closed.
+   * Graceful close: setup-only states close directly; entered/controlling states
+   * drain, optionally send one neutral frame, attempt DRC exit, then close.
    * No automatic RTH is emitted.
    */
   async closeGracefully(
