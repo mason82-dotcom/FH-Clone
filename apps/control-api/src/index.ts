@@ -24,11 +24,13 @@ import {
 import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
+import { createFh2OpenApiFromEnv, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
+const fh2 = createFh2OpenApiFromEnv();
 
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
@@ -198,6 +200,36 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/missions/active") {
       return json(response, 200, missions.listActive());
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/fh2/status") {
+      return json(response, 200, fh2.status());
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/fh2/waylines") {
+      try {
+        const page = queryInt(url, "page", 1, 1, 10_000);
+        const size = queryInt(url, "size", 100, 1, 500);
+        return json(response, 200, await fh2.listWaylines(page, size));
+      } catch (error) {
+        if (error instanceof Fh2OpenApiNotConfigured) {
+          return json(response, 503, { error: "fh2_not_configured" });
+        }
+        throw error;
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/fh2/flight-tasks") {
+      try {
+        const page = queryInt(url, "page", 1, 1, 10_000);
+        const pageSize = queryInt(url, "page_size", 50, 1, 500);
+        return json(response, 200, await fh2.listFlightTasks(page, pageSize));
+      } catch (error) {
+        if (error instanceof Fh2OpenApiNotConfigured) {
+          return json(response, 503, { error: "fh2_not_configured" });
+        }
+        throw error;
+      }
     }
 
     const missionMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/mission$/);
@@ -498,6 +530,22 @@ async function readJson<T>(request: IncomingMessage, limit: number): Promise<T> 
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as T;
 }
 
+function queryInt(
+  url: URL,
+  name: string,
+  fallback: number,
+  min: number,
+  max: number
+): number {
+  const raw = url.searchParams.get(name);
+  if (raw === null || raw === "") return fallback;
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`invalid_query_${name}`);
+  }
+  return value;
+}
+
 function envInt(name: string, fallback: number): number {
   const value = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(value) ? value : fallback;
@@ -608,6 +656,9 @@ function getDeviceCapabilityView(deviceId: string) {
               controlProfile.requiresCloudControlAuthority
           }
         : null,
+      platform: {
+        fh2Read: fh2.status()
+      },
       wayline: {
         observedInActiveMission: activeMission?.waylineObserved ?? false,
         observedInLastCompletedMission:
