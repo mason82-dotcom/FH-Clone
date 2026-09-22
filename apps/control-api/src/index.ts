@@ -612,7 +612,7 @@ function getDeviceCapabilityView(deviceId: string) {
         observedInActiveMission: activeMission?.waylineObserved ?? false,
         observedInLastCompletedMission:
           lastCompletedMission?.waylineObserved ?? false,
-        currentlyFlyingWayline: activeMission?.lastActivity === "wayline",
+        currentlyFlyingWayline: activeMission?.lastModeCode === 5,
         executionCapabilityAdvertised:
           adapterCapabilities.includes("mission.wayline"),
         managementImplemented:
