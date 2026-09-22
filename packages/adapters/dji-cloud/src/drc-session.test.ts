@@ -96,6 +96,7 @@ test("session follows explicit setup -> controlling -> draining -> closed", asyn
   const requesting = await manager.request({
     aircraftSn: "M4T-001",
     gatewaySn: "RC-PLUS2-001",
+    holder: "operator-a",
     guards: preAuthorityGuards
   });
   assert.equal(requesting.state, "requesting");
@@ -103,6 +104,7 @@ test("session follows explicit setup -> controlling -> draining -> closed", asyn
   await assert.rejects(
     manager.activate({
       gatewaySn: "RC-PLUS2-001",
+      holder: "operator-a",
       guards: preAuthorityGuards
     }),
     /djiAuthority/
@@ -153,6 +155,7 @@ test("dead-man degrades at 500ms and closes at 2s", async () => {
   await manager.request({
     aircraftSn: "M4T-002",
     gatewaySn: "RC-PLUS2-002",
+    holder: "operator-a",
     guards: preAuthorityGuards
   });
   await advanceToControlling(manager, "RC-PLUS2-002");
@@ -185,6 +188,7 @@ test("DJI authority loss force-closes without a neutral publish", async () => {
   await manager.request({
     aircraftSn: "M4T-003",
     gatewaySn: "RC-PLUS2-003",
+    holder: "operator-a",
     guards: preAuthorityGuards
   });
   await advanceToControlling(manager, "RC-PLUS2-003");
@@ -214,6 +218,7 @@ test("loss of FH-Clone lease drains while DJI authority still exists", async () 
   await manager.request({
     aircraftSn: "M4T-004",
     gatewaySn: "RC-PLUS2-004",
+    holder: "operator-a",
     guards: preAuthorityGuards
   });
   await advanceToControlling(manager, "RC-PLUS2-004");
