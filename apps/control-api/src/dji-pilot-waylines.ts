@@ -48,8 +48,8 @@ function requiredInteger(
 ): number {
   const raw = url.searchParams.get(name);
   if (raw === null || raw === "") return fallback;
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value) || value < min || value > max) {
+  const value = strictInteger(raw, name);
+  if (value < min || value > max) {
     throw new Error(`invalid_query_${name}`);
   }
   return value;
@@ -63,8 +63,8 @@ function optionalInteger(
 ): number | undefined {
   const raw = url.searchParams.get(name);
   if (raw === null || raw === "") return undefined;
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value) || value < min || value > max) {
+  const value = strictInteger(raw, name);
+  if (value < min || value > max) {
     throw new Error(`invalid_query_${name}`);
   }
   return value;
@@ -79,11 +79,19 @@ function optionalBoolean(url: URL, name: string): boolean | undefined {
 }
 
 function integerArray(url: URL, name: string): number[] {
-  return url.searchParams.getAll(name).map((raw) => {
-    const value = Number.parseInt(raw, 10);
-    if (!Number.isInteger(value)) throw new Error(`invalid_query_${name}`);
-    return value;
-  });
+  return url.searchParams.getAll(name).map((raw) => strictInteger(raw, name));
+}
+
+function strictInteger(raw: string, name: string): number {
+  const trimmed = raw.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    throw new Error(`invalid_query_${name}`);
+  }
+  const value = Number(trimmed);
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(`invalid_query_${name}`);
+  }
+  return value;
 }
 
 function nonEmptyArray(url: URL, name: string): string[] {

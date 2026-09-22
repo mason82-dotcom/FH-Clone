@@ -47,4 +47,19 @@ test("rejects malformed boolean and integer filters", () => {
       ),
     /invalid_query_template_type/
   );
+
+  for (const query of [
+    "page=2foo",
+    "page_size=25.5",
+    "action_type=1x",
+    "template_type=2x"
+  ]) {
+    assert.throws(
+      () =>
+        parseDjiPilotWaylineListQuery(
+          new URL(`http://localhost/api/dji/pilot/waylines?${query}`)
+        ),
+      /invalid_query_/
+    );
+  }
 });
