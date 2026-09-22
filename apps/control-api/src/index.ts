@@ -269,7 +269,7 @@ const internalServer = createServer(async (request, response) => {
           isDrcGatewayActive: async (gatewaySn) => {
             const session = await drcSessions?.get(gatewaySn);
             if (!session || !(await drcSessions?.isActive(gatewaySn))) return false;
-            const guards = getDrcGuards(session.aircraftSn);
+            const guards = getDrcGuards(session.aircraftSn, session.holder);
             return guards.fc3 && guards.controlLease && guards.capability && guards.djiAuthority;
           }
         });
