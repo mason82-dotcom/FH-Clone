@@ -142,3 +142,16 @@ test("unimplemented DJI-documented controls stay disabled in V3 runtime", () => 
   assert.equal(m4.flightControl, true);
   assert.equal(m4.flyTo, true);
 });
+
+test("Pilot Cloud profiles never advertise mission.wayline without an execution path", () => {
+  const profiles = [
+    getDjiCloudControlProfile({ domain: 0, type: 77, subType: 0 }, rcPro),
+    getDjiCloudControlProfile({ domain: 0, type: 77, subType: 1 }, rcPro),
+    getDjiCloudControlProfile({ domain: 0, type: 99, subType: 0 }, rcPlus2),
+    getDjiCloudControlProfile({ domain: 0, type: 99, subType: 1 }, rcPlus2)
+  ];
+
+  for (const profile of profiles) {
+    assert.equal(profile.capabilities.includes("mission.wayline"), false);
+  }
+});
