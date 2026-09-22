@@ -27,15 +27,24 @@ Geräteidentität entsteht serverseitig.
 - interner AuthZ-Service-Token
 - FC0 als Standard-Sicherheitsstufe
 
-### V3-Ziel
+### Implementiert
 
 - `POST /internal/emqx/authn`
-- eigener Gateway-Credential-Speicher
-- Passwort-Hashing
+- eigener PostgreSQL-Gateway-Credential-Speicher
+- scrypt-Passwort-Hashing/-Prüfung
 - serverseitige Bindung Credential -> `gateway_sn`
 - vertrauenswürdige EMQX-Client-Attribute
-- vollständige Entkopplung der AuthZ von `clientid`
+- AuthZ ohne `clientid` als Sicherheitsidentität
+- Prüfung, ob die Credential-Bindung weiterhin aktiv ist
 - Audit-Persistenz
+
+### Noch lokal zu verifizieren
+
+- EMQX-Secret-Rendering im finalen Root-Compose
+- Backend-Service-Connect über AuthN
+- reales Gateway-Credential mit RC Pro
+- Deaktivierung/Rotation bei bestehender Sitzung
+- Datenbank-/Hook-Ausfall fail-closed
 
 ### Real zu verifizieren
 
