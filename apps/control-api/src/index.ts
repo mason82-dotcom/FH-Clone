@@ -266,7 +266,12 @@ const internalServer = createServer(async (request, response) => {
         const result = await authorizeEmqx(dji.topology, body, {
           // Runtime-only session state. It is intentionally never rehydrated
           // from PostgreSQL after a process restart.
-          isDrcGatewayActive: (gatewaySn) => drcSessions?.isActive(gatewaySn) ?? false
+          isDrcGatewayActive: async (gatewaySn) => {
+            const session = await drcSessions?.get(gatewaySn);
+            if (!session || !(await drcSessions?.isActive(gatewaySn))) return false;
+            const guards = getDrcGuards(session.aircraftSn);
+            return guards.fc3 && guards.controlLease && guards.capability && guards.djiAuthority;
+          }
         });
 
         if (result === "deny") {
