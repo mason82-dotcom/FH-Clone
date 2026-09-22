@@ -257,12 +257,12 @@ export class DjiPilotBridgeClient {
   }
 
   loadMap(config: DjiMapModuleConfig): void {
-    this.requireLoaded("loadMap", ["thing", "ws"]);
+    this.requireLoaded("loadMap", ["thing", "ws", "api"]);
     this.loadComponent("map", config as unknown as Record<string, unknown>);
   }
 
   loadTsa(): void {
-    this.requireLoaded("loadTsa", ["thing", "ws"]);
+    this.requireLoaded("loadTsa", ["thing", "ws", "api"]);
     this.loadComponent("tsa", {});
   }
 
