@@ -44,6 +44,7 @@ Sie ist nicht mit der realen Client-ID einer DJI RC Pro gleichzusetzen.
 
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
+| `EMQX_AUTHN_TOKEN` | leer | internes Bearer-Secret für EMQX-AuthN-Anfragen |
 | `EMQX_AUTHZ_TOKEN` | leer | internes Bearer-Secret für dynamische AuthZ-Anfragen |
 
 Ist `EMQX_AUTHZ_TOKEN` nicht gesetzt, bleiben dynamische DJI-/DRC-Rechte
