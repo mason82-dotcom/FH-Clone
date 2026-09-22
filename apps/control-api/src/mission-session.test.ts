@@ -169,3 +169,24 @@ test("new flight after telemetry timeout receives a new mission id", () => {
   assert.ok(second);
   assert.notEqual(second.missionId, first.missionId);
 });
+
+
+test("tracks Wayline observation without advertising execution capability", () => {
+  const tracker = new MissionSessionTracker();
+
+  const started = tracker.observe(message(900_000, 3));
+  assert.ok(started);
+  assert.equal(started.lastActivity, "manual_flight");
+  assert.equal(started.waylineObserved, false);
+
+  const wayline = tracker.observe(message(901_000, 5));
+  assert.ok(wayline);
+  assert.equal(wayline.lastActivity, "wayline");
+  assert.equal(wayline.lastModeCode, 5);
+  assert.equal(wayline.waylineObserved, true);
+
+  const manualAgain = tracker.observe(message(902_000, 3));
+  assert.ok(manualAgain);
+  assert.equal(manualAgain.lastActivity, "manual_flight");
+  assert.equal(manualAgain.waylineObserved, true);
+});
