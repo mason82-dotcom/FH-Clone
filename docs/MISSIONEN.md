@@ -24,7 +24,7 @@ Implementiert:
 
 Noch nicht V3-final:
 
-- persistente Missionshistorie in PostgreSQL
+- vollständige Telemetrie- und Medienkorrelation
 - Korrelation mit Medien
 - Korrelation mit UgCS/FH2-Tasks
 - schreibende Missionsausführung
@@ -100,6 +100,7 @@ standby
 telemetry_timeout
 device_disconnected
 manual
+service_restart  (Persistenz-Recovery, nicht regulärer Tracker-Endgrund)
 ```
 
 ## Öffentliche API
@@ -159,6 +160,17 @@ persistieren, wenn `TIMESCALE_URL` gesetzt ist.
 
 Persistiert werden Start, Ende, Endgrund, Gateway-/Drone-SN,
 Produktidentität und optionale nicht-sensitive RTK-Quellenmetadaten.
+
+Beim Start der Control API werden in TimescaleDB noch offene automatische
+Missionszeilen **vor neuem DJI-Ingest** abgeschlossen:
+
+```text
+end_reason = service_restart
+ended_at   = Startzeitpunkt des neuen Dienstprozesses
+```
+
+Die alte Sitzung wird damit nicht unsicher als aktiv fortgesetzt. Neue
+Telemetrie kann anschließend eine neue automatische Sitzung erzeugen.
 
 Noch offen ist die vollständige persistente Telemetrie- und Medienkorrelation.
 Details: [Persistenz](PERSISTENZ.md).
