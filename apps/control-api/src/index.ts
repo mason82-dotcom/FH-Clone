@@ -12,6 +12,14 @@ import {
   type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
 import {
+  HttpUgcsBridgeTransport,
+  UgcsAdapter
+} from "@fh-clone/adapter-ugcs";
+import {
+  MediaOverlayRegistry,
+  isMediaAsset
+} from "./media-overlay.js";
+import {
   evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest
 } from "./authz.js";
@@ -31,6 +39,8 @@ import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 const fh2 = createFh2OpenApiFromEnv();
+const ugcs = createUgcsFromEnv();
+const mediaOverlays = new MediaOverlayRegistry();
 
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
@@ -119,6 +129,7 @@ const bind = process.env.BIND ?? "0.0.0.0";
 const internalBind = process.env.INTERNAL_BIND ?? "0.0.0.0";
 const emqxAuthnToken = process.env.EMQX_AUTHN_TOKEN;
 const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
+const mediaIngestToken = process.env.MEDIA_INGEST_TOKEN;
 const missionSweepTimer = setInterval(() => {
   void persistSweptMissionEnds();
 }, 5_000);
@@ -152,6 +163,12 @@ const publicServer = createServer(async (request, response) => {
         missions: {
           active: missions.listActive().length,
           persistenceEnabled: missionStore.enabled
+        },
+        ugcs: {
+          configured: Boolean(ugcs)
+        },
+        mediaOverlays: {
+          assets: mediaOverlays.size()
         }
       });
     }
@@ -230,6 +247,59 @@ const publicServer = createServer(async (request, response) => {
         }
         throw error;
       }
+    }
+
+
+    if (request.method === "GET" && url.pathname === "/api/ugcs/status") {
+      if (!ugcs) return json(response, 503, { error: "ugcs_not_configured" });
+      try {
+        return json(response, 200, await ugcs.health());
+      } catch (error) {
+        return json(response, 502, {
+          error: "ugcs_bridge_unavailable",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/ugcs/vehicles") {
+      if (!ugcs) return json(response, 503, { error: "ugcs_not_configured" });
+      try {
+        return json(response, 200, await ugcs.listVehicles());
+      } catch (error) {
+        return json(response, 502, {
+          error: "ugcs_bridge_unavailable",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/ugcs/routes") {
+      if (!ugcs) return json(response, 503, { error: "ugcs_not_configured" });
+      try {
+        return json(response, 200, await ugcs.listRoutes());
+      } catch (error) {
+        return json(response, 502, {
+          error: "ugcs_bridge_unavailable",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/ugcs/telemetry") {
+      if (!ugcs) return json(response, 503, { error: "ugcs_not_configured" });
+      try {
+        return json(response, 200, await ugcs.readTelemetrySnapshot());
+      } catch (error) {
+        return json(response, 502, {
+          error: "ugcs_bridge_unavailable",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/media/overlays") {
+      return json(response, 200, mediaOverlays.list());
     }
 
     const missionMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/mission$/);
@@ -344,6 +414,42 @@ const internalServer = createServer(async (request, response) => {
       }
     }
 
+    if (request.method === "POST" && request.url === "/internal/media/assets") {
+      try {
+        if (!hasValidBearerToken(request, mediaIngestToken)) {
+          return json(response, 401, { error: "media_ingest_unauthorized" });
+        }
+
+        const body = await readJson<unknown>(request, 2_000_000);
+        const candidates = Array.isArray(body) ? body : [body];
+
+        if (candidates.length === 0 || candidates.length > 500) {
+          return json(response, 400, { error: "invalid_media_asset_batch" });
+        }
+
+        for (const candidate of candidates) {
+          if (!isMediaAsset(candidate)) {
+            return json(response, 400, { error: "invalid_media_asset" });
+          }
+        }
+
+        let overlayed = 0;
+        for (const asset of candidates) {
+          if (mediaOverlays.upsert(asset)) overlayed += 1;
+        }
+
+        return json(response, 200, {
+          accepted: candidates.length,
+          overlayed
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "media_ingest_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
     if (request.method === "POST" && request.url === "/internal/emqx/authz") {
       const startedAt = process.hrtime.bigint();
       try {
@@ -411,6 +517,18 @@ console.log(`FH-Clone control API listening on ${bind}:${publicPort}`);
 await listenServer(internalServer, internalPort, internalBind);
 console.log(`FH-Clone internal API listening on ${internalBind}:${internalPort}`);
 
+if (ugcs) {
+  try {
+    await ugcs.start();
+    console.log("FH-Clone UgCS adapter connected.");
+  } catch (error) {
+    console.warn(
+      "[UgCS] Bridge nicht erreichbar; Groundstation bleibt read-only offline:",
+      errorMessage(error)
+    );
+  }
+}
+
 if (dji) {
   await dji.start({
     onDevice(device) {
@@ -469,6 +587,7 @@ async function shutdown(): Promise<void> {
   internalServer.close();
   await drcSessions?.shutdown();
   await dji?.stop();
+  await ugcs?.stop();
   await authzAudit.shutdown();
   await gatewayCredentials?.close();
   await missionStore.close();
@@ -797,4 +916,17 @@ function createTopologyPersistenceQueue(
       await tail;
     }
   };
+}
+
+
+function createUgcsFromEnv(): UgcsAdapter | undefined {
+  const baseUrl = process.env.UGCS_BRIDGE_URL?.trim();
+  if (!baseUrl) return undefined;
+
+  return new UgcsAdapter(
+    new HttpUgcsBridgeTransport({
+      baseUrl,
+      requestTimeoutMs: envInt("UGCS_BRIDGE_TIMEOUT_MS", 5_000)
+    })
+  );
 }
