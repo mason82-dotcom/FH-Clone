@@ -32,9 +32,10 @@ export function RtkSatelliteChart({ samples }: RtkSatelliteChartProps) {
     ])
   );
 
-  const gpsPoints = points(usable, "gpsSatellites", maxSatellites);
-  const rtkPoints = points(usable, "rtkSatellites", maxSatellites);
-  const gridValues = gridSteps(maxSatellites);
+  const axisMax = axisMaximum(maxSatellites);
+  const gpsPoints = points(usable, "gpsSatellites", axisMax);
+  const rtkPoints = points(usable, "rtkSatellites", axisMax);
+  const gridValues = gridSteps(axisMax);
 
   return (
     <div className="satellite-chart">
@@ -118,10 +119,14 @@ function yFor(value: number, max: number): number {
   return PAD_TOP + usableHeight - (value / max) * usableHeight;
 }
 
-function gridSteps(max: number): number[] {
+function axisMaximum(max: number): number {
   const step = max <= 20 ? 5 : 10;
-  const top = Math.ceil(max / step) * step;
+  return Math.max(step, Math.ceil(max / step) * step);
+}
+
+function gridSteps(axisMax: number): number[] {
+  const step = axisMax <= 20 ? 5 : 10;
   const values: number[] = [];
-  for (let value = 0; value <= top; value += step) values.push(value);
+  for (let value = 0; value <= axisMax; value += step) values.push(value);
   return values;
 }
