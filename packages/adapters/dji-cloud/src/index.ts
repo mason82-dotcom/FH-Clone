@@ -516,3 +516,5 @@ export function parseDrcStatusNotify(message: unknown): 0 | 1 | 2 | undefined {
   const raw = data?.drc_state;
   return raw === 0 || raw === 1 || raw === 2 ? raw : undefined;
 }
+
+export * from "./m3m-media.js";
