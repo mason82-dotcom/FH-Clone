@@ -21,6 +21,14 @@ export interface RtkDeviceSnapshot {
   ageMs: number;
 }
 
+export interface RtkHistorySample {
+  sampledAt: number;
+  gpsSatellites?: number;
+  rtkSatellites?: number;
+  isFixed?: boolean;
+  fixState: RtkFixState;
+}
+
 export interface RtkFixTransition {
   deviceId: string;
   type: "acquired" | "lost";
