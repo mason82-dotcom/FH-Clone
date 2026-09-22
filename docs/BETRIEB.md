@@ -73,6 +73,32 @@ Das Verify-Skript:
 
 Der Stack bleibt nach erfolgreicher Prüfung gestartet.
 
+### Gateway-Credential provisionieren
+
+Für reale RC-Pro-/RC-Plus-Tests steht ein lokales Provisioning-Skript bereit:
+
+```bash
+bash scripts/provision-gateway.sh dji-gateway-rcpro1 RC-PRO-001
+```
+
+Das Passwort wird interaktiv verdeckt abgefragt, mit scrypt gehasht und nur
+als Hash in `gateway_credentials` gespeichert. Ein vorhandener Username wird
+damit rotiert und wieder aktiviert.
+
+Das Skript gibt weder Passwort noch Hash aus.
+
+### Was der Verify zusätzlich prüft
+
+Neben Health/Readiness validiert `scripts/verify.sh` auch:
+
+- ungültiger AuthN-Service-Token -> `HTTP 200 + deny`
+- temporäres Gateway-Credential -> AuthN `allow`
+- trusted `client_attrs.gateway_sn`
+- AuthZ eines eigenen Gateway-Status-Topics
+- deaktiviertes Credential -> sofortiges AuthZ `deny`
+- keine permanenten `drc/up`-/`drc/down`-Rechte in der Datei-ACL
+- Datenbankmarker bleibt über TimescaleDB-Restart erhalten
+
 ## Lokale Node.js-Prüfung
 
 Solange das Root-`package-lock.json` noch fehlt:
