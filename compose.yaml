@@ -90,6 +90,8 @@ services:
   emqx:
     image: ${EMQX_IMAGE:-emqx/emqx:5.7.2}
     environment:
+      EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE:?EMQX_NODE_COOKIE fehlt}
+      EMQX_NODE__DATA_DIR: /opt/emqx/data
       EMQX_AUTHENTICATION__1__HEADERS__AUTHORIZATION: "\"Bearer ${EMQX_AUTHN_TOKEN:?EMQX_AUTHN_TOKEN fehlt}\""
       EMQX_AUTHORIZATION__SOURCES__1__HEADERS__AUTHORIZATION: "\"Bearer ${EMQX_AUTHZ_TOKEN:?EMQX_AUTHZ_TOKEN fehlt}\""
     volumes:
