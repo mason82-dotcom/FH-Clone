@@ -1,7 +1,7 @@
 import mqtt, { type MqttClient } from "mqtt";
 import type { DjiMqttPublisher, DrcBrokerCredentials, MqttQos } from "./drc.js";
 
-export type DrcTransportLossReason = "mqtt_close" | "mqtt_offline" | "mqtt_error";
+export type DrcTransportLossReason = "mqtt_close" | "mqtt_offline";
 
 export interface DrcBrokerTransportOptions {
   onConnected?: () => void | Promise<void>;
@@ -63,6 +63,12 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
       };
       const onError = (error: Error) => {
         cleanup();
+        if (generation === this.generation) {
+          this.connected = false;
+          this.client = undefined;
+          client.removeAllListeners();
+          client.end(true);
+        }
         reject(error);
       };
       const cleanup = () => {
