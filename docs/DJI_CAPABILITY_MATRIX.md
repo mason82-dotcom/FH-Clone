@@ -42,6 +42,7 @@ FH2 darf daher nicht nur anhand von `type` entscheiden.
 | DJI RC Pro Enterprise | 2 | 144 | 0 |
 | DJI RC Plus | 2 | 119 | 0 |
 | DJI RC Plus 2 | 2 | 174 | 0 |
+| DJI Dock 3 | 3 | 3 | 0 |
 
 ### Aircraft im aktuellen Pilot-to-Cloud-Profil
 
@@ -52,6 +53,13 @@ FH2 darf daher nicht nur anhand von `type` entscheiden.
 | Mavic 3TA | 0 | 77 | 3 |
 | Matrice 4E | 0 | 99 | 0 |
 | Matrice 4T | 0 | 99 | 1 |
+
+### Aircraft im Dock-to-Cloud-Profil
+
+| Produkt | domain | type | sub_type |
+| --- | ---: | ---: | ---: |
+| Matrice 4D | 0 | 100 | 0 |
+| Matrice 4TD | 0 | 100 | 1 |
 
 Unbekannte Domains oder Subtypen werden **fail-closed** behandelt.
 
@@ -132,6 +140,27 @@ Diese Funktionen werden daher trotz DJI-Produktsupport nicht als routbare
 `AdapterDevice.capabilities[]` gemeldet. Der spezialisierte M4-DRC-Pfad
 bleibt zusätzlich FC3/Lease/DJI-Authority/Session/Dead-Man-gated.
 
+## Matrice 4D / 4TD hinter DJI Dock 3
+
+M4D/M4TD verwenden einen eigenen **Dock-to-Cloud**-Vertrag und werden nicht
+mit M4E/M4T hinter RC Plus 2 gleichgesetzt.
+
+FH2 erkennt aktuell:
+
+- Dock 3 als Gateway `3/3/0`,
+- M4D als Aircraft `0/100/0`,
+- M4TD als Aircraft `0/100/1`,
+- M4D Camera `98-0-0`,
+- M4TD Camera `99-0-0`,
+- den offiziellen M4D/M4TD-Property-Vertrag für OSD/State.
+
+Die Integration ist in V3 **Property-/Telemetrie-read-only**. Dokumentierte
+`rw`-Properties, Dock-DRC oder andere Steuerfunktionen werden daraus nicht
+automatisch freigeschaltet. Es werden keine generischen schreibenden
+`AdapterDevice.capabilities[]` beworben.
+
+Siehe [M4D_DOCK3.md](M4D_DOCK3.md).
+
 ## M3M
 
 M3M muss getrennt betrachtet werden.
@@ -199,16 +228,17 @@ behandelt.
 | `gimbal_pitch/roll/yaw` | `telemetry.gimbal` | aus tatsächlich beobachteten Gimbal-Properties |
 | `gps_number` | `telemetry.flight` | GPS/GNSS; allein **kein** RTK-Nachweis |
 | `rtk_number` | `telemetry.rtk` | RTK-spezifische Telemetrie |
-| `quality == 10` | `telemetry.rtk` + RTK fixed | DJI kennzeichnet explizit RTK fixed |
+| M4D/M4TD `quality == 10` | `telemetry.rtk` + RTK fixed | im M4D/M4TD-Dock-Property-Vertrag explizit RTK fixed; nicht pauschal auf andere Produktverträge übertragen |
 | `mode_code == 18` | `telemetry.rtk` | Airborne RTK fixing; kein Fix-Nachweis |
 | `live_capacity` | derzeit **kein** `livestream.read` | DJI-Fähigkeit ist dokumentiert, FH2-Livestream-Integration für V3 noch nicht vollständig implementiert |
 | Pilot Media Management | derzeit **kein** `media.read` | DJI-Funktion läuft über Pilot-2/JSBridge/Object-Storage; FH2-Media-Integration bleibt separates Gate |
 
 ### GNSS/RTK
 
-DJI trennt GPS- und RTK-Satelliten ausdrücklich. Außerdem beschreibt
-`position_state.is_fixed` den allgemeinen Satelliten-Fixvorgang, während
-`position_state.quality=10` ausdrücklich **RTK fixed** bedeutet.
+DJI trennt GPS- und RTK-Satelliten ausdrücklich. `position_state.is_fixed`
+beschreibt den allgemeinen Satelliten-Fixvorgang. Im M4D/M4TD-Dock-Vertrag
+ist `position_state.quality=10` ausdrücklich **RTK fixed**; diese Semantik
+wird nicht ungeprüft auf andere Produktfamilien übertragen.
 
 FH2 darf deshalb weder aus `gps_number` noch aus `is_fixed==2` allein
 eine positive RTK-Capability beziehungsweise einen RTK-Fix ableiten.
@@ -286,6 +316,8 @@ aktuellen DJI-Produktübersicht überein:
 | Mavic 3TA | `129-0-0` |
 | Matrice 4E | `88-0-0` |
 | Matrice 4T | `89-0-0` |
+| Matrice 4D | `98-0-0` |
+| Matrice 4TD | `99-0-0` |
 
 Diese Tabelle identifiziert ausschließlich das Payload. Lens-/Video-Pfade
 werden weiterhin zur Laufzeit ermittelt.
@@ -323,6 +355,8 @@ Vor V3-RC bleiben Hardwaretests erforderlich für:
 - Cloud-Control-Authority
 - tatsächliche M3E/M3T/M3TA-Payload-Kommandos
 - tatsächliche M4E/M4T-Live-Control-Sequenz
+- reale Dock-3-`update_topo`-/OSD-/State-Payloads für M4D/M4TD
+- M4D/M4TD-`cameras[]`, Batterie-, RTK- und Funklink-Properties
 
 ## Offizielle DJI-Referenzen
 
@@ -334,6 +368,8 @@ Vor V3-RC bleiben Hardwaretests erforderlich für:
   https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/drc.html
 - RC Pro DRC/Payload:
   https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/rc-pro/drc.html
+- M4D/M4TD Dock-to-Cloud Properties:
+  https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dock-to-cloud/mqtt/aircraft/m4d-properties.html
 - WPML:
   https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/template-kml.html
 
