@@ -295,3 +295,21 @@ Bis zum Release Candidate werden keine neuen unabhängigen Features aufgenommen.
 
 Erlaubt sind nur Änderungen, die ein Release Gate schließen oder einen
 Integrationsfehler beheben.
+
+
+## Projektabschluss nach V3.0
+
+V3.0 ist der geplante Abschlussstand dieses Projekts.
+
+Nach erfolgreicher V3.0-Abnahme:
+
+- werden die V3-Arbeitspakete geschlossen,
+- werden keine neuen Features oder Folgeversionen geplant,
+- wird kein V3.1-/V4-Backlog angelegt,
+- werden keine Agentenaufträge fortgeführt,
+- bleibt `main` als freigegebener Abschlussstand bestehen.
+
+Weitere Entwicklung erfolgt nur nach einem neuen ausdrücklichen Auftrag des
+Projektinhabers.
+
+Kurz: **V3.0 fertig -> Projektstopp / Feierabend.**
