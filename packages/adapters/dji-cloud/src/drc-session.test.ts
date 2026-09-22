@@ -270,3 +270,32 @@ test("transport loss revokes runtime DRC activity immediately and recovery resum
   assert.equal(transport.heartbeatsStarted, startedBeforeLoss + 1);
   assert.ok(audits.includes("transport_recovered"));
 });
+
+
+test("assigns a unique runtime session id and does not rehydrate it", async () => {
+  const transport = new FakeTransport();
+  const store = new InMemoryDrcSessionStore();
+  const manager = new DrcSessionManager(transport, store, {
+    checkIntervalMs: 60_000
+  });
+
+  const session = await manager.request({
+    aircraftSn: "M4T-RUNTIME",
+    gatewaySn: "RC-RUNTIME",
+    holder: "operator-a",
+    guards: preAuthorityGuards
+  });
+
+  assert.match(
+    session.sessionId,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  );
+
+  const restarted = new DrcSessionManager(
+    transport,
+    new InMemoryDrcSessionStore(),
+    { checkIntervalMs: 60_000 }
+  );
+
+  assert.equal(await restarted.get("RC-RUNTIME"), undefined);
+});
