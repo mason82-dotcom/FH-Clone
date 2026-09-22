@@ -10,6 +10,7 @@ import type {
   RawMessage
 } from "@fh-clone/aircraft-core";
 import { normalizeDjiPayload } from "./normalizer.js";
+import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import {
@@ -77,6 +78,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   private readonly capabilities = new Map<string, Set<Capability>>();
   private readonly pendingServices = new Map<string, PendingServiceRequest>();
   readonly topology = new DjiTopologyRegistry();
+  readonly cloudAuthority = new DjiCloudControlAuthorityRegistry();
 
   constructor(private readonly options: DjiCloudAdapterOptions) {}
 
@@ -188,6 +190,16 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     return this.getControlProfile(deviceSn)?.orbitFlight ?? false;
   }
 
+  getCloudControlAuthority(deviceOrGatewaySn: string) {
+    const gatewaySn = this.resolveGatewaySn(deviceOrGatewaySn) ?? deviceOrGatewaySn;
+    return this.cloudAuthority.get(gatewaySn);
+  }
+
+  isCloudControlAuthorized(deviceOrGatewaySn: string): boolean {
+    const gatewaySn = this.resolveGatewaySn(deviceOrGatewaySn) ?? deviceOrGatewaySn;
+    return this.cloudAuthority.isAuthorized(gatewaySn);
+  }
+
   async requestServiceForDevice(
     deviceSn: string,
     method: string,
@@ -268,6 +280,14 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     }
 
     const deviceId = deviceFromTopic(topic);
+
+    if (deviceId && topic.endsWith("/state")) {
+      this.cloudAuthority.applyState(deviceId, payload, receivedAt);
+    }
+
+    if (deviceId && topic.endsWith("/events")) {
+      this.cloudAuthority.applyEvent(deviceId, payload, receivedAt);
+    }
 
     if (deviceId && topic.startsWith("sys/product/") && topic.endsWith("/status")) {
       const topology = parseDjiTopologyUpdate(deviceId, payload, receivedAt);
@@ -436,3 +456,5 @@ export * from "./capabilities.js";
 export * from "./rtk.js";
 
 export * from "./payloads.js";
+
+export * from "./cloud-authority.js";
