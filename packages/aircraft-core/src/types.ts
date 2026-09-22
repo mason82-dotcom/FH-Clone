@@ -9,6 +9,8 @@ export type Capability =
   | "telemetry.gimbal"
   | "control.flight"
   | "control.rth"
+  | "control.pointing"
+  | "control.orbit"
   | "control.camera"
   | "control.gimbal"
   | "mission.wayline"
