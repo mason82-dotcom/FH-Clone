@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import {
   DeviceRegistry,
@@ -8,8 +9,8 @@ import {
   type DjiCloudAdapterOptions
 } from "@fh-clone/adapter-dji-cloud";
 import {
-  authorizeDjiGateway,
-  type EmqxAuthorizationRequest
+  authorizeEmqx,
+  isEmqxAuthorizationRequest
 } from "./authz.js";
 import { RtkTelemetryService } from "./rtk-service.js";
 
@@ -43,6 +44,13 @@ const publicPort = envInt("PORT", 8080);
 const internalPort = envInt("INTERNAL_PORT", 8081);
 const bind = process.env.BIND ?? "0.0.0.0";
 const internalBind = process.env.INTERNAL_BIND ?? "0.0.0.0";
+const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
+
+if (!emqxAuthzToken) {
+  console.warn(
+    "[AuthZ] EMQX_AUTHZ_TOKEN ist nicht gesetzt; dynamische DJI/DRC-Autorisierung bleibt gesperrt."
+  );
+}
 
 const publicServer = createServer(async (request, response) => {
   try {
@@ -111,10 +119,44 @@ const internalServer = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && request.url === "/internal/emqx/authz") {
-      const body = await readJson<EmqxAuthorizationRequest>(request, 16_384);
-      if (!dji) return json(response, 200, { result: "ignore" });
-      const result = authorizeDjiGateway(dji.topology, body);
-      return json(response, 200, { result });
+      try {
+        const body = await readJson<unknown>(request, 16_384);
+        if (!isEmqxAuthorizationRequest(body)) {
+          return json(response, 200, { result: "deny" });
+        }
+
+        const dynamicRequest =
+          body.username.startsWith("dji-gateway-") ||
+          (
+            body.username === "backend-service" &&
+            /\/drc\/(up|down)$/.test(body.topic)
+          );
+
+        if (dynamicRequest && !hasValidBearerToken(request, emqxAuthzToken)) {
+          auditAuthz("deny", body, "invalid_internal_token");
+          return json(response, 200, { result: "deny" });
+        }
+
+        if (!dji) {
+          const result = dynamicRequest ? "deny" : "ignore";
+          auditAuthz(result, body, "dji_adapter_unavailable");
+          return json(response, 200, { result });
+        }
+
+        const result = authorizeEmqx(dji.topology, body, {
+          // DRC remains fail-closed until the backend DRC session manager is
+          // explicitly wired to this policy after FC3/lease/authority checks.
+          isDrcGatewayActive: () => false
+        });
+
+        if (result === "deny") {
+          auditAuthz(result, body, "policy_denied");
+        }
+        return json(response, 200, { result });
+      } catch (error) {
+        console.error("[AuthZ] Evaluierungsfehler:", errorMessage(error));
+        return json(response, 200, { result: "deny" });
+      }
     }
 
     return json(response, 404, { error: "not_found" });
@@ -183,4 +225,48 @@ function envInt(name: string, fallback: number): number {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+
+function hasValidBearerToken(
+  request: IncomingMessage,
+  expectedToken: string | undefined
+): boolean {
+  if (!expectedToken) return false;
+
+  const header = request.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const presented = header.slice("Bearer ".length);
+  const expected = Buffer.from(expectedToken);
+  const actual = Buffer.from(presented);
+
+  return (
+    expected.length === actual.length &&
+    timingSafeEqual(expected, actual)
+  );
+}
+
+function auditAuthz(
+  result: "allow" | "deny" | "ignore",
+  request: {
+    username: string;
+    clientid: string;
+    action: string;
+    topic: string;
+    peerhost?: string;
+  },
+  reason: string
+): void {
+  console.info("[AuthZ]", {
+    result,
+    reason,
+    username: request.username,
+    clientid: request.clientid,
+    action: request.action,
+    topic: request.topic,
+    ...(request.peerhost ? { peerhost: request.peerhost } : {})
+  });
 }
