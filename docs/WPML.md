@@ -76,6 +76,8 @@ FH2 liest unter anderem:
 - `globalRTHHeight` in `waylines.wpml` (read-only; erzeugt keinerlei RTH-Freigabe)
 - `droneInfo`
 - `payloadInfo`
+- optionales `autoRerouteInfo` mit
+  `missionAutoRerouteMode` und `transitionalAutoRerouteMode`
 
 ### Produktidentitäten
 
@@ -90,9 +92,17 @@ Beispiele aus dem aktuellen Common-Element-Vertrag:
 | `77/2` | M3M |
 | `91/0` | M3D |
 | `91/1` | M3TD |
+| `99/0` | M4E |
+| `99/1` | M4T |
+| `100/0` | M4D |
+| `100/1` | M4TD |
 | `payloadEnumValue=66` | M3E Camera |
 | `67` | M3T Camera |
 | `68` | M3M Camera |
+| `88` | M4E Camera |
+| `89` | M4T Camera |
+| `98` | M4D Camera |
+| `99` | M4TD Camera |
 
 Wichtig:
 
@@ -106,9 +116,10 @@ MQTT payload_index
 
 FH2 konvertiert diese Identitäten nicht heuristisch ineinander.
 
-Die aktuell verifizierte WPML-Common-Element-Tabelle enumeriert unter anderem
-M300/M350/M30/M3E/M3T/M3M/M3D/M3TD. Nicht eindeutig dokumentierte neuere
-Produktwerte werden als unbekannt erhalten und **nicht geraten**.
+Die aktuelle DJI-WPML-Dokumentation unterstützt zusätzlich M4E/M4T sowie
+M4D/M4TD. Deren Werte werden aus der offiziellen Produktmatrix übernommen.
+Nicht eindeutig dokumentierte zukünftige Produktwerte bleiben als unbekannt
+erhalten und werden **nicht geraten**.
 
 ## Template-Ebene
 
@@ -120,6 +131,8 @@ FH2 liest pro `Folder`:
 - `waylineCoordinateSysParam.coordinateMode`
 - `heightMode`
 - `positioningType`
+- `payloadParam.payloadPositionIndex`
+- `payloadParam.imageFormat` als unveränderten Rohwert plus getrennte Liste
 - Waypoints/Placemark
 - ActionGroups
 
@@ -259,7 +272,9 @@ Aktuell geprüft werden unter anderem:
 - gültige Waypoint-Koordinaten
 - eindeutige Waypoint-Indizes pro Folder
 - Waypoint-Indizes monoton und lückenlos ab `0`
-- erforderliches `globalRTHHeight` in `waylines.wpml`
+- erforderliches `globalRTHHeight` in `waylines.wpml` und DJI-Bereich `[2,1500]` m
+- `takeOffSecurityHeight` mindestens `1.2` m für RC-Routen; Dock-Routen können produktspezifisch mindestens `8` m verlangen
+- eindeutige `templateId` innerhalb von `template.kml`
 - `actionTriggerParam > 0` bei `multipleTiming` / `multipleDistance`
 - ActionGroup-ID-Bereich `[0,65535]`
 - ActionGroup-ID-Eindeutigkeit im Dokument
