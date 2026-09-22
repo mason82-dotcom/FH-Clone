@@ -187,6 +187,27 @@ Serverseitige MQTT-/HTTPS-Integration. Der aktuelle Schwerpunkt liegt auf:
 DRC ist technisch separat implementiert und nicht Teil der permanenten
 Basic-Link-Berechtigung.
 
+### Livestreaming
+
+Der verbindliche FH2-Livestreamingpfad ist selbst gehostet:
+
+```text
+DJI Pilot 2 / RC Pro Enterprise
+  -> DJI Cloud API live_start_push
+  -> RTMP
+  -> MediaMTX
+  -> WebRTC
+  -> FH2 WebUI
+```
+
+HLS darf als Fallback angeboten werden.
+
+Der FlightHub-2-/SIKONG-CE-Bezahlstream bleibt deaktiviert. Der Browser erhält
+keine RTMP-Publish- oder DJI-Credentials. Start/Stop/Lens/Quality laufen
+serverseitig über den vorhandenen DJI-`services/services_reply`-Pfad.
+
+Details: [LIVESTREAM.md](LIVESTREAM.md).
+
 ### DJI Mobile SDK V5
 
 Vorgesehener Android-/RC-Adapter. SDK-KeyManager- und Gerätewerte werden in
