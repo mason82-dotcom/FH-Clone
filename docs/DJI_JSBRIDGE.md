@@ -28,13 +28,24 @@ window.djiBridge vorhanden?
   -> platformIsVerified()
   -> optional platformVerifyLicense(appId, appKey, license)
   -> platformIsVerified() erneut prüfen
-  -> platformSetWorkspaceId(uuid)
-  -> platformSetInformation(platformName, workspaceName, description)
-  -> Controller-/Aircraft-SN lesen
+  -> Version + Controller-/Aircraft-SN lesen
+  -> Bridge ready
+
+später nach sicherem Runtime-Bootstrap:
+  -> API-Modul geladen
+  -> Thing-Modul geladen + MQTT verbunden
+  -> configureWorkspace()
+       -> platformSetWorkspaceId(uuid)
+       -> platformSetInformation(...)
+  -> abhängige Module laden
 ```
 
 DJI verlangt die License-Verifikation vor nachfolgenden JSBridge-Aufrufen.
 Der Workspace-ID-Vertrag erwartet UUID-Format.
+
+`ready` bedeutet in FH2 deshalb nur: **JSBridge vorhanden und License
+verifiziert**. Es bedeutet nicht automatisch, dass Thing/API/WS verbunden
+oder ein Workspace bereits aktiviert ist.
 
 FH2 verwendet dafür den React-Provider:
 
@@ -158,8 +169,10 @@ Benötigt:
 DJI dokumentiert für diese Funktionen den geladenen Cloud-/Thing-,
 WebSocket- **und API-Kontext**. Der FH2-Client prüft deshalb vor
 `loadMap()` und `loadTsa()` explizit `thing` + `ws` + `api` und
-bricht andernfalls ab. Wird das API-Modul neu geladen, müssen die davon
-abhängigen HTTPS-Funktionen ebenfalls neu initialisiert werden.
+bricht andernfalls ab. Wird das API-Modul neu geladen, entlädt FH2 vorhandene
+`map`-/`tsa`-/`mission`-Module zuerst, damit keine veralteten
+Host-/Token-Kontexte weiterlaufen. Anschließend müssen die abhängigen Module
+explizit neu geladen werden.
 
 ### media
 
@@ -207,6 +220,18 @@ Bis ein eigener authentisierter Pilot2-Bootstrap-Vertrag abgenommen ist, werden
 die Module nur über explizit vom Aufrufer gelieferte Runtimeparameter geladen.
 Es werden keine Credentials aus anderen FH2-Konfigurationen kopiert oder
 geraten.
+
+Der Client setzt Workspace-ID und Plattforminformation bewusst **nicht** schon
+beim Provider-Start. `configureWorkspace()` verlangt vorher:
+
+```text
+api geladen
++ thing geladen
++ thingGetConnectState() == true
+```
+
+Erst danach werden `platformSetWorkspaceId()` und
+`platformSetInformation()` aufgerufen.
 
 ## Livestream
 
