@@ -17,7 +17,11 @@ import {
   describeDjiProduct,
   parseDjiTopologyUpdate
 } from "./topology.js";
-import { getDjiCloudControlProfile } from "./capabilities.js";
+import {
+  getDjiCloudControlProfile,
+  type DjiCloudControlProfile,
+  type DjiDrcProfile
+} from "./capabilities.js";
 
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
@@ -155,22 +159,33 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     return this.topology.resolveGatewaySn(deviceOrGatewaySn);
   }
 
-  supportsFlightControl(deviceSn: string): boolean {
+  getControlProfile(deviceSn: string): DjiCloudControlProfile | undefined {
     const gatewaySn = this.resolveGatewaySn(deviceSn);
-    if (!gatewaySn) return false;
+    if (!gatewaySn) return undefined;
     const topology = this.topology.getGateway(gatewaySn);
     const subDevice = topology?.subDevices.find((device) => device.sn === deviceSn);
-    if (!topology || !subDevice) return false;
-    return getDjiCloudControlProfile(subDevice.product, topology.product).flightControl;
+    if (!topology || !subDevice) return undefined;
+    return getDjiCloudControlProfile(subDevice.product, topology.product);
+  }
+
+  getDrcProfile(deviceSn: string): DjiDrcProfile {
+    return this.getControlProfile(deviceSn)?.drcProfile ?? "none";
+  }
+
+  supportsFlightControl(deviceSn: string): boolean {
+    return this.getControlProfile(deviceSn)?.flightControl ?? false;
   }
 
   supportsFlyTo(deviceSn: string): boolean {
-    const gatewaySn = this.resolveGatewaySn(deviceSn);
-    if (!gatewaySn) return false;
-    const topology = this.topology.getGateway(gatewaySn);
-    const subDevice = topology?.subDevices.find((device) => device.sn === deviceSn);
-    if (!topology || !subDevice) return false;
-    return getDjiCloudControlProfile(subDevice.product, topology.product).flyTo;
+    return this.getControlProfile(deviceSn)?.flyTo ?? false;
+  }
+
+  supportsPointingFlight(deviceSn: string): boolean {
+    return this.getControlProfile(deviceSn)?.pointingFlight ?? false;
+  }
+
+  supportsOrbitFlight(deviceSn: string): boolean {
+    return this.getControlProfile(deviceSn)?.orbitFlight ?? false;
   }
 
   async requestServiceForDevice(
