@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import {
   DeviceRegistry,
   ParameterRegistry
@@ -16,6 +16,11 @@ import {
   isEmqxAuthorizationRequest
 } from "./authz.js";
 import { AuthzAuditWriter } from "./authz-audit.js";
+import {
+  authenticateEmqx,
+  isEmqxAuthenticationRequest,
+  PostgresGatewayCredentialStore
+} from "./authn.js";
 import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
@@ -27,6 +32,7 @@ const parameters = new ParameterRegistry();
 
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
+const gatewayCredentials = await createGatewayCredentialStore();
 let drcSessions: DrcSessionManager | undefined;
 const djiOptions = getDjiOptions(topologyPersistence, async (gatewaySn, drcState) => {
   await drcSessions?.applyDrcStatus(gatewaySn, drcState);
@@ -105,66 +111,22 @@ if (missionStore.enabled) {
   }
 }
 
-if (dji) {
-  await dji.start({
-    onDevice(device) {
-      devices.upsert(device);
-    },
-    onParameter(sample) {
-      parameters.update(sample);
-    },
-    async onRawMessage(message) {
-      const previousMissionId = message.deviceId
-        ? missions.getActive(message.deviceId)?.missionId
-        : undefined;
-      const session = missions.observe(message);
-
-      if (session && session.endedAt !== undefined) {
-        try {
-          await missionStore.closeSession(session);
-        } catch (error) {
-          console.error(
-            "[Mission] Failed to persist automatic mission end:",
-            session.missionId,
-            errorMessage(error)
-          );
-        }
-      } else if (
-        session &&
-        session.missionId !== previousMissionId
-      ) {
-        try {
-          await missionStore.open(session, {
-            ...(message.deviceId
-              ? getMissionProduct(message.deviceId)
-              : {})
-          });
-        } catch (error) {
-          console.error(
-            "[Mission] Failed to persist automatic mission start:",
-            session.missionId,
-            errorMessage(error)
-          );
-        }
-      }
-
-      rtk.observe(message);
-      if (process.env.LOG_RAW_DJI === "1") {
-        console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
-      }
-    }
-  });
-}
-
 const publicPort = envInt("PORT", 8080);
 const internalPort = envInt("INTERNAL_PORT", 8081);
 const bind = process.env.BIND ?? "0.0.0.0";
 const internalBind = process.env.INTERNAL_BIND ?? "0.0.0.0";
+const emqxAuthnToken = process.env.EMQX_AUTHN_TOKEN;
 const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
 const missionSweepTimer = setInterval(() => {
   void persistSweptMissionEnds();
 }, 5_000);
 missionSweepTimer.unref();
+
+if (!emqxAuthnToken) {
+  console.warn(
+    "[AuthN] EMQX_AUTHN_TOKEN ist nicht gesetzt; MQTT-Authentifizierung über den internen Hook bleibt gesperrt."
+  );
+}
 
 if (!emqxAuthzToken) {
   console.warn(
@@ -259,6 +221,45 @@ const internalServer = createServer(async (request, response) => {
       return json(response, 200, { status: "ok", service: "control-api-internal" });
     }
 
+    if (request.method === "POST" && request.url === "/internal/emqx/authn") {
+      try {
+        const body = await readJson<unknown>(request, 16_384);
+        if (
+          !isEmqxAuthenticationRequest(body) ||
+          !hasValidBearerToken(request, emqxAuthnToken)
+        ) {
+          return json(response, 200, {
+            result: "deny",
+            is_superuser: false
+          });
+        }
+
+        const result = await authenticateEmqx(
+          gatewayCredentials,
+          body,
+          process.env.DJI_MQTT_PASSWORD
+        );
+
+        console.info("[AuthN]", {
+          result: result.result,
+          username: body.username,
+          clientid: body.clientid,
+          ...(body.peerhost ? { peerhost: body.peerhost } : {}),
+          ...(result.result === "allow"
+            ? { gateway_sn: result.client_attrs.gateway_sn }
+            : {})
+        });
+
+        return json(response, 200, result);
+      } catch (error) {
+        console.error("[AuthN] Evaluierungsfehler:", errorMessage(error));
+        return json(response, 200, {
+          result: "deny",
+          is_superuser: false
+        });
+      }
+    }
+
     if (request.method === "POST" && request.url === "/internal/emqx/authz") {
       const startedAt = process.hrtime.bigint();
       try {
@@ -294,6 +295,8 @@ const internalServer = createServer(async (request, response) => {
         }
 
         const authzDecision = await evaluateEmqxAuthorization(dji.topology, body, {
+          isGatewayPrincipalActive: async (username, gatewaySn) =>
+            (await gatewayCredentials?.isActiveBinding(username, gatewaySn)) ?? false,
           // Runtime-only session state. It is intentionally never rehydrated
           // from PostgreSQL after a process restart.
           isDrcGatewayActive: async (gatewaySn) => {
@@ -318,13 +321,63 @@ const internalServer = createServer(async (request, response) => {
   }
 });
 
-publicServer.listen(publicPort, bind, () => {
-  console.log(`FH-Clone control API listening on ${bind}:${publicPort}`);
-});
+await listenServer(publicServer, publicPort, bind);
+console.log(`FH-Clone control API listening on ${bind}:${publicPort}`);
 
-internalServer.listen(internalPort, internalBind, () => {
-  console.log(`FH-Clone internal API listening on ${internalBind}:${internalPort}`);
-});
+await listenServer(internalServer, internalPort, internalBind);
+console.log(`FH-Clone internal API listening on ${internalBind}:${internalPort}`);
+
+if (dji) {
+  await dji.start({
+    onDevice(device) {
+      devices.upsert(device);
+    },
+    onParameter(sample) {
+      parameters.update(sample);
+    },
+    async onRawMessage(message) {
+      const previousMissionId = message.deviceId
+        ? missions.getActive(message.deviceId)?.missionId
+        : undefined;
+      const session = missions.observe(message);
+
+      if (session && session.endedAt !== undefined) {
+        try {
+          await missionStore.closeSession(session);
+        } catch (error) {
+          console.error(
+            "[Mission] Failed to persist automatic mission end:",
+            session.missionId,
+            errorMessage(error)
+          );
+        }
+      } else if (
+        session &&
+        session.missionId !== previousMissionId
+      ) {
+        try {
+          await missionStore.open(session, {
+            ...(message.deviceId
+              ? getMissionProduct(message.deviceId)
+              : {})
+          });
+        } catch (error) {
+          console.error(
+            "[Mission] Failed to persist automatic mission start:",
+            session.missionId,
+            errorMessage(error)
+          );
+        }
+      }
+
+      rtk.observe(message);
+      if (process.env.LOG_RAW_DJI === "1") {
+        console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
+      }
+    }
+  });
+}
+
 
 async function shutdown(): Promise<void> {
   clearInterval(missionSweepTimer);
@@ -333,6 +386,7 @@ async function shutdown(): Promise<void> {
   await drcSessions?.shutdown();
   await dji?.stop();
   await authzAudit.shutdown();
+  await gatewayCredentials?.close();
   await missionStore.close();
   await topologyPersistence.flush();
   await topologyStore?.close();
@@ -359,6 +413,21 @@ function getDjiOptions(
     ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {}),
     ...(topologyPersistence.enabled ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyPersistence.enqueue(change) } : {})
   };
+}
+
+function listenServer(
+  server: Server,
+  port: number,
+  host: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onError = (error: Error) => reject(error);
+    server.once("error", onError);
+    server.listen(port, host, () => {
+      server.off("error", onError);
+      resolve();
+    });
+  });
 }
 
 function json(response: ServerResponse, status: number, body: unknown): void {
@@ -492,6 +561,27 @@ function getMissionProduct(
   return product ? { product } : {};
 }
 
+
+async function createGatewayCredentialStore(): Promise<
+  PostgresGatewayCredentialStore | undefined
+> {
+  const connectionString =
+    process.env.DATABASE_URL ?? process.env.TIMESCALE_URL;
+  if (!connectionString) return undefined;
+
+  const store = new PostgresGatewayCredentialStore(connectionString);
+  try {
+    await store.assertReady();
+    return store;
+  } catch (error) {
+    console.error(
+      "[AuthN] Gateway-Credential-Store nicht verfügbar; Gateway-Authentifizierung bleibt gesperrt:",
+      errorMessage(error)
+    );
+    await store.close();
+    return undefined;
+  }
+}
 
 async function createTopologyStore(): Promise<PostgresGatewayRegistryStore | undefined> {
   const connectionString = process.env.DATABASE_URL;
