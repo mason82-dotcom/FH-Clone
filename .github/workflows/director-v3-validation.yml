@@ -1,6 +1,9 @@
 name: Direktor V3 Validierung
 
 on:
+  push:
+    branches:
+      - director/frontend-fh2-final-validation-v4
   workflow_dispatch:
     inputs:
       r1_bootstrap:
