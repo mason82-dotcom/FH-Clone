@@ -1,3 +1,5 @@
+import type { MissionRtkContext } from "./mission.js";
+
 export type GroundStationCapability =
   | "groundstation.vehicle.read"
   | "groundstation.telemetry.read"
@@ -38,6 +40,11 @@ export interface GroundStationMission {
   name: string;
   format: string;
   metadata?: Record<string, unknown>;
+  /**
+   * Non-sensitive RTK context for documentation/audit.
+   * NTRIP connection parameters and credentials are intentionally excluded.
+   */
+  rtk?: MissionRtkContext;
 }
 
 export interface GroundStationHealth {
