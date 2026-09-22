@@ -157,6 +157,8 @@ export interface DjiPilotWaylinePage {
 }
 
 export interface DjiPilotWaylineListQuery {
+  /** Optional wayline file-name search used by DJI Pilot 2. */
+  key?: string;
   favorited?: boolean;
   orderBy?: string;
   page?: number;

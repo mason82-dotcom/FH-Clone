@@ -3,6 +3,17 @@ import {
   type DjiPilotWaylineListQuery
 } from "@fh-clone/adapter-dji-cloud";
 
+const DJI_PILOT_ORDER_BY = new Set([
+  "name asc",
+  "name desc",
+  "update_time asc",
+  "update_time desc",
+  "create_time asc",
+  "create_time desc"
+]);
+
+const DJI_PILOT_TEMPLATE_TYPES = new Set([0, 1, 2, 3]);
+
 export function createDjiPilotWaylineCatalogFromEnv(): DjiPilotWaylineCatalogClient {
   return new DjiPilotWaylineCatalogClient({
     enabled: envBool("DJI_PILOT_WAYLINE_ENABLED", false),
@@ -20,16 +31,24 @@ export function createDjiPilotWaylineCatalogFromEnv(): DjiPilotWaylineCatalogCli
 }
 
 export function parseDjiPilotWaylineListQuery(url: URL): DjiPilotWaylineListQuery {
+  const key = optionalString(url, "key");
   const favorited = optionalBoolean(url, "favorited");
-  const actionType = optionalInteger(url, "action_type", 0, 1000);
+  const actionType = optionalInteger(url, "action_type", 1, 1);
   const templateTypes = integerArray(url, "template_type");
+  if (templateTypes.some((value) => !DJI_PILOT_TEMPLATE_TYPES.has(value))) {
+    throw new Error("invalid_query_template_type");
+  }
   const droneModelKeys = nonEmptyArray(url, "drone_model_keys");
   const payloadModelKeys = nonEmptyArray(url, "payload_model_key");
-  const orderBy = url.searchParams.get("order_by")?.trim();
+  const orderBy = optionalString(url, "order_by");
+  if (orderBy && !DJI_PILOT_ORDER_BY.has(orderBy)) {
+    throw new Error("invalid_query_order_by");
+  }
 
   return {
     page: requiredInteger(url, "page", 1, 1, 10_000),
-    pageSize: requiredInteger(url, "page_size", 100, 1, 500),
+    pageSize: requiredInteger(url, "page_size", 10, 1, 500),
+    ...(key ? { key } : {}),
     ...(favorited !== undefined ? { favorited } : {}),
     ...(orderBy ? { orderBy } : {}),
     ...(actionType !== undefined ? { actionType } : {}),
@@ -68,6 +87,11 @@ function optionalInteger(
     throw new Error(`invalid_query_${name}`);
   }
   return value;
+}
+
+function optionalString(url: URL, name: string): string | undefined {
+  const value = url.searchParams.get(name)?.trim();
+  return value ? value : undefined;
 }
 
 function optionalBoolean(url: URL, name: string): boolean | undefined {

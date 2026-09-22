@@ -54,10 +54,12 @@ test("lists DJI Pilot waypoint files read-only and keeps model keys separate fro
   });
 
   const result = await client.listWaylines({
+    key: "M3M Survey",
     page: 2,
     pageSize: 25,
     favorited: false,
-    actionType: 0,
+    orderBy: "update_time desc",
+    actionType: 1,
     templateTypes: [0, 2],
     droneModelKeys: ["0-67-0", "0-77-2"],
     payloadModelKeys: ["1-68-0"]
@@ -67,6 +69,9 @@ test("lists DJI Pilot waypoint files read-only and keeps model keys separate fro
   assert.equal(seenInit?.redirect, "manual");
   assert.equal((seenInit?.headers as Record<string, string>)["x-auth-token"], "secret-token");
   assert.equal(seenUrl?.pathname, "/wayline/api/v1/workspaces/workspace-1/waylines");
+  assert.equal(seenUrl?.searchParams.get("key"), "M3M Survey");
+  assert.equal(seenUrl?.searchParams.get("order_by"), "update_time desc");
+  assert.equal(seenUrl?.searchParams.get("action_type"), "1");
   assert.deepEqual(seenUrl?.searchParams.getAll("template_type"), ["0", "2"]);
   assert.deepEqual(seenUrl?.searchParams.getAll("drone_model_keys"), ["0-67-0", "0-77-2"]);
   assert.deepEqual(seenUrl?.searchParams.getAll("payload_model_key"), ["1-68-0"]);

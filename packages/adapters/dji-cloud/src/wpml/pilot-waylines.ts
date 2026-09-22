@@ -55,6 +55,7 @@ export class DjiPilotWaylineCatalogClient {
     const workspaceId = encodeURIComponent(this.options.workspaceId!.trim());
     const url = new URL(`${base}/wayline/api/v1/workspaces/${workspaceId}/waylines`);
 
+    appendString(url, "key", query.key);
     appendBoolean(url, "favorited", query.favorited);
     appendString(url, "order_by", query.orderBy);
     appendInteger(url, "page", query.page);
