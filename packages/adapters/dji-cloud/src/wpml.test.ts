@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { readWpmlKmz } from "./wpml/kmz.js";
+import { projectWpmlToGroundStation } from "./wpml/groundstation.js";
 import { parseWpmlBundle } from "./wpml/parser.js";
 
 const templateXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -309,6 +310,65 @@ test("reads the required WPML files from a KMZ archive and preserves res entries
   assert.equal(result.bundle.template.missionConfig.drone?.subEnumValue, 2);
   assert.deepEqual(result.resources, ["wpmz/res/reference.txt"]);
   assert.equal(result.entries.length, 3);
+});
+
+test("projects validated WPML into neutral FH2 mission and route models", () => {
+  const bundle = parseWpmlBundle(templateXml, waylinesXml);
+  const projection = projectWpmlToGroundStation(bundle, {
+    id: "pilot-file-123",
+    name: "Inspektionsroute",
+    sourceFileName: "inspection.kmz"
+  });
+
+  assert.equal(projection.mission.id, "pilot-file-123");
+  assert.equal(projection.mission.name, "Inspektionsroute");
+  assert.equal(projection.mission.format, "dji-wpml");
+  assert.equal(projection.routes.length, 1);
+  assert.equal(projection.routes[0]?.metadata?.executeHeightMode, "WGS84");
+  assert.equal(projection.routes[0]?.segments?.[0]?.points[0]?.altitudeM, 132.5);
+  assert.deepEqual(projection.references[0], {
+    kind: "wayline",
+    id: "pilot-file-123#wayline:0",
+    source: "dji_wpml",
+    confidence: "derived"
+  });
+});
+
+test("does not mislabel relative WPML execute heights as absolute altitude", () => {
+  const relativeWaylines = waylinesXml.replace(
+    "<wpml:executeHeightMode>WGS84</wpml:executeHeightMode>",
+    "<wpml:executeHeightMode>relativeToStartPoint</wpml:executeHeightMode>"
+  ).replace(
+    "<wpml:executeHeight>132.5</wpml:executeHeight>",
+    "<wpml:executeHeight>40</wpml:executeHeight>"
+  );
+
+  const projection = projectWpmlToGroundStation(
+    parseWpmlBundle(templateXml, relativeWaylines),
+    { id: "relative-route" }
+  );
+
+  const point = projection.routes[0]?.segments?.[0]?.points[0];
+  assert.equal(point?.altitudeM, undefined);
+  assert.equal(point?.aglAltitudeM, undefined);
+  assert.deepEqual(
+    projection.routes[0]?.metadata?.waypointExecuteHeights,
+    [{ index: 0, executeHeightM: 40 }]
+  );
+});
+
+test("refuses to project WPML bundles with validation errors", () => {
+  const invalid = waylinesXml.replace(
+    "<wpml:globalRTHHeight>120</wpml:globalRTHHeight>",
+    ""
+  );
+  assert.throws(
+    () =>
+      projectWpmlToGroundStation(parseWpmlBundle(templateXml, invalid), {
+        id: "invalid-route"
+      }),
+    /mission\.global_rth_height_missing/
+  );
 });
 
 test("requires the exact DJI WPML archive paths", () => {
