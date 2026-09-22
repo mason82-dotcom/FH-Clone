@@ -262,3 +262,70 @@ Vor V3 fehlen noch:
 - HTTP AuthN
 - finaler Root-Compose-Gesamtstart
 - vollständige automatisierte Abnahme
+
+
+## Automatische Flugsession / mission_id
+
+Der Control-Service erzeugt für Ad-hoc-Flüge automatisch eine flüchtige Session-ID, die bei aktivierter Timescale-Persistenz synchron in `missions` angelegt wird.
+
+Start nur bei flugaktiven DJI-`mode_code`-Werten:
+
+```text
+3  Manual flight
+4  Automatic takeoff
+5  Wayline flight
+6  Panoramic photography
+7  Intelligent tracking
+8  ADS-B avoidance
+9  Auto returning to home
+10 Automatic landing
+11 Forced landing
+12 Three-blade landing
+15 APAS
+16 Virtual stick state
+17 Live flight controls
+18 Airborne RTK fixing mode
+```
+
+Kein automatischer Start bei:
+
+```text
+0  Standby
+1  Takeoff preparation
+2  Takeoff preparation completed
+13 Upgrading
+14 Not connected
+```
+
+Beendigung:
+
+- `mode_code = 0` mindestens 5 s stabil -> `standby`
+- 30 s ohne Telemetrie -> `telemetry_timeout`
+- 30 s stabil `mode_code = 14` -> `device_disconnected`
+- Service-Neustart schließt alte offene DB-Sessions mit `service_restart`
+
+Öffentliche Read-Endpunkte:
+
+```text
+GET /api/missions/active
+GET /api/devices/{device_sn}/mission
+```
+
+Der aktuelle `missionId` wird außerdem in RTK-Snapshots und RTK-SSE-Events mitgeführt.
+
+## TimescaleDB-Persistenz
+
+Aktivierung:
+
+```text
+TIMESCALE_URL=postgres://fhclone:<passwort>@timescaledb:5432/fhclone
+```
+
+Optional sichere RTK-Quellenmetadaten:
+
+```text
+RTK_SOURCE_LABEL=SAPOS BW
+RTK_SOURCE_PROVIDER=Landesdienst
+```
+
+Ohne `TIMESCALE_URL` bleibt der komplette Live-/RTK-Pfad funktionsfähig; Persistenz ist optional und darf die Telemetrie nicht blockieren.
