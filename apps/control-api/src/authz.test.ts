@@ -72,10 +72,10 @@ test("validates the EMQX authorization request schema", () => {
   );
 });
 
-test("allows topology bootstrap for the matching gateway", () => {
-  assert.equal(authorizeDjiGateway(topology(), request()), "allow");
+test("allows topology bootstrap for the matching gateway", async () => {
+  assert.equal(await authorizeDjiGateway(topology(), request()), "allow");
   assert.equal(
-    authorizeDjiGateway(
+    await authorizeDjiGateway(
       topology(),
       request({ topic: "thing/product/RC-PRO-001/status" })
     ),
@@ -83,16 +83,16 @@ test("allows topology bootstrap for the matching gateway", () => {
   );
 });
 
-test("allows aircraft osd only for a registered sub-device", () => {
+test("allows aircraft osd only for a registered sub-device", async () => {
   assert.equal(
-    authorizeDjiGateway(
+    await authorizeDjiGateway(
       topology(),
       request({ topic: "thing/product/M3E-001/osd" })
     ),
     "allow"
   );
   assert.equal(
-    authorizeDjiGateway(
+    await authorizeDjiGateway(
       topology(),
       request({ topic: "thing/product/M3E-OTHER/osd" })
     ),
@@ -100,9 +100,9 @@ test("allows aircraft osd only for a registered sub-device", () => {
   );
 });
 
-test("denies a gateway username that does not match clientid", () => {
+test("denies a gateway username that does not match clientid", async () => {
   assert.equal(
-    authorizeDjiGateway(
+    await authorizeDjiGateway(
       topology(),
       request({ username: "dji-gateway-RC-PRO-OTHER" })
     ),
@@ -110,7 +110,7 @@ test("denies a gateway username that does not match clientid", () => {
   );
 });
 
-test("M4 DRC is denied unless the dynamic session policy is active", () => {
+test("M4 DRC is denied unless the dynamic session policy is active", async () => {
   const drcUp = request({
     username: "dji-gateway-RC-PLUS2-001",
     clientid: "RC-PLUS2-001",
@@ -125,18 +125,18 @@ test("M4 DRC is denied unless the dynamic session policy is active", () => {
     topic: "thing/product/RC-PLUS2-001/drc/down"
   });
 
-  assert.equal(authorizeEmqx(topology(), drcUp), "deny");
-  assert.equal(authorizeEmqx(topology(), drcDown), "deny");
+  assert.equal(await authorizeEmqx(topology(), drcUp), "deny");
+  assert.equal(await authorizeEmqx(topology(), drcDown), "deny");
 
   const active = {
     isDrcGatewayActive: (gatewaySn: string) => gatewaySn === "RC-PLUS2-001"
   };
 
-  assert.equal(authorizeEmqx(topology(), drcUp, active), "allow");
-  assert.equal(authorizeEmqx(topology(), drcDown, active), "allow");
+  assert.equal(await authorizeEmqx(topology(), drcUp, active), "allow");
+  assert.equal(await authorizeEmqx(topology(), drcDown, active), "allow");
 });
 
-test("backend DRC is dynamically gated while normal backend traffic falls through", () => {
+test("backend DRC is dynamically gated while normal backend traffic falls through", async () => {
   const backendDrc = request({
     username: "backend-service",
     clientid: "fh-clone-backend",
@@ -144,16 +144,16 @@ test("backend DRC is dynamically gated while normal backend traffic falls throug
     topic: "thing/product/RC-PLUS2-001/drc/down"
   });
 
-  assert.equal(authorizeEmqx(topology(), backendDrc), "deny");
+  assert.equal(await authorizeEmqx(topology(), backendDrc), "deny");
   assert.equal(
-    authorizeEmqx(topology(), backendDrc, {
+    await authorizeEmqx(topology(), backendDrc, {
       isDrcGatewayActive: (gatewaySn) => gatewaySn === "RC-PLUS2-001"
     }),
     "allow"
   );
 
   assert.equal(
-    authorizeEmqx(
+    await authorizeEmqx(
       topology(),
       request({
         username: "backend-service",
@@ -166,9 +166,9 @@ test("backend DRC is dynamically gated while normal backend traffic falls throug
   );
 });
 
-test("webui operator is never granted dynamic write access", () => {
+test("webui operator is never granted dynamic write access", async () => {
   assert.equal(
-    authorizeEmqx(
+    await authorizeEmqx(
       topology(),
       request({
         username: "webui-operator",
