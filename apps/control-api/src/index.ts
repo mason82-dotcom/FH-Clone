@@ -143,7 +143,7 @@ const internalServer = createServer(async (request, response) => {
           return json(response, 200, { result });
         }
 
-        const result = authorizeEmqx(dji.topology, body, {
+        const result = await authorizeEmqx(dji.topology, body, {
           // DRC remains fail-closed until the backend DRC session manager is
           // explicitly wired to this policy after FC3/lease/authority checks.
           isDrcGatewayActive: () => false
