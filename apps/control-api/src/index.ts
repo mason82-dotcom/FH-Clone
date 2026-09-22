@@ -78,6 +78,11 @@ const publicServer = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/rtk/transitions") {
+      const deviceId = url.searchParams.get("device") ?? undefined;
+      return json(response, 200, rtk.recentTransitions(deviceId));
+    }
+
     const rtkMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/rtk$/);
     if (request.method === "GET" && rtkMatch) {
       const deviceId = decodeURIComponent(rtkMatch[1] ?? "");
