@@ -277,7 +277,7 @@ const internalServer = createServer(async (request, response) => {
         if (dynamicRequest && !hasValidBearerToken(request, emqxAuthzToken)) {
           enqueueAuthzAudit(
             body,
-            { result: "deny", reason: "internal_token_mismatch" },
+            { result: "deny", reason: "internal_error" },
             elapsedUs(startedAt)
           );
           return json(response, 200, { result: "deny" });
