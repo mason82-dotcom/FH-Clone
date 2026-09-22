@@ -51,22 +51,32 @@ Noch erforderlich:
 - damit reproduzierbares `npm ci`
 - lokaler kompletter Build-/Testnachweis
 
-## Gate 2 – Runtime: OFFEN
+## Gate 2 – Runtime: IMPLEMENTIERT, LOKALE ABNAHME OFFEN
+
+Auf `main` vorhanden:
+
+- Root-`compose.yaml`
+- Root-`.env.example`
+- `control-api`
+- `emqx`
+- `web`
+- `timescaledb`
+- getrennte Frontend-/Backend-/MQTT-Netze
+- interner Port 8081 ohne Host-Publishing
+- `GET /health`
+- `GET /ready`
+- Docker-Healthchecks
+- `scripts/verify.sh`
+- TimescaleDB-Restartprüfung
+- AuthN-Fail-Closed-Prüfung
+- EMQX-5.7-`emqx.conf`
 
 Noch erforderlich:
 
-- finaler Root-Compose
-- Root-`.env.example`
-- Pflichtdienste:
-  - `control-api`
-  - `emqx`
-  - `web`
-  - `postgres` oder `timescaledb`
-- gemeinsamer Health-/Readiness-Pfad
-- Neustart ohne Verlust persistenter Daten
-
-Der separate Timescale-Unterstack ist vorhanden, ersetzt aber noch nicht den
-finalen Root-Stack.
+- tatsächliche lokale Ausführung von `scripts/verify.sh`
+- belegter erfolgreicher Compose-Build
+- belegte Readiness nach DB-Restart
+- lokaler MQTT-/AuthN-Verbindungsnachweis
 
 ## Gate 3 – Tests: TEILWEISE IMPLEMENTIERT
 
@@ -218,11 +228,10 @@ und wäre keine V3-Abnahme.
 Manager:
 
 1. `package-lock.json`
-2. Root-`.env.example`
-3. Root-Compose
-4. Health/Readiness
-5. lokale Verify-Suite
-6. finale EMQX-AuthN-/Credential-Bindung
+2. reproduzierbares `npm ci`
+3. `scripts/verify.sh` real ausführen und Ergebnis belegen
+4. Gateway-Credential lokal provisionieren und AuthN prüfen
+5. Credential-Deaktivierung/Fail-Closed prüfen
 
 RC Pro:
 
