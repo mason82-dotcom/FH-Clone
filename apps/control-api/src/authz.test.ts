@@ -6,6 +6,7 @@ import { DjiTopologyRegistry } from "@fh-clone/adapter-dji-cloud";
 import {
   authorizeDjiGateway,
   authorizeEmqx,
+  evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest
 } from "./authz.js";
 
@@ -166,7 +167,7 @@ test("backend DRC is dynamically gated while normal backend traffic falls throug
   );
 });
 
-test("webui operator is never granted dynamic write access", async () => {
+test("webui operator is explicitly denied dynamic write access", async () => {
   assert.equal(
     await authorizeEmqx(
       topology(),
@@ -180,6 +181,109 @@ test("webui operator is never granted dynamic write access", async () => {
         isDrcGatewayActive: () => true
       }
     ),
-    "ignore"
+    "deny"
   );
+});
+
+
+test("returns a stable reason for own gateway and sub-device traffic", async () => {
+  assert.deepEqual(
+    await evaluateEmqxAuthorization(topology(), request()),
+    {
+      result: "allow",
+      reason: "gateway_own_topic",
+      gatewaySn: "RC-PRO-001"
+    }
+  );
+
+  assert.deepEqual(
+    await evaluateEmqxAuthorization(
+      topology(),
+      request({ topic: "thing/product/M3E-OTHER/osd" })
+    ),
+    {
+      result: "deny",
+      reason: "gateway_topology_mismatch",
+      gatewaySn: "RC-PRO-001",
+      aircraftSn: "M3E-OTHER"
+    }
+  );
+});
+
+test("DRC reasons distinguish active and inactive sessions", async () => {
+  const drcRequest = request({
+    username: "dji-gateway-RC-PLUS2-001",
+    clientid: "RC-PLUS2-001",
+    topic: "thing/product/RC-PLUS2-001/drc/up"
+  });
+
+  assert.equal(
+    (await evaluateEmqxAuthorization(topology(), drcRequest)).reason,
+    "drc_session_inactive"
+  );
+  assert.equal(
+    (
+      await evaluateEmqxAuthorization(topology(), drcRequest, {
+        isDrcGatewayActive: () => true
+      })
+    ).reason,
+    "drc_session_active"
+  );
+});
+
+test("backend DRC publish has a dedicated allow reason", async () => {
+  const backend = request({
+    username: "backend-service",
+    clientid: "fh-clone-backend",
+    topic: "thing/product/RC-PLUS2-001/drc/down"
+  });
+
+  assert.deepEqual(
+    await evaluateEmqxAuthorization(topology(), backend, {
+      isDrcGatewayActive: () => true
+    }),
+    {
+      result: "allow",
+      reason: "drc_backend_publish",
+      gatewaySn: "RC-PLUS2-001"
+    }
+  );
+});
+
+test("webui reasons distinguish read-only from out-of-scope topics", async () => {
+  const read = await evaluateEmqxAuthorization(
+    topology(),
+    request({
+      username: "webui-operator",
+      clientid: "browser-1",
+      action: "subscribe",
+      topic: "thing/product/M3E-001/osd"
+    })
+  );
+  assert.equal(read.result, "ignore");
+  assert.equal(read.reason, "webui_read_only");
+
+  const write = await evaluateEmqxAuthorization(
+    topology(),
+    request({
+      username: "webui-operator",
+      clientid: "browser-1",
+      action: "publish",
+      topic: "thing/product/RC-PLUS2-001/drc/down"
+    })
+  );
+  assert.equal(write.result, "deny");
+  assert.equal(write.reason, "webui_read_only");
+
+  const outside = await evaluateEmqxAuthorization(
+    topology(),
+    request({
+      username: "webui-operator",
+      clientid: "browser-1",
+      action: "subscribe",
+      topic: "$SYS/brokers"
+    })
+  );
+  assert.equal(outside.result, "deny");
+  assert.equal(outside.reason, "webui_topic_out_of_scope");
 });
