@@ -168,6 +168,10 @@ FH2-Upstreamfehler:
 Die gelieferten IDs können über `MissionExternalReference` korreliert
 werden. Zeitliche Nähe allein gilt nicht als authoritative Zuordnung.
 
+FlightHub-2-/SIKONG-CE-Livestreaming ist in FH2 V3 ausdrücklich deaktiviert.
+Es gibt keinen lokalen Start-/Forwarding-Endpunkt und keine automatische
+Aktivierung eines kostenpflichtigen Streaming-Kanals.
+
 ### GET /api/rtk
 
 Liefert alle aktuellen RTK-/GNSS-Snapshots.
