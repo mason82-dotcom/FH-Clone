@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RtkDashboard } from "../rtk/RtkDashboard.js";
 import { useFh2 } from "../../fh2/Fh2Provider.js";
 import { useFh2CesiumViewer } from "../../fh2/useFh2CesiumViewer.js";
+import { useDjiPilotBridge } from "../../pilot-bridge/DjiPilotBridgeProvider.js";
 import {
   Fh2OverlayController,
   type Fh2OverlayTopology
@@ -41,6 +42,7 @@ function productName(type: number, subType: number): string {
 
 export function Fh2Workspace() {
   const { config, state } = useFh2();
+  const pilotBridge = useDjiPilotBridge();
   const cesiumViewer = useFh2CesiumViewer("global");
   const [view, setView] = useState<WorkspaceView>("project");
   const [topology, setTopology] = useState<Fh2OverlayTopology[]>([]);
@@ -138,6 +140,12 @@ export function Fh2Workspace() {
           </span>
           <span className="fh2-runtime-pill">
             Cesium {cesiumViewer ? "bereit" : "–"}
+          </span>
+          <span
+            className={`fh2-runtime-pill fh2-runtime-pill--${pilotBridge.state}`}
+            title={pilotBridge.error ?? pilotBridge.identity.remoteControllerSn ?? "DJI Pilot 2 JSBridge"}
+          >
+            Pilot JSBridge {pilotBridge.state === "ready" ? "bereit" : pilotBridge.state === "unavailable" ? "–" : pilotBridge.state}
           </span>
         </div>
       </div>
