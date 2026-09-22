@@ -73,6 +73,7 @@ FH2 liest unter anderem:
 - `takeOffRefPoint`
 - `takeOffRefPointAGLHeight`
 - `globalTransitionalSpeed`
+- `globalRTHHeight` in `waylines.wpml` (read-only; erzeugt keinerlei RTH-Freigabe)
 - `droneInfo`
 - `payloadInfo`
 
@@ -146,6 +147,7 @@ Aus `waylines.wpml` liest FH2:
 - `waylineId`
 - `executeHeightMode`
 - `autoFlightSpeed`
+- optionale `startActionGroup`-Initialaktionen
 - Waypoint-`index`
 - KML-`coordinates`
 - `executeHeight`
@@ -256,6 +258,9 @@ Aktuell geprüft werden unter anderem:
 - konsistente `droneInfo` / `payloadInfo`
 - gültige Waypoint-Koordinaten
 - eindeutige Waypoint-Indizes pro Folder
+- Waypoint-Indizes monoton und lückenlos ab `0`
+- erforderliches `globalRTHHeight` in `waylines.wpml`
+- `actionTriggerParam > 0` bei `multipleTiming` / `multipleDistance`
 - ActionGroup-ID-Bereich `[0,65535]`
 - ActionGroup-ID-Eindeutigkeit im Dokument
 - `endIndex >= startIndex`
@@ -290,6 +295,10 @@ FH2 reicht Arrayfilter als wiederholte Queryparameter weiter. DJI beschreibt
 sie als Arrays, legt auf der Referenzseite aber keine eindeutige
 Wire-Serialisierung fest. Dieses Detail bleibt für reale Pilot-2-Integration
 zu verifizieren.
+
+Lokale Integer-Queryparameter werden strikt als vollständige Dezimalzahlen
+validiert. Werte wie `page=2foo` oder `page_size=25.5` werden nicht
+teilweise geparst, sondern abgewiesen.
 
 ## Pilot-Katalogmodell
 
