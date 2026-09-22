@@ -85,7 +85,7 @@ public final class BridgeMain {
         server.createContext("/vehicles", exchange -> handle(exchange, this::vehiclesJson));
         server.createContext("/routes", exchange -> handle(exchange, this::routesJson));
         server.createContext("/telemetry", exchange -> handle(exchange, this::telemetryJson));
-        server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+        server.setExecutor(Executors.newCachedThreadPool());
         server.start();
         System.out.printf("FH-Clone UgCS bridge listening on %s:%d; UCS=%s:%d%n",
                 bind, port, ucsHost, ucsPort);

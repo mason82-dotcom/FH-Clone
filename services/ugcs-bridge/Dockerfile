@@ -8,4 +8,4 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /src/target/ugcs-bridge-0.1.0.jar /app/ugcs-bridge.jar
 EXPOSE 8092
-ENTRYPOINT ["java", "-jar", "/app/ugcs-bridge.jar"]
+ENTRYPOINT ["java", "--add-modules", "jdk.httpserver", "-jar", "/app/ugcs-bridge.jar"]
