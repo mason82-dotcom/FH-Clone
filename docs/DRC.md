@@ -148,7 +148,7 @@ gebunden sind. Das aktuelle `stick_control` benötigt dieses Recht jedoch
 zwingend. FH-Clone bleibt für M4-Flugsteuerung deshalb strikt
 authority-gated.
 
-M3E/M3T/M3M bleiben im Pilot-Cloud-Profil auf Payload-Control begrenzt.
+DJI dokumentiert M3E/M3T/M3TA im RC-Pro-Pilot-Cloud-Pfad als Payload-orientiert. FH2 V3 implementiert dafür derzeit keinen schreibenden Payload-Command-Pfad. M3M wird separat über MSDK/WPML/Media betrachtet und erhält kein automatisch abgeleitetes Pilot-Cloud-Control-Profil.
 
 ## DRC-Kommandoklassen und Sequenzen
 
