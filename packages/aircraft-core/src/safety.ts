@@ -23,7 +23,9 @@ export function classifyCapability(capability: Capability): {
 } {
   if (
     capability === "control.flight" ||
-    capability === "control.rth"
+    capability === "control.rth" ||
+    capability === "control.pointing" ||
+    capability === "control.orbit"
   ) {
     return { stage: "FC3", risk: "DANGEROUS" };
   }
