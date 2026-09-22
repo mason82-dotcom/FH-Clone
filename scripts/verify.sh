@@ -92,8 +92,28 @@ if [ "$authn_result" != "200:deny" ]; then
 fi
 
 echo "[8/8] Persistenz-Restart prüfen"
+verify_id="fh2-verify-$(date +%s)"
+docker compose --env-file .env exec -T timescaledb \
+  psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+  -c "CREATE TABLE IF NOT EXISTS fh2_runtime_verify (id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" \
+  -c "INSERT INTO fh2_runtime_verify (id) VALUES ('$verify_id');" >/dev/null
+
 docker compose --env-file .env restart timescaledb >/dev/null
 wait_http "http://127.0.0.1:$API_PORT/ready" "Readiness nach DB-Restart"
+
+persisted="$(
+  docker compose --env-file .env exec -T timescaledb \
+    psql -U fhclone -d fhclone -tAc \
+    "SELECT count(*) FROM fh2_runtime_verify WHERE id = '$verify_id';"
+)"
+if [ "$(printf '%s' "$persisted" | tr -d '[:space:]')" != "1" ]; then
+  echo "FEHLER: Persistenzmarker fehlt nach TimescaleDB-Restart."
+  exit 1
+fi
+
+docker compose --env-file .env exec -T timescaledb \
+  psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+  -c "DELETE FROM fh2_runtime_verify WHERE id = '$verify_id';" >/dev/null
 
 echo "FH2 V3 lokale Runtime-Prüfung erfolgreich."
 echo "Stack bleibt gestartet."
