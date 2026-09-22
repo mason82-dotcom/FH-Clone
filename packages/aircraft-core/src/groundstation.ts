@@ -46,6 +46,12 @@ export interface GroundStationRoute {
 export interface GroundStationTelemetryValue {
   time?: number;
   value: unknown;
+  /** Original UCS semantic such as S_LATITUDE or S_ALTITUDE_AMSL. */
+  semantic?: string;
+  /** Original UCS subsystem such as S_FLIGHT_CONTROLLER. */
+  subsystem?: string;
+  /** Original vendor field code. */
+  code?: string;
 }
 
 export type GroundStationTelemetrySnapshot =
