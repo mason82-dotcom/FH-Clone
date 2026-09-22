@@ -282,7 +282,11 @@ DJI-M3M-Felder auf die herstellerneutralen Core-Typen ab.
 
 Abgebildet werden unter anderem:
 
-- `BandName` -> authoritative `SpectralBand`
+- `BandName` -> authoritative `SpectralBand` und erst dann Profil
+  `MULTISPECTRAL`
+- ohne dokumentiertes `BandName` bleibt das Asset fail-safe
+  `GENERIC/unknown`; insbesondere wird ein M3M-RGB-Bild nicht als
+  Narrow-Band geraten
 - `BandFreq`, `CentralWavelength` und `SensorIndex` ->
   Konsistenzprüfung der Bandidentität
 - `CaptureUUID` -> authoritative Capture-Set-Korrelation
