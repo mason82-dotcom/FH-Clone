@@ -339,8 +339,11 @@ export class DrcSessionManager {
   async markTransportLost(gatewaySn: string, reason = "transport_lost"): Promise<DrcSessionRecord | undefined> {
     const current = await this.store.get(gatewaySn);
     if (!current || current.state === "closed" || current.state === "idle") return current;
+    this.stopTimer(gatewaySn);
+    this.controller.stopHeartbeat();
     const record = { ...current, transportConnected: false, updatedAt: this.now(), reason };
     await this.persist(record);
+    await this.audit(record, "transport_lost", reason);
     return { ...record };
   }
 
