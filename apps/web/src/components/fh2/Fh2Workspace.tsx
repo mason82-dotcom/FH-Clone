@@ -4,6 +4,10 @@ import { RtkDashboard } from "../rtk/RtkDashboard.js";
 import { useFh2 } from "../../fh2/Fh2Provider.js";
 import { useFh2CesiumViewer } from "../../fh2/useFh2CesiumViewer.js";
 import {
+  Fh2OverlayController,
+  type Fh2OverlayTopology
+} from "../../fh2/Fh2OverlayController.js";
+import {
   Fh2FlightPathViewer,
   Fh2ProjectMap,
   Fh2VirtualCockpit,
@@ -18,22 +22,6 @@ type WorkspaceView =
   | "flight-history"
   | "cockpit"
   | "rtk";
-
-interface DjiTopology {
-  gatewaySn: string;
-  product: {
-    type: number;
-    subType: number;
-  };
-  subDevices: Array<{
-    sn: string;
-    index?: string;
-    product: {
-      type: number;
-      subType: number;
-    };
-  }>;
-}
 
 interface DevicePair {
   gatewaySn: string;
@@ -55,7 +43,7 @@ export function Fh2Workspace() {
   const { config, state } = useFh2();
   const cesiumViewer = useFh2CesiumViewer("global");
   const [view, setView] = useState<WorkspaceView>("project");
-  const [topology, setTopology] = useState<DjiTopology[]>([]);
+  const [topology, setTopology] = useState<Fh2OverlayTopology[]>([]);
   const [selectedPair, setSelectedPair] = useState("");
   const [waylineId, setWaylineId] = useState(config.defaultWaylineId);
   const [flightPathId, setFlightPathId] = useState(config.defaultFlightPathId);
@@ -70,7 +58,7 @@ export function Fh2Workspace() {
         if (!response.ok) {
           throw new Error(`Topology HTTP ${response.status}`);
         }
-        return response.json() as Promise<DjiTopology[]>;
+        return response.json() as Promise<Fh2OverlayTopology[]>;
       })
       .then((data) => {
         if (!cancelled) setTopology(Array.isArray(data) ? data : []);
@@ -202,6 +190,7 @@ export function Fh2Workspace() {
             />
           </label>
         )}
+        <Fh2OverlayController topology={topology} />
       </div>
 
       <div className="fh2-workspace__content">
