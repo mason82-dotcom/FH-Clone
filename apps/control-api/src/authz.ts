@@ -42,11 +42,12 @@ export function authorizeDjiGateway(
 
   if (request.action === "publish") {
     if (
-      parsed.family === "sys" &&
+      (parsed.family === "sys" || parsed.family === "thing") &&
       parsed.sn === request.clientid &&
       parsed.suffix === "status"
     ) {
-      // Bootstrap path: update_topo must be allowed before any sub-device is known.
+      // Bootstrap path: DJI documentation contains both sys/.../status and
+      // RC-Pro-specific thing/.../status forms for update_topo.
       return "allow";
     }
 
