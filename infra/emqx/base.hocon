@@ -1,3 +1,33 @@
+authentication = [
+  {
+    mechanism = password_based
+    backend = http
+    enable = true
+
+    method = post
+    url = "http://control-api:8081/internal/emqx/authn"
+
+    headers {
+      "Content-Type" = "application/json"
+
+      # Secure disabled default. The deployment renderer must replace this
+      # placeholder with EMQX_AUTHN_TOKEN before MQTT authentication works.
+      "Authorization" = "Bearer __FH_CLONE_AUTHN_DISABLED__"
+    }
+
+    body {
+      username = "${username}"
+      password = "${password}"
+      clientid = "${clientid}"
+      peerhost = "${peerhost}"
+    }
+
+    pool_size = 8
+    connect_timeout = "1s"
+    request_timeout = "1s"
+  }
+]
+
 authorization {
   no_match = deny
   deny_action = ignore
@@ -41,6 +71,8 @@ authorization {
         username = "${username}"
         clientid = "${clientid}"
         peerhost = "${peerhost}"
+        role = "${client_attrs.role}"
+        gateway_sn = "${client_attrs.gateway_sn}"
         action = "${action}"
         topic = "${topic}"
         qos = "${qos}"
