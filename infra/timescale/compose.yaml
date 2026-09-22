@@ -9,10 +9,15 @@ services:
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d:ro
+      - ../postgres/migrations/001_dji_gateway_registry.sql:/docker-entrypoint-initdb.d/005_dji_gateway_registry.sql:ro
     expose:
       - "5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fhclone -d fhclone"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U fhclone -d fhclone >/dev/null && psql -U fhclone -d fhclone -tAc \"SELECT CASE WHEN to_regclass('public.missions') IS NOT NULL AND to_regclass('public.telemetry') IS NOT NULL AND to_regclass('public.authz_audit') IS NOT NULL AND to_regclass('public.gateway_credentials') IS NOT NULL AND to_regclass('public.dji_gateways') IS NOT NULL AND to_regclass('public.dji_gateway_devices') IS NOT NULL THEN 1 ELSE 0 END\" | grep -qx 1"
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
