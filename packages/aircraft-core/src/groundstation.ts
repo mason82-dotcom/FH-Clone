@@ -21,9 +21,25 @@ export interface GroundStationVehicle {
   metadata?: Record<string, unknown>;
 }
 
+export interface GroundStationGeoPoint {
+  latitudeDeg: number;
+  longitudeDeg: number;
+  /** WGS84/ellipsoid-like absolute altitude when supplied by the source. */
+  altitudeM?: number;
+  /** AGL altitude when supplied by the source. Do not treat as absolute. */
+  aglAltitudeM?: number;
+}
+
+export interface GroundStationRouteSegment {
+  id?: string;
+  figureType?: string;
+  points: GroundStationGeoPoint[];
+}
+
 export interface GroundStationRoute {
   id: string;
   name: string;
+  segments?: GroundStationRouteSegment[];
   metadata?: Record<string, unknown>;
 }
 
