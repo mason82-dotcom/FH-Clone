@@ -69,7 +69,12 @@ public final class BridgeMain {
                 TelemetryField field = item.getTelemetryField();
                 if (field == null) continue;
                 String key = field.getSubsystem().name() + "." + field.getCode();
-                values.put(key, new TelemetryValue(item.getTime(), valueOf(item.getValue())));
+                values.put(key, new TelemetryValue(
+                        item.getTime(),
+                        valueOf(item.getValue()),
+                        field.hasSemantic() ? field.getSemantic().name() : null,
+                        field.hasSubsystem() ? field.getSubsystem().name() : null,
+                        field.getCode()));
             }
         });
 
@@ -197,8 +202,17 @@ public final class BridgeMain {
                 TelemetryValue value = field.getValue();
                 json.append(quote(field.getKey()))
                         .append(":{\"time\":").append(value.time())
-                        .append(",\"value\":").append(jsonValue(value.value()))
-                        .append('}');
+                        .append(",\"value\":").append(jsonValue(value.value()));
+                if (value.semantic() != null) {
+                    json.append(",\"semantic\":").append(quote(value.semantic()));
+                }
+                if (value.subsystem() != null) {
+                    json.append(",\"subsystem\":").append(quote(value.subsystem()));
+                }
+                if (value.code() != null && !value.code().isBlank()) {
+                    json.append(",\"code\":").append(quote(value.code()));
+                }
+                json.append('}');
             }
             json.append('}');
         }
@@ -289,5 +303,11 @@ public final class BridgeMain {
         String get() throws Exception;
     }
 
-    private record TelemetryValue(long time, Object value) {}
+    private record TelemetryValue(
+            long time,
+            Object value,
+            String semantic,
+            String subsystem,
+            String code
+    ) {}
 }
