@@ -306,3 +306,27 @@ Wayline Management implementiert
   !=
 mission.wayline ausführbar
 ```
+
+## Externe Referenzen und Korrelation
+
+Für die spätere Verbindung von automatischer Flugsitzung, FH2 Flight Task,
+DJI Pilot Wayline, WPML und UgCS verwendet V3 `MissionExternalReference`.
+
+Beispiel:
+
+```json
+{
+  "kind": "wayline",
+  "id": "WL-123",
+  "source": "dji_pilot_wayline",
+  "confidence": "authoritative"
+}
+```
+
+Eine rein zeitliche Korrelation darf höchstens als `heuristic` geführt
+werden. Sie darf niemals stillschweigend zu einer authoritative Referenz
+hochgestuft werden.
+
+`mode_code == 5` liefert nur die Aussage „Aircraft befindet sich in einem
+Wayline-Flug“. Ohne separaten Wayline-/Task-Vertrag bleibt die eigentliche
+Wayline-ID unbekannt.
