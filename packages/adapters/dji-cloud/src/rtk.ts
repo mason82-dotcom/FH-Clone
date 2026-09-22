@@ -69,17 +69,24 @@ export function parseDjiRtkStatus(
 ): DjiRtkStatus | undefined {
   if (!isRecord(payload)) return undefined;
   const source = isRecord(payload.data) ? payload.data : payload;
-  const positionState = isRecord(source.position_state)
-    ? source.position_state
-    : undefined;
+  const host = isRecord(source.host) ? source.host : source;
+  const positionState = isRecord(host.position_state)
+    ? host.position_state
+    : isRecord(source.position_state)
+      ? source.position_state
+      : undefined;
 
   const fixStateCode = numeric(positionState?.is_fixed);
   const qualityCode = numeric(positionState?.quality);
   const gpsSatellites =
-    numeric(positionState?.gps_number) ?? numeric(source.gps_number);
+    numeric(positionState?.gps_number) ??
+    numeric(host.gps_number) ??
+    numeric(source.gps_number);
   const rtkSatellites =
-    numeric(positionState?.rtk_number) ?? numeric(source.rtk_number);
-  const modeCode = numeric(source.mode_code);
+    numeric(positionState?.rtk_number) ??
+    numeric(host.rtk_number) ??
+    numeric(source.rtk_number);
+  const modeCode = numeric(host.mode_code) ?? numeric(source.mode_code);
 
   if (
     fixStateCode === undefined &&
@@ -93,11 +100,11 @@ export function parseDjiRtkStatus(
 
   const fixState = fixStateFromCode(fixStateCode);
   const isFixed =
-    qualityCode === 10
-      ? true
-      : fixStateCode === undefined
-        ? undefined
-        : fixStateCode === 2;
+    fixStateCode !== undefined
+      ? fixStateCode === 2
+      : qualityCode === 10
+        ? true
+        : undefined;
 
   return {
     fixState,
