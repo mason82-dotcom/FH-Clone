@@ -60,6 +60,17 @@ Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
 - `DJI_MQTT_CLIENT_ID`
 - `DJI_CLOUD_API_VERSION`
 
+### FlightHub 2 OpenAPI
+
+- `FH2_ENABLED`
+- `FH2_BASE_URL`
+- `FH2_ORG_ID`
+- `FH2_PROJECT_ID`
+- `FH2_USER_TOKEN`
+- `FH2_TIMEOUT_MS`
+
+Der FH2-Client ist read-only und folgt keinen HTTP-Redirects.
+
 ### EMQX und Diagnose
 
 - `EMQX_AUTHZ_TOKEN` – internes Secret für EMQX -> Control API
@@ -112,6 +123,22 @@ GET /api/devices/{device_sn}/telemetry
 ```
 
 Liefert den aktuellen normalisierten Parametersnapshot.
+
+### FlightHub 2 OpenAPI – read-only
+
+```http
+GET /api/fh2/status
+GET /api/fh2/waylines?page=1&size=100
+GET /api/fh2/flight-tasks?page=1&page_size=50
+```
+
+Der FH2-Pfad verwendet ausschließlich GET. Fehlende Konfiguration liefert
+`503 fh2_not_configured`; Upstreamfehler werden als `502 fh2_upstream_error`
+abgebildet.
+
+Die Wayline-/Flight-Task-IDs aus diesem Pfad können später über den
+`MissionExternalReference`-Vertrag mit lokalen Flugsitzungen korreliert
+werden. Eine Korrelation entsteht nicht automatisch durch Zeitnähe.
 
 ### Automatische Flugsitzungen
 
