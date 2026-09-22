@@ -7,7 +7,7 @@ Dieses Dokument ist die aktuelle Direktor-Sicht auf den V3-Abschluss.
 Kanonischer Stand:
 
 ```text
-main = 25fd1435c14820c94ae7e281da685e3a532158e9
+main = f5065a8eebd71570196c6ff5c07d429bd96b5a4f
 ```
 
 ## Versionsstatus
@@ -33,6 +33,7 @@ Folgende V3-Kandidaten sind auf `main` übernommen:
 - PR #32 – robuster Verify-Credential-/Marker-Cleanup
 - PR #34 – Basic-Link/DRC-Trennung mit Regressionstest
 - PR #35 – herstellerneutraler Media-/NDVI-Core-Vertrag
+- PR #36 – SafetyGate-/ControlAuthority-Regressionstests
 
 Bewusst **nicht** gemergt:
 
@@ -102,6 +103,9 @@ Automatisiert vorhanden sind unter anderem:
 - DRC-Recovery/Transportverlust
 - Basic-Link ohne DRC-Defaulttopics
 - Media-/NDVI-Validierung
+- SafetyGate FC0/FC3/Kill-Switch
+- ControlAuthority Lease Owner/Expiry
+- CommandCoordinator Safety + Lease
 
 Die finale lokale Gesamtabnahme bleibt wegen fehlendem Root-`package-lock.json`
 und damit nicht ausführbarem `npm ci` offen.
@@ -192,6 +196,7 @@ Auf `main` vorhanden:
 - Runtime-only Autorisierungszustand
 - Basic-Link-/DRC-Trennung
 - AuthZ-Audit
+- explizite Tests für FC0, FC3, Kill-Switch, Lease und CommandCoordinator
 - Basic-Link ohne permanente oder Default-DRC-Topics
 - Verify-Credential-Cleanup unabhängig vom Control-API-Lifecycle
 
