@@ -60,31 +60,37 @@ keine automatische Retry-, Safety- oder FC-Entscheidung.
 Zusätzlich zur FlightHub-2-OpenAPI-V2-Demo gelten für FH2 folgende offizielle
 DJI-Repositories als normative Upstream-Referenzen:
 
-### FlightHub-2-Livestream-Semantik
+### FlightHub-2-/SIKONG-CE-Livestream: deaktiviert
 
-Für FlightHub-2-OpenAPI und FlightHub-Sync/Forwarding gilt:
+Der kostenpflichtige FlightHub-2-/SIKONG-CE-Livestream ist für FH2 V3
+**deaktiviert**.
 
-- `POST /openapi/v2.0/live-stream/start` wählt **kein** Streamingprotokoll aus.
-  Der Request enthält Geräte-/Kamera-ID, Ablaufzeit und Qualität. Das von
-  FlightHub bereitgestellte Ergebnis liefert `url`, `expire_ts` und
-  `url_type`; der Client verwendet den von DJI zurückgegebenen Provider-/URL-
-  Typ.
-- Diese Einschränkung gilt für FlightHub-2-OpenAPI. Sie darf **nicht** auf die
-  DJI Cloud API verallgemeinert werden: deren Livestream-Service kennt
-  `url_type` und dokumentiert unter anderem Agora, RTMP, GB28181 und WebRTC.
-- Ein aktivierter OpenAPI-/Sync-Forwarding-Kanal ist ein **aktiver Stream**.
-  Verbrauch/Betriebsdauer beginnt mit dem aktivierten Kanal und nicht erst mit
-  einem verbundenen Zuschauer. Solange Quelle online und Kanal offen ist, kann
-  Streamingdauer anfallen.
-- Deshalb müssen `channel enabled`, `source streaming` und
-  `viewer connected` im FH2-Datenmodell getrennte Zustände bleiben.
-- Für FlightHub-2-On-Premises sind Livestream-Minuten laut aktuellem DJI-
-  Paketmodell unbegrenzt. Das ändert nicht, dass ein offener Kanal Netzwerk-,
-  Encoder- und Streaming-Ressourcen belegt.
+Verbindliche Projektregel:
 
-FH2 darf einen Forwarding-Kanal daher nicht allein deshalb offenlassen, weil
-aktuell kein Viewer verbunden ist. Ein späterer Livestream-Controller braucht
-einen expliziten Stop-/Disable-Lifecycle.
+- keine Implementierung von `POST /openapi/v2.0/live-stream/start`
+- keine automatische Aktivierung von FlightHub-Sync-/Forwarding-Kanälen
+- keine dauerhaften kostenpflichtigen Streaming-Kanäle
+- keine `livestream.read`-Capability aus `live_capacity` oder
+  FlightHub-OpenAPI-Evidenz
+- keine automatische Wiederaktivierung nach Reconnect oder Neustart
+
+Die dokumentierte DJI-Semantik bleibt nur Referenz:
+
+- der FlightHub-OpenAPI-Start wählt kein Streamingprotokoll aus,
+- ein aktivierter Forwarding-Kanal kann Streamingdauer verbrauchen, auch wenn
+  kein Viewer verbunden ist,
+- `channel enabled`, `source streaming` und `viewer connected` sind
+  getrennte Zustände.
+
+Diese Deaktivierung betrifft ausdrücklich den FlightHub-2-/SIKONG-CE-
+Bezahlpfad. Die technisch getrennte DJI Cloud API mit eigener
+`url_type`-/RTMP-/GB28181-/WebRTC-/Agora-Semantik bleibt als Herstellervertrag
+dokumentiert, ist dadurch aber **nicht automatisch als FH2-V3-Produktfunktion
+freigegeben**.
+
+Eine spätere Aktivierung dieses Bezahlfeatures erfordert einen neuen
+ausdrücklichen Auftrag des Projektinhabers.
+
 
 ## DJI Cloud API
 
