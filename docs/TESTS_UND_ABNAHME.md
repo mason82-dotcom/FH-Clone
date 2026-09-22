@@ -19,6 +19,10 @@ Im Repository vorhanden:
 ```text
 apps/control-api/src/authz.test.ts
 apps/control-api/src/mission-session.test.ts
+apps/control-api/src/fh2-openapi.test.ts
+packages/aircraft-core/src/mission.test.ts
+packages/aircraft-core/src/safety.test.ts
+packages/aircraft-core/src/authority.test.ts
 packages/adapters/dji-cloud/src/drc-session.test.ts
 ```
 
@@ -37,6 +41,24 @@ Schwerpunkt:
 
 `mission-session.test.ts` prüft die Erkennung und Verwaltung aktiver
 Missionssitzungen.
+
+### FH2 OpenAPI
+
+`fh2-openapi.test.ts` prüft:
+
+- Wayline-`size`-Parameter,
+- Flight-Task-`page_size`,
+- erforderliche FH2-Header,
+- ausschließlich GET,
+- Redirect-Ablehnung,
+- DJI-Businesscode-Fehler.
+
+### Core Mission/Safety/Authority
+
+Der `aircraft-core` führt seine kompilierten `*.test.js` jetzt über das
+Workspace-`test`-Script aus. Damit werden Mission-Referenzvertrag, SafetyGate
+und ControlAuthority nicht mehr von Root-`npm test --workspaces --if-present`
+übersprungen.
 
 ### DRC-Sitzung
 
