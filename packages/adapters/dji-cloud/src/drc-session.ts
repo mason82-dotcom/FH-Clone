@@ -456,23 +456,42 @@ export class DrcSessionManager {
     await this.audit(draining, "draining", reason);
 
     let lastNeutralAt = draining.lastNeutralAt;
+    const shouldNeutral =
+      current.transportConnected &&
+      (current.state === "controlling" || current.state === "degraded");
+
     try {
-      await this.controller.sendNeutralStickControl(gatewaySn);
-      lastNeutralAt = this.now();
-      await this.audit(
-        {
-          ...draining,
-          ...(lastNeutralAt !== undefined ? { lastNeutralAt } : {})
-        },
-        "neutral_sent",
-        reason
-      );
+      if (shouldNeutral) {
+        try {
+          await this.controller.sendNeutralStickControl(gatewaySn);
+          lastNeutralAt = this.now();
+          await this.audit(
+            {
+              ...draining,
+              ...(lastNeutralAt !== undefined ? { lastNeutralAt } : {})
+            },
+            "neutral_sent",
+            reason
+          );
+        } catch {
+          // Cleanup must continue even if the data-plane is already unavailable.
+        }
+      }
     } finally {
       this.controller.stopHeartbeat();
     }
 
     try {
-      await this.controller.exitDrcMode(gatewaySn);
+      if (
+        current.state === "authority_grabbed" ||
+        current.state === "drc_mode_active" ||
+        current.state === "controlling" ||
+        current.state === "degraded"
+      ) {
+        await this.controller.exitDrcMode(gatewaySn);
+      }
+    } catch {
+      // The session still closes locally; runtime authorization must fail closed.
     } finally {
       return this.finishClosed(draining, reason, lastNeutralAt, false);
     }
@@ -522,8 +541,12 @@ export class DrcSessionManager {
 
     await Promise.allSettled(
       open.map(async (session) => {
-        if (session.state === "controlling" || session.state === "degraded" || session.state === "drc_mode_active" || session.state === "authority_grabbed" || session.state === "authorized" || session.state === "requesting") {
+        if (session.state === "controlling" || session.state === "degraded" || session.state === "drc_mode_active" || session.state === "authority_grabbed") {
           await this.closeGracefully(session.gatewaySn, "backend_shutdown");
+          return;
+        }
+        if (session.state === "authorized" || session.state === "requesting") {
+          await this.forceClose(session.gatewaySn, "backend_shutdown");
           return;
         }
         if (session.state === "draining") {
