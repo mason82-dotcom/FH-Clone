@@ -1,0 +1,95 @@
+# TimescaleDB – FH-Clone Telemetrie
+
+FH-Clone verwendet TimescaleDB für persistente Flugtelemetrie und relationale Missionszuordnung.
+
+## Version
+
+Der Stack ist bewusst gepinnt auf:
+
+```text
+timescale/timescaledb:2.30.1-pg16
+```
+
+Kein `latest`-Tag im produktiven Compose.
+
+## Start
+
+```bash
+cp .env.example .env
+docker compose --env-file .env up -d
+```
+
+Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. Der Zugriff ist für den internen Stack gedacht.
+
+## Schema
+
+`sql/001_schema.sql` legt an:
+
+- relationale Tabelle `missions`
+- Hypertable `telemetry`
+- 1-Tages-Chunks
+- Hypercore/Columnstore mit Segmentierung nach `mission_id, drone_sn`
+- Columnstore-Policy nach 7 Tagen
+- Rohdaten-Retention nach 24 Monaten
+- Continuous Aggregate `telemetry_1m`
+
+## Produktkennung
+
+DJI-Geräte werden nicht über erfundene Modellnummern persistiert. Die Felder entsprechen der Cloud-API-Topologie:
+
+```text
+product_domain
+device_type
+device_sub_type
+```
+
+Für die Mavic-3-Enterprise-Serie ist `device_type = 77`; M3E/M3T werden über `device_sub_type` unterschieden.
+
+## Missions-Sessions
+
+Automatische Sessions entstehen erst bei flugaktiven `mode_code`-Werten.
+
+Nicht startend:
+
+- 0 Standby
+- 1 Takeoff preparation
+- 2 Takeoff preparation completed
+- 13 Upgrading
+- 14 Not connected
+
+Beendigung:
+
+- stabiler Standby-Zustand nach Grace-Periode
+- oder 30 s ohne Telemetrie
+- oder explizites späteres manuelles Ende
+
+`mode_code = 0` wird bewusst als **Standby** behandelt, nicht pauschal als semantisches "Landed"-Event.
+
+## RTK
+
+Persistiert werden nur Statuswerte wie:
+
+- `is_fixed`
+- `quality`
+- `gps_number`
+- `rtk_number`
+- `mode_code`
+
+NTRIP Host, Port, Mountpoint, Benutzername und Passwort werden nicht gespeichert.
+
+Optional können sichere Metadaten gesetzt werden:
+
+```text
+RTK_SOURCE_LABEL=SAPOS BW
+RTK_SOURCE_PROVIDER=Landesdienst
+```
+
+## Control API
+
+Wenn Persistenz aktiviert werden soll:
+
+```text
+TIMESCALE_URL=postgres://fhclone:<passwort>@timescaledb:5432/fhclone
+```
+
+Ohne `TIMESCALE_URL` arbeitet die Live-Telemetrie vollständig ohne Datenbank weiter.
