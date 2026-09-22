@@ -14,9 +14,7 @@ CREATE TABLE IF NOT EXISTS authz_audit (
                       'drc_session_active',
                       'drc_session_inactive',
                       'drc_backend_publish',
-                      'internal_error',
-                      'internal_token_mismatch',
-                      'internal_token_mismatch'
+                      'internal_error'
                     )),
   action            TEXT NOT NULL
                     CHECK (action IN ('publish', 'subscribe')),
