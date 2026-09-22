@@ -286,6 +286,45 @@ Aktuell geprüft werden unter anderem:
 Das ist keine vollständige XSD-/Business-Regel-Validierung aller
 produktspezifischen DJI-Grenzen.
 
+## Projektion ins FH2-Missionsmodell
+
+Ein erfolgreich validiertes WPML-Bundle kann read-only in die
+herstellerneutralen FH2-Typen projiziert werden:
+
+```text
+WpmlBundle
+  -> GroundStationMission
+  -> GroundStationRoute[]
+  -> MissionExternalReference[]
+```
+
+Die stabile Import-/Datei-ID wird vom aufrufenden Pfad vorgegeben. FH2
+erfindet keine externe Wayline-ID.
+
+Für jede `waylines.wpml`-Folder entsteht eine neutrale Route. Dabei gilt für
+die Höhe strikt:
+
+```text
+executeHeightMode = WGS84
+  -> executeHeight darf als GroundStationGeoPoint.altitudeM erscheinen
+
+executeHeightMode = relativeToStartPoint
+oder realTimeFollowSurface
+  -> executeHeight bleibt WPML-Metadatum
+  -> keine Umdeutung in altitudeM oder aglAltitudeM
+```
+
+Damit bleibt die DJI-Höhenreferenz erhalten und eine relative bzw.
+oberflächenbezogene Höhe wird nicht fälschlich als Ellipsoidhöhe behandelt.
+
+Die erzeugten `MissionExternalReference`-Einträge verwenden
+`source=dji_wpml`. Ihre zusammengesetzte FH2-Referenz ist `derived`, weil
+sie aus der vom Importpfad gelieferten stabilen Datei-ID plus dem internen
+WPML-`waylineId` gebildet wird.
+
+Diese Projektion ist ausschließlich lesend. Sie erzeugt weder Upload- noch
+Execution-Rechte.
+
 ## Pilot-to-Cloud Waypoint Management
 
 Separat zum KMZ-Parser unterstützt FH2 read-only:
