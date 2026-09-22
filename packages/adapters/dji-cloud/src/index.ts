@@ -502,6 +502,7 @@ export * from "./capabilities.js";
 export * from "./rtk.js";
 
 export * from "./payloads.js";
+export * from "./m3m-media.js";
 
 export * from "./cloud-authority.js";
 export * from "./pilot-authority.js";
