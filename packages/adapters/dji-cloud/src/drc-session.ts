@@ -7,11 +7,31 @@ import {
 export type DrcSessionState =
   | "idle"
   | "requesting"
-  | "active"
+  | "authorized"
+  | "authority_grabbed"
+  | "drc_mode_active"
+  | "controlling"
+  | "degraded"
   | "draining"
   | "closed";
 
 export type DrcSessionHealth = "healthy" | "degraded";
+
+const DRC_TRANSITIONS: Readonly<Record<DrcSessionState, readonly DrcSessionState[]>> = {
+  idle: ["requesting"],
+  requesting: ["authorized", "closed"],
+  authorized: ["authority_grabbed", "closed"],
+  authority_grabbed: ["drc_mode_active", "closed"],
+  drc_mode_active: ["controlling", "closed"],
+  controlling: ["degraded", "closed"],
+  degraded: ["controlling", "draining", "closed"],
+  draining: ["closed"],
+  closed: ["requesting"]
+};
+
+export function isAllowedDrcTransition(from: DrcSessionState, to: DrcSessionState): boolean {
+  return DRC_TRANSITIONS[from].includes(to);
+}
 
 export interface DrcSessionGuards {
   fc3: boolean;
@@ -29,6 +49,11 @@ export interface DrcSessionRecord {
   updatedAt: number;
   lastInputAt?: number;
   lastNeutralAt?: number;
+  /** Runtime DRC data-plane status. Never rehydrated into authorization after restart. */
+  transportConnected: boolean;
+  /** Last DJI drc_status_notify state observed on the main broker. */
+  lastDrcStatus?: 0 | 1 | 2;
+  lastDrcStatusAt?: number;
   closedAt?: number;
   reason?: string;
 }
@@ -59,6 +84,10 @@ export class InMemoryDrcSessionStore implements DrcSessionStore {
   >;
 
   constructor(private readonly now: () => number = Date.now) {}
+
+  async listOpenSessions(): Promise<DrcSessionRecord[]> {
+    return this.store.listOpen();
+  }
 
   async get(gatewaySn: string): Promise<DrcSessionRecord | undefined> {
     const entry = this.records.get(gatewaySn);
@@ -103,6 +132,8 @@ export class InMemoryDrcSessionStore implements DrcSessionStore {
 }
 
 export interface DrcSessionManagerOptions {
+  /** Maximum age of drc_status_notify before the RC-side DRC state becomes unknown. */
+  drcStatusStaleAfterMs?: number;
   /** Local FH-Clone dead-man threshold; not a DJI protocol constant. */
   degradeAfterMs?: number;
   /** Local FH-Clone close threshold; not a DJI protocol constant. */
@@ -191,6 +222,7 @@ export class DrcSessionManager {
   private readonly closeAfterMs: number;
   private readonly checkIntervalMs: number;
   private readonly sessionTtlMs: number;
+  private readonly drcStatusStaleAfterMs: number;
   private readonly now: () => number;
   private readonly onStateChange:
     | ((record: DrcSessionRecord) => void | Promise<void>)
@@ -207,6 +239,7 @@ export class DrcSessionManager {
     this.degradeAfterMs = options.degradeAfterMs ?? 500;
     this.closeAfterMs = options.closeAfterMs ?? 2_000;
     this.checkIntervalMs = options.checkIntervalMs ?? 100;
+    this.drcStatusStaleAfterMs = options.drcStatusStaleAfterMs ?? 30_000;
     this.sessionTtlMs = Math.min(
       options.sessionTtlMs ?? 24 * 60 * 60 * 1_000,
       24 * 60 * 60 * 1_000
@@ -223,6 +256,9 @@ export class DrcSessionManager {
     }
     if (this.checkIntervalMs <= 0) {
       throw new RangeError("checkIntervalMs must be greater than zero");
+    }
+    if (this.drcStatusStaleAfterMs <= 0) {
+      throw new RangeError("drcStatusStaleAfterMs must be greater than zero");
     }
     if (this.sessionTtlMs <= 0) {
       throw new RangeError("sessionTtlMs must be greater than zero");
@@ -250,7 +286,8 @@ export class DrcSessionManager {
       state: "requesting",
       health: "healthy",
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      transportConnected: false
     };
 
     await this.persist(record);
@@ -258,32 +295,73 @@ export class DrcSessionManager {
     return { ...record };
   }
 
+  async markAuthorized(gatewaySn: string): Promise<DrcSessionRecord> {
+    return this.transitionState(gatewaySn, "requesting", "authorized");
+  }
+
+  async markAuthorityGrabbed(gatewaySn: string): Promise<DrcSessionRecord> {
+    return this.transitionState(gatewaySn, "authorized", "authority_grabbed");
+  }
+
+  async markDrcModeActive(gatewaySn: string): Promise<DrcSessionRecord> {
+    const record = await this.transitionState(gatewaySn, "authority_grabbed", "drc_mode_active");
+    return this.setTransportConnected(gatewaySn, true);
+  }
+
+  async setTransportConnected(gatewaySn: string, connected: boolean): Promise<DrcSessionRecord> {
+    const current = await this.require(gatewaySn);
+    const record = { ...current, transportConnected: connected, updatedAt: this.now() };
+    await this.persist(record);
+    return { ...record };
+  }
+
+  async applyDrcStatus(gatewaySn: string, drcState: 0 | 1 | 2): Promise<DrcSessionRecord | undefined> {
+    const current = await this.store.get(gatewaySn);
+    if (!current || current.state === "closed" || current.state === "idle") return current;
+    const record = {
+      ...current,
+      lastDrcStatus: drcState,
+      lastDrcStatusAt: this.now(),
+      updatedAt: this.now()
+    };
+    await this.persist(record);
+    return { ...record };
+  }
+
+  async getDrcStatus(gatewaySn: string): Promise<0 | 1 | 2 | "unknown"> {
+    const current = await this.store.get(gatewaySn);
+    if (!current || current.lastDrcStatus === undefined || current.lastDrcStatusAt === undefined) {
+      return "unknown";
+    }
+    if (this.now() - current.lastDrcStatusAt > this.drcStatusStaleAfterMs) return "unknown";
+    return current.lastDrcStatus;
+  }
+
+  async markTransportLost(gatewaySn: string, reason = "transport_lost"): Promise<DrcSessionRecord | undefined> {
+    const current = await this.store.get(gatewaySn);
+    if (!current || current.state === "closed" || current.state === "idle") return current;
+    const record = { ...current, transportConnected: false, updatedAt: this.now(), reason };
+    await this.persist(record);
+    return { ...record };
+  }
+
   async activate(input: ActivateDrcSession): Promise<DrcSessionRecord> {
     this.assertGuards(input.guards, "activate DRC session");
 
     const current = await this.require(input.gatewaySn);
-    if (current.state !== "requesting") {
+    if (current.state !== "drc_mode_active") {
       throw new Error(
         `Cannot activate DRC session from state ${current.state}`
       );
     }
+    if (!current.transportConnected) {
+      throw new Error("Cannot activate DRC session while DRC transport is disconnected");
+    }
 
-    const now = this.now();
     this.controller.resetControlSequence();
     this.controller.startHeartbeat(current.gatewaySn);
-
-    const record: DrcSessionRecord = {
-      ...current,
-      state: "active",
-      health: "healthy",
-      updatedAt: now,
-      lastInputAt: now
-    };
-
-    await this.persist(record);
-    this.startTimer(record.gatewaySn);
-    await this.audit(record, "activated");
-    return { ...record };
+    await this.audit(current, "activated");
+    return { ...current };
   }
 
   async sendStick(
@@ -293,18 +371,26 @@ export class DrcSessionManager {
   ): Promise<number> {
     this.assertGuards(guards, "send DRC stick input");
 
-    const current = await this.requireActive(gatewaySn);
+    const current = await this.require(gatewaySn);
+    if (current.state !== "drc_mode_active" && current.state !== "controlling" && current.state !== "degraded") {
+      throw new Error(`DRC session for gateway ${gatewaySn} cannot accept stick input (state=${current.state})`);
+    }
+    if (!current.transportConnected) {
+      throw new Error(`DRC transport for gateway ${gatewaySn} is disconnected`);
+    }
     const seq = await this.controller.sendStickControl(gatewaySn, channels);
     const now = this.now();
 
     const record = withoutReason({
       ...current,
+      state: "controlling",
       health: "healthy",
       updatedAt: now,
       lastInputAt: now
     });
 
     await this.persist(record);
+    if (current.state === "drc_mode_active") this.startTimer(gatewaySn);
     await this.audit(record, "input");
     return seq;
   }
@@ -413,7 +499,10 @@ export class DrcSessionManager {
 
   async isActive(gatewaySn: string): Promise<boolean> {
     const current = await this.store.get(gatewaySn);
-    return current?.state === "active";
+    return Boolean(
+      current?.transportConnected &&
+      (current.state === "controlling" || current.state === "degraded")
+    );
   }
 
   /** Deterministic dead-man evaluation hook used by tests and schedulers. */
@@ -430,7 +519,7 @@ export class DrcSessionManager {
 
     await Promise.allSettled(
       open.map(async (session) => {
-        if (session.state === "active" || session.state === "requesting") {
+        if (session.state === "controlling" || session.state === "degraded" || session.state === "drc_mode_active" || session.state === "authority_grabbed" || session.state === "authorized" || session.state === "requesting") {
           await this.closeGracefully(session.gatewaySn, "backend_shutdown");
           return;
         }
@@ -451,7 +540,7 @@ export class DrcSessionManager {
 
     try {
       const current = await this.store.get(gatewaySn);
-      if (!current || current.state !== "active") {
+      if (!current || (current.state !== "controlling" && current.state !== "degraded")) {
         this.stopTimer(gatewaySn);
         return;
       }
@@ -470,6 +559,7 @@ export class DrcSessionManager {
       ) {
         const degraded: DrcSessionRecord = {
           ...current,
+          state: "degraded",
           health: "degraded",
           updatedAt: this.now(),
           reason: "input_stale"
@@ -507,7 +597,7 @@ export class DrcSessionManager {
 
   private async requireActive(gatewaySn: string): Promise<DrcSessionRecord> {
     const current = await this.require(gatewaySn);
-    if (current.state !== "active") {
+    if (current.state !== "controlling" && current.state !== "degraded") {
       throw new Error(
         `DRC session for gateway ${gatewaySn} is not active (state=${current.state})`
       );
@@ -546,6 +636,7 @@ export class DrcSessionManager {
     const closed: DrcSessionRecord = {
       ...current,
       state: "closed",
+      transportConnected: false,
       updatedAt: now,
       closedAt: now,
       ...(lastNeutralAt !== undefined ? { lastNeutralAt } : {}),
@@ -559,6 +650,20 @@ export class DrcSessionManager {
       reason
     );
     return { ...closed };
+  }
+
+  private async transitionState(
+    gatewaySn: string,
+    expected: DrcSessionState,
+    next: DrcSessionState
+  ): Promise<DrcSessionRecord> {
+    const current = await this.require(gatewaySn);
+    if (current.state !== expected || !isAllowedDrcTransition(current.state, next)) {
+      throw new Error(`Invalid DRC transition ${current.state}->${next}; expected ${expected}`);
+    }
+    const record = { ...current, state: next, updatedAt: this.now() };
+    await this.persist(record);
+    return { ...record };
   }
 
   private async persist(record: DrcSessionRecord): Promise<void> {
