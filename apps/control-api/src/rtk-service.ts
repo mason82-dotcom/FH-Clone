@@ -48,8 +48,8 @@ export class RtkTelemetryService {
 
   private readonly staleAfterMs: number;
   private readonly maxTransitions: number;
-  private readonly resolveGatewaySn?: (deviceId: string) => string | undefined;
-  private readonly resolveMissionId?: (deviceId: string) => string | undefined;
+  private readonly resolveGatewaySn: ((deviceId: string) => string | undefined) | undefined;
+  private readonly resolveMissionId: ((deviceId: string) => string | undefined) | undefined;
 
   constructor(options: RtkTelemetryServiceOptions = {}) {
     this.staleAfterMs = options.staleAfterMs ?? 5_000;
