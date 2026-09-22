@@ -72,6 +72,11 @@ export interface EnterDrcModeOptions {
   hsiFrequencyHz?: number;
 }
 
+export interface CloudControlAuthRequest {
+  userId: string;
+  userCallsign: string;
+}
+
 export interface FlyToPoint {
   latitude: number;
   longitude: number;
@@ -178,8 +183,38 @@ export class DrcController {
     this.stickSeq = 0;
   }
 
+  /**
+   * Legacy/Dock authority path. Pilot Cloud on RC Plus 2 uses
+   * cloud_control_auth_request instead.
+   */
   async grabFlightAuthority(gatewaySn: string): Promise<DjiServiceReply> {
     return this.requestServiceOk(gatewaySn, "flight_authority_grab", {});
+  }
+
+  async requestCloudControlAuthority(
+    gatewaySn: string,
+    request: CloudControlAuthRequest
+  ): Promise<DjiServiceReply> {
+    if (!request.userId.trim()) {
+      throw new Error("Cloud-control userId is required");
+    }
+    if (!request.userCallsign.trim()) {
+      throw new Error("Cloud-control userCallsign is required");
+    }
+
+    return this.requestServiceOk(gatewaySn, "cloud_control_auth_request", {
+      user_id: request.userId,
+      user_callsign: request.userCallsign,
+      control_keys: ["flight"]
+    });
+  }
+
+  async releaseCloudControlAuthority(
+    gatewaySn: string
+  ): Promise<DjiServiceReply> {
+    return this.requestServiceOk(gatewaySn, "cloud_control_release", {
+      control_keys: ["flight"]
+    });
   }
 
   async enterDrcMode(
