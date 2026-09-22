@@ -225,3 +225,26 @@ Build
 
 Nach erfolgreicher V3.0-Freigabe werden die V3-Arbeitspakete geschlossen und
 das Projekt gestoppt.
+
+## Mission/Wayline/Capabilities
+
+Vor V3-RC lokal prüfen:
+
+- [ ] `mode_code == 5` setzt `lastActivity=wayline` und `waylineObserved=true`.
+- [ ] Wechsel aus Wayline in einen anderen aktiven Modus erhält `waylineObserved=true`.
+- [ ] Standby-Grace meldet nicht fälschlich `currentlyFlyingWayline=true`.
+- [ ] `/api/devices/{device_sn}/wayline` erfindet keine Wayline-ID.
+- [ ] `/api/devices/{device_sn}/capabilities` trennt Adapter-Capabilities und DJI-Control-Profil.
+- [ ] DJI-Produktsupport erzeugt ohne `AircraftAdapter.execute()`-Pfad keine generische Schreib-Capability.
+- [ ] `mission.wayline` bleibt für den DJI-Cloud-Adapter in V3 nicht beworben.
+- [ ] Wayline-Beobachtung aktiviert weder FC2 noch Mission Execution.
+
+Verbindliche Invariante:
+
+```text
+Wayline beobachtet
+  !=
+Wayline Management implementiert
+  !=
+mission.wayline ausführbar
+```
