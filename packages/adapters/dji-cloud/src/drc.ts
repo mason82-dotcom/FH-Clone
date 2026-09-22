@@ -175,6 +175,7 @@ export class DrcController {
 
   resetControlSequence(): void {
     this.controlSequence.reset();
+    this.stickSeq = 0;
   }
 
   async grabFlightAuthority(gatewaySn: string): Promise<DjiServiceReply> {
