@@ -187,19 +187,18 @@ Dynamische DJI-Anfragen benötigen das interne Bearer-Secret
 Bei internen Evaluierungsfehlern wird dynamische DJI-Autorisierung
 fail-closed mit `deny` behandelt.
 
-## V3-Zielendpunkt
-
 ### POST /internal/emqx/authn
 
-Noch **nicht** als finaler V3-Pfad abgenommen.
+Implementierter interner EMQX-HTTP-Authenticator.
 
-Ziel:
+Er:
 
-- Gateway-Credential prüfen
-- serverseitigen Principal auflösen
-- vertrauenswürdige `gateway_sn` liefern
-- `is_superuser = false`
-- Client-Attribute für nachfolgende AuthZ bereitstellen
+- prüft Gateway-Credentials gegen den PostgreSQL-Credential-Store
+- löst den serverseitig gebundenen Principal auf
+- liefert die vertrauenswürdige `gateway_sn`
+- setzt `is_superuser = false`
+- stellt `client_attrs.role` und `client_attrs.gateway_sn` für die nachfolgende AuthZ bereit
+- antwortet bei AuthN-Fehlern fail-closed mit HTTP 200 + `deny`
 
 Siehe:
 
@@ -242,7 +241,6 @@ Die finale V3-API wird zusätzlich dokumentieren:
 - Persistenz-/Historienendpunkte, falls öffentlich benötigt
 - Medien-/Multispektralendpunkte
 - Readiness
-- AuthN intern
 - stabile Fehlerobjekte
 - Versionierung der öffentlichen API
 
