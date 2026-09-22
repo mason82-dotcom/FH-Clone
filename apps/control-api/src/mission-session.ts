@@ -7,6 +7,22 @@ export type MissionEndReason =
   | "device_disconnected"
   | "manual";
 
+export type MissionActivity =
+  | "manual_flight"
+  | "automatic_takeoff"
+  | "wayline"
+  | "panorama"
+  | "intelligent_tracking"
+  | "adsb_avoidance"
+  | "return_to_home"
+  | "automatic_landing"
+  | "forced_landing"
+  | "three_blade_landing"
+  | "apas"
+  | "virtual_stick"
+  | "live_flight_control"
+  | "airborne_rtk_fixing";
+
 export interface AutoMissionSession {
   missionId: string;
   deviceId: string;
@@ -17,6 +33,9 @@ export interface AutoMissionSession {
   endReason?: MissionEndReason;
   lastTelemetryAt: number;
   lastModeCode?: number;
+  lastActivity?: MissionActivity;
+  /** True once mode_code=5 was observed in this runtime mission session. */
+  waylineObserved: boolean;
 }
 
 export type MissionSessionEvent =
@@ -99,7 +118,12 @@ export class MissionSessionTracker {
 
     if (state.active) {
       state.active.lastTelemetryAt = message.receivedAt;
-      if (modeCode !== undefined) state.active.lastModeCode = modeCode;
+      if (modeCode !== undefined) {
+        state.active.lastModeCode = modeCode;
+        const activity = classifyMissionActivity(modeCode);
+        if (activity) state.active.lastActivity = activity;
+        if (modeCode === 5) state.active.waylineObserved = true;
+      }
 
       if (!state.active.gatewaySn) {
         const gatewaySn = this.resolveGatewaySn?.(message.deviceId);
@@ -124,7 +148,11 @@ export class MissionSessionTracker {
           source: "automatic",
           startedAt: message.receivedAt,
           lastTelemetryAt: message.receivedAt,
-          lastModeCode: modeCode
+          lastModeCode: modeCode,
+          ...(classifyMissionActivity(modeCode)
+            ? { lastActivity: classifyMissionActivity(modeCode) }
+            : {}),
+          waylineObserved: modeCode === 5
         };
         state.active = session;
         this.publish({ type: "started", session: { ...session } });
@@ -234,6 +262,43 @@ export class MissionSessionTracker {
     for (const subscriber of this.subscribers) {
       subscriber(event);
     }
+  }
+}
+
+export function classifyMissionActivity(
+  modeCode: number
+): MissionActivity | undefined {
+  switch (modeCode) {
+    case 3:
+      return "manual_flight";
+    case 4:
+      return "automatic_takeoff";
+    case 5:
+      return "wayline";
+    case 6:
+      return "panorama";
+    case 7:
+      return "intelligent_tracking";
+    case 8:
+      return "adsb_avoidance";
+    case 9:
+      return "return_to_home";
+    case 10:
+      return "automatic_landing";
+    case 11:
+      return "forced_landing";
+    case 12:
+      return "three_blade_landing";
+    case 15:
+      return "apas";
+    case 16:
+      return "virtual_stick";
+    case 17:
+      return "live_flight_control";
+    case 18:
+      return "airborne_rtk_fixing";
+    default:
+      return undefined;
   }
 }
 
