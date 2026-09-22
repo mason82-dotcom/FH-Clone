@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { readWpmlKmz } from "./wpml/kmz.js";
-import { projectWpmlToGroundStation } from "./wpml/groundstation.js";
+import {
+  importWpmlKmzToGroundStation,
+  projectWpmlToGroundStation
+} from "./wpml/groundstation.js";
 import { parseWpmlBundle } from "./wpml/parser.js";
 
 const templateXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -369,6 +372,22 @@ test("refuses to project WPML bundles with validation errors", () => {
       }),
     /mission\.global_rth_height_missing/
   );
+});
+
+test("imports KMZ bytes directly into the neutral FH2 mission model", () => {
+  const kmz = storedZip([
+    ["wpmz/template.kml", templateXml],
+    ["wpmz/waylines.wpml", waylinesXml]
+  ]);
+
+  const imported = importWpmlKmzToGroundStation(kmz, {
+    id: "kmz-import-1",
+    sourceFileName: "route.kmz"
+  });
+
+  assert.equal(imported.package.entries.length, 2);
+  assert.equal(imported.mission.id, "kmz-import-1");
+  assert.equal(imported.routes[0]?.segments?.[0]?.points[0]?.altitudeM, 132.5);
 });
 
 test("requires the exact DJI WPML archive paths", () => {
