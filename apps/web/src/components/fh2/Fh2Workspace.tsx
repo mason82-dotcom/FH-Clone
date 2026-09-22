@@ -104,6 +104,24 @@ export function Fh2Workspace() {
   useEffect(() => {
     if (selectedPair) return;
 
+    // While Pilot 2 is still resolving its runtime identity, do not race it
+    // with an arbitrary first topology entry.
+    if (pilotBridge.state === "initializing") return;
+
+    const pilotGatewaySn = pilotBridge.identity.remoteControllerSn;
+    const pilotDroneSn = pilotBridge.identity.aircraftSn;
+    if (pilotGatewaySn && pilotDroneSn) {
+      const pilotPair = pairs.find(
+        (pair) =>
+          pair.gatewaySn === pilotGatewaySn &&
+          pair.droneSn === pilotDroneSn
+      );
+      if (pilotPair) {
+        setSelectedPair(`${pilotPair.gatewaySn}::${pilotPair.droneSn}`);
+        return;
+      }
+    }
+
     const configured =
       config.defaultGatewaySn && config.defaultDroneSn
         ? `${config.defaultGatewaySn}::${config.defaultDroneSn}`
@@ -122,6 +140,9 @@ export function Fh2Workspace() {
     config.defaultDroneSn,
     config.defaultGatewaySn,
     pairs,
+    pilotBridge.identity.aircraftSn,
+    pilotBridge.identity.remoteControllerSn,
+    pilotBridge.state,
     selectedPair
   ]);
 
