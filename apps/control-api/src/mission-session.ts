@@ -141,6 +141,7 @@ export class MissionSessionTracker {
 
       if (!state.active) {
         const gatewaySn = this.resolveGatewaySn?.(message.deviceId);
+        const activity = classifyMissionActivity(modeCode);
         const session: AutoMissionSession = {
           missionId: randomUUID(),
           deviceId: message.deviceId,
@@ -149,9 +150,7 @@ export class MissionSessionTracker {
           startedAt: message.receivedAt,
           lastTelemetryAt: message.receivedAt,
           lastModeCode: modeCode,
-          ...(classifyMissionActivity(modeCode)
-            ? { lastActivity: classifyMissionActivity(modeCode) }
-            : {}),
+          ...(activity ? { lastActivity: activity } : {}),
           waylineObserved: modeCode === 5
         };
         state.active = session;
