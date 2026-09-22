@@ -10,12 +10,17 @@ import type {
   RawMessage
 } from "@fh-clone/aircraft-core";
 import { normalizeDjiPayload } from "./normalizer.js";
+import { normalizeDjiHsiObstacleInfo } from "./obstacle.js";
 import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
 import { DjiPilotCloudAuthorityCoordinator } from "./pilot-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import { DrcController, type DrcBrokerCredentials } from "./drc.js";
-import { DrcBrokerTransport, type DrcTransportLossReason } from "./drc-transport.js";
+import {
+  DrcBrokerTransport,
+  type DrcInboundMessage,
+  type DrcTransportLossReason
+} from "./drc-transport.js";
 import {
   DjiTopologyRegistry,
   describeDjiProduct,
@@ -96,7 +101,8 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   constructor(private readonly options: DjiCloudAdapterOptions) {
     this.drcTransport = new DrcBrokerTransport({
       onConnected: () => this.options.onDrcTransportConnected?.(),
-      onLost: (reason) => this.options.onDrcTransportLost?.(reason)
+      onLost: (reason) => this.options.onDrcTransportLost?.(reason),
+      onMessage: (message) => this.handleDrcTransportMessage(message)
     });
     this.drc = new DrcController(this, this.drcTransport);
   }
@@ -277,8 +283,12 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     });
   }
 
-  async connectDrcTransport(credentials: DrcBrokerCredentials): Promise<void> {
-    await this.drcTransport.connect(credentials);
+  async connectDrcTransport(
+    gatewaySn: string,
+    aircraftSn: string,
+    credentials: DrcBrokerCredentials
+  ): Promise<void> {
+    await this.drcTransport.connect(credentials, { gatewaySn, aircraftSn });
   }
 
   async disconnectDrcTransport(): Promise<void> {
@@ -292,6 +302,48 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       message:
         "Direct DJI flight-control publishing remains disabled in the adapter; use the backend CommandCoordinator/DRC service."
     };
+  }
+
+  private async handleDrcTransportMessage(
+    message: DrcInboundMessage
+  ): Promise<void> {
+    const normalized = normalizeDjiHsiObstacleInfo(
+      message.aircraftSn,
+      message.payload,
+      message.receivedAt
+    );
+    if (normalized.samples.length === 0) return;
+
+    await this.events?.onRawMessage?.({
+      adapterId: this.id,
+      deviceId: message.aircraftSn,
+      receivedAt: message.receivedAt,
+      channel: message.topic,
+      payload: message.payload
+    });
+
+    const knownCapabilities =
+      this.capabilities.get(message.aircraftSn) ?? new Set<Capability>();
+    for (const capability of normalized.capabilities) {
+      knownCapabilities.add(capability);
+    }
+    this.capabilities.set(message.aircraftSn, knownCapabilities);
+
+    const existing = this.devices.get(message.aircraftSn);
+    if (existing) {
+      const updated: AdapterDevice = {
+        ...existing,
+        capabilities: [...knownCapabilities],
+        connected: true,
+        lastSeenAt: message.receivedAt
+      };
+      this.devices.set(message.aircraftSn, updated);
+      await this.events?.onDevice?.(updated);
+    }
+
+    for (const obstacleSample of normalized.samples) {
+      await this.events?.onParameter?.(obstacleSample);
+    }
   }
 
   private async handleMessage(topic: string, bytes: Buffer): Promise<void> {
@@ -500,6 +552,7 @@ export * from "./drc-transport.js";
 export * from "./topology.js";
 export * from "./capabilities.js";
 export * from "./rtk.js";
+export * from "./obstacle.js";
 
 export * from "./payloads.js";
 
