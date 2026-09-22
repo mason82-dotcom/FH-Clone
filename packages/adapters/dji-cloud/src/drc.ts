@@ -9,14 +9,52 @@ export interface DjiMqttPublisher {
 }
 
 export interface DrcAxes {
-  /** DJI protocol axis x. Semantics vary by product generation; do not map to UI pitch/roll here. */
+  /** Legacy DJI velocity-control axis x. */
   x: number;
-  /** DJI protocol axis y. Semantics vary by product generation; do not map to UI pitch/roll here. */
+  /** Legacy DJI velocity-control axis y. */
   y: number;
   /** Vertical speed in m/s. */
   h: number;
-  /** Yaw angular velocity. Current Dock documentation uses degree/s. */
+  /** Yaw angular velocity in degree/s. */
   w: number;
+}
+
+export const DJI_STICK_MIN = 364;
+export const DJI_STICK_CENTER = 1024;
+export const DJI_STICK_MAX = 1684;
+
+export interface DrcStickChannels {
+  roll: number;
+  pitch: number;
+  throttle: number;
+  yaw: number;
+  /** Optional gimbal pitch channel for products that expose it on stick_control. */
+  gimbalPitch?: number;
+}
+
+export interface NormalizedStickInput {
+  /** Normalized input -1..1. */
+  roll: number;
+  /** Normalized input -1..1. */
+  pitch: number;
+  /** Normalized input -1..1. */
+  throttle: number;
+  /** Normalized input -1..1. */
+  yaw: number;
+}
+
+export function toDjiStickChannel(value: number): number {
+  assertFiniteRange("normalized stick input", value, -1, 1);
+  return Math.round(DJI_STICK_CENTER + value * (DJI_STICK_MAX - DJI_STICK_CENTER));
+}
+
+export function toDjiStickChannels(input: NormalizedStickInput): DrcStickChannels {
+  return {
+    roll: toDjiStickChannel(input.roll),
+    pitch: toDjiStickChannel(input.pitch),
+    throttle: toDjiStickChannel(input.throttle),
+    yaw: toDjiStickChannel(input.yaw)
+  };
 }
 
 export interface DrcBrokerCredentials {
@@ -112,6 +150,7 @@ class DrcControlSequence {
 
 export class DrcController {
   private readonly controlSequence = new DrcControlSequence();
+  private stickSeq = 0;
   private envelopeSeq = 0;
   private queue: Promise<void> = Promise.resolve();
   private lastControlAt = 0;
@@ -163,6 +202,11 @@ export class DrcController {
     return this.requestServiceOk(gatewaySn, "drc_mode_exit", {});
   }
 
+  /**
+   * Legacy velocity-control command. DJI marks drone_control as abandoned in
+   * current DRC documentation; keep it only for integrations that explicitly
+   * require the legacy profile.
+   */
   async sendControl(gatewaySn: string, axes: DrcAxes): Promise<number> {
     assertFiniteRange("x", axes.x, -17, 17);
     assertFiniteRange("y", axes.y, -17, 17);
@@ -170,14 +214,7 @@ export class DrcController {
     assertFiniteRange("w", axes.w, -90, 90);
 
     return this.runExclusive(async () => {
-      const now = Date.now();
-      const earliest = Math.max(
-        this.controlBlockedUntil,
-        this.lastControlAt + this.minControlIntervalMs
-      );
-      if (earliest > now) {
-        await new Promise<void>((resolve) => setTimeout(resolve, earliest - now));
-      }
+      await this.waitForControlSlot();
 
       const seq = this.controlSequence.next(axes);
       await this.drc.publish(
@@ -196,6 +233,62 @@ export class DrcController {
       );
       this.lastControlAt = Date.now();
       return seq;
+    });
+  }
+
+  /**
+   * Current Pilot/Dock stick-control protocol. Callers must maintain a 5-10 Hz
+   * stream while active. The protocol intentionally has no ACK mechanism.
+   */
+  async sendStickControl(
+    gatewaySn: string,
+    channels: DrcStickChannels
+  ): Promise<number> {
+    assertFiniteRange("roll", channels.roll, DJI_STICK_MIN, DJI_STICK_MAX);
+    assertFiniteRange("pitch", channels.pitch, DJI_STICK_MIN, DJI_STICK_MAX);
+    assertFiniteRange("throttle", channels.throttle, DJI_STICK_MIN, DJI_STICK_MAX);
+    assertFiniteRange("yaw", channels.yaw, DJI_STICK_MIN, DJI_STICK_MAX);
+    if (channels.gimbalPitch !== undefined) {
+      assertFiniteRange(
+        "gimbalPitch",
+        channels.gimbalPitch,
+        DJI_STICK_MIN,
+        DJI_STICK_MAX
+      );
+    }
+
+    return this.runExclusive(async () => {
+      await this.waitForControlSlot();
+
+      const seq = ++this.stickSeq;
+      await this.drc.publish(
+        `thing/product/${gatewaySn}/drc/down`,
+        {
+          seq,
+          method: "stick_control",
+          data: {
+            roll: Math.round(channels.roll),
+            pitch: Math.round(channels.pitch),
+            throttle: Math.round(channels.throttle),
+            yaw: Math.round(channels.yaw),
+            ...(channels.gimbalPitch !== undefined
+              ? { gimbal_pitch: Math.round(channels.gimbalPitch) }
+              : {})
+          }
+        },
+        0
+      );
+      this.lastControlAt = Date.now();
+      return seq;
+    });
+  }
+
+  async sendNeutralStickControl(gatewaySn: string): Promise<number> {
+    return this.sendStickControl(gatewaySn, {
+      roll: DJI_STICK_CENTER,
+      pitch: DJI_STICK_CENTER,
+      throttle: DJI_STICK_CENTER,
+      yaw: DJI_STICK_CENTER
     });
   }
 
@@ -289,6 +382,17 @@ export class DrcController {
       throw new DjiServiceError(method, reply.result, reply);
     }
     return reply;
+  }
+
+  private async waitForControlSlot(): Promise<void> {
+    const now = Date.now();
+    const earliest = Math.max(
+      this.controlBlockedUntil,
+      this.lastControlAt + this.minControlIntervalMs
+    );
+    if (earliest > now) {
+      await new Promise<void>((resolve) => setTimeout(resolve, earliest - now));
+    }
   }
 
   private nextEnvelopeSeq(): number {
