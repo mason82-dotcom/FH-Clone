@@ -1,122 +1,110 @@
-# FH2-Manager / M4-Cloud Abgleich
+# Abgleich FH2 V3 und M4-Cloud V2
 
-Stand des Abgleichs:
+## Zweck
 
-- M4-Cloud `main`: V2.0, Commit `149a2da83312138482bfba96733634be419eae5d`
-- FH-Clone `main`: modularer Aircraft-/Groundstation-Core
-- Lyrebird: in beiden Pfaden deaktiviert
-- CI: nur der Direktor startet/bewertet die zentrale CI
-- maßgeblicher Arbeitsstand: `main`
+M4-Cloud V2 und FH-Clone/FH2 V3 sind getrennte Projekte mit unterschiedlichen
+Schwerpunkten.
 
-## Rollen der beiden Projekte
+Der Abgleich verhindert, dass Sicherheits- oder Protokollregeln
+widersprüchlich umgesetzt werden.
 
-### M4-Cloud / FH2-Manager
+## Referenzstand M4
 
-M4-Cloud bleibt die stabile Integrations-/Betriebsschicht für:
+M4-Cloud bleibt der stabile V2-Referenzpfad für:
 
 - FlightHub 2 Privatization OpenAPI V2
+- read-only FH2-Ressourcen
 - DJI Cloud API Bootstrap
-- MQTT Basic Link
+- Basic-Link-MQTT
 - dynamische Kamera-/Videopfad-Erkennung
-- PostgreSQL/Runtime
-- lokale Verify-/Betriebsabläufe
+- lokale Betriebs-/Verify-Abläufe
 
-Der aktuelle V2.0-Stand ist sicherheitsseitig read-only bzw. DRC-frei.
+M4 V2 bleibt eingefroren, solange kein neuer ausdrücklicher Auftrag erfolgt.
 
-### FH-Clone
+## FH2 V3
 
-FH-Clone entwickelt die modulare Domänen- und Adapterarchitektur weiter:
+FH-Clone entwickelt die umfassendere modulare Zielarchitektur:
 
 - SDK-neutraler Aircraft Core
-- Device-/Parameter-/Capability Registry
-- Gateway↔Sub-Device-Topologie
-- Control Authority
-- zentrale Safety-Stufen
-- DJI Cloud API 1.16.1 Kompatibilitätsprofil
-- UgCS als Groundstation
-- DRC-Engine für explizit unterstützte Plattformen
-- spätere MSDK/PSDK/OSDK/Edge-SDK-Adapter
+- dynamische Geräte-/Capability-Registry
+- EMQX AuthN/AuthZ
+- Gateway-/Sub-Device-Topologie
+- RTK
+- WebUI
+- Media/Multispektral
+- UgCS
+- Control Authority und Safety
+- optionaler DRC-Code unter FC3
 
-FH-Clone darf M4-Sicherheitsgrenzen nicht durch einen alternativen Direktpfad umgehen.
-
-## Gemeinsame Safety-Stufen
-
-Beide Projekte verwenden denselben Stufenvertrag:
+## Gemeinsame Sicherheitsstufen
 
 | Stufe | Bedeutung |
 | --- | --- |
-| FC0 | Analyse, Verträge, read-only; keine realen Downlinks |
-| FC1 | kontrollierte nicht-fliegende Downlinks |
-| FC2 | Mission/Task Control |
-| FC3 | RTH, Aircraft Control, DRC |
+| FC0 | Analyse, Lesen und Planung |
+| FC1 | kontrollierte nicht flugkritische Schreibzugriffe |
+| FC2 | Mission/Task |
+| FC3 | Flugsteuerung, RTH, DRC |
 
-FH-Clone startet immer auf **FC0**.
+FH2 startet immer auf FC0.
 
-Die Existenz von DRC-/Command-Code hebt FC0 nicht auf.
+## FlightHub 2 OpenAPI V2
 
-## Adaptergrenzen
-
-### FlightHub 2 OpenAPI V2
-
-Authoritative für die aktuell verifizierten read-only FH2-Ressourcen:
+M4 bleibt die verifizierte Referenz für die aktuell verwendeten
+read-only-Ressourcen, darunter:
 
 - Devices
 - HMS
 - Waylines
 - Flight Tasks
 
-Header-/Request-Vertrag aus M4:
+Verwendete Header:
 
 - `X-User-Token`
 - `X-Project-Uuid`
 - `X-Request-Id`
 - `X-Language`
 
-FH-Clone implementiert keine erfundenen FH2-Write-Endpunkte.
+FH2 erfindet keine nicht dokumentierten Write-Endpunkte.
 
-### DJI Cloud API
+## DJI Cloud API
 
-Bleibt getrennt von FH2 OpenAPI.
+DJI Cloud API und FlightHub-2-OpenAPI bleiben getrennte Integrationspfade.
 
-Gemeinsam verwendete Konzepte:
+Gemeinsame Konzepte:
 
-- Basic Link / MQTT
-- `gateway_sn` vs. `device_sn`
+- Basic Link
+- `gateway_sn` / `device_sn`
 - `update_topo`
-- Device OSD/State
-- Service/Reply-Korrelation
+- OSD/State
+- Services/Replies
 - Capability-Gating
 
-### UgCS
+## MQTT-Broker
 
-UgCS ist eine zusätzliche Groundstation-Schicht in FH-Clone.
+M4 V2 verwendet Mosquitto mit statischer, restriktiver Basic-Link-Konfiguration.
 
-UgCS ersetzt weder FH2 OpenAPI noch DJI Cloud API. Missionen/Routen werden über den GroundStationAdapter in das gemeinsame Domainmodell eingebunden.
+FH2 V3 verwendet EMQX mit dynamischer Gateway-/Topologie-Autorisierung.
 
-## RC Pro Enterprise
+Das ist kein Topic-Protokollkonflikt. FH2 V3 erweitert das
+Sicherheitsmodell, ohne den eingefrorenen M4-V2-Stack stillschweigend
+umzubauen.
 
-Gemeinsames Modell:
+## RC Pro
+
+Gemeinsames Topologiemodell:
 
 ```text
-RC Pro Enterprise (gateway_sn)
-        |
-        +-- Aircraft (device_sn)
+Controller gateway_sn
+      |
+      +-- Aircraft device_sn
 ```
 
-Die Topologie wird durch `update_topo` gelernt.
+FH2 V3 geht darüber hinaus und entkoppelt die MQTT-Client-ID vollständig von
+der Sicherheitsidentität.
 
-Wichtig:
+## Kamera und Medien
 
-- OSD/State werden nach `device_sn` verarbeitet.
-- Services/DRC werden über `gateway_sn` geroutet.
-- RC Pro Enterprise ist DJI product type 144.
-- Mavic 3 Enterprise Series ist product type 77.
-
-Für M3E/M3T/M3M wird Cloud-Flugsteuerung nicht allein aus vorhandenen DRC-Topics abgeleitet; das Capability-Profil entscheidet.
-
-## Kamera-/Payload-Modell
-
-FH-Clone übernimmt die stabilen M4-Schlüssel als gemeinsame Terminologie:
+Stabile gemeinsame Begriffe bleiben:
 
 - `device_sn`
 - `payload_index`
@@ -129,35 +117,25 @@ FH-Clone übernimmt die stabilen M4-Schlüssel als gemeinsame Terminologie:
 - `focal_length_mm`
 - `iso`
 - `shutter_speed`
-- Gimbal Pitch/Roll/Yaw
 
-Multispektral-/NDVI-Felder werden nicht aus Modellnamen erfunden. Die fachlichen Ergebnisse aus M4-Issues #14, #16 und #15 werden später als gemeinsamer Vertrag übernommen.
-
-## MQTT / Broker
-
-Aktuell besteht ein Infrastrukturunterschied:
-
-- M4-Cloud V2.0: Mosquitto, Basic Link, DRC gesperrt
-- FH-Clone: EMQX-Entwurf mit dynamischer Gateway/Sub-Device-Autorisierung
-
-Das ist kein Protokollkonflikt. Die gemeinsame DJI-Topic-Semantik bleibt gleich.
-
-Die dynamische EMQX-Autorisierung aus FH-Clone ist ein Kandidat für eine spätere Manager-Version, **nicht** eine stillschweigende Änderung des eingefrorenen M4-V2.0-Stacks.
+FH2 V3 ergänzt darauf aufbauend den Media-/Sensor-/Bandvertrag.
 
 ## DRC
 
-FH-Clone enthält eine DRC-Engine, aber:
+M4 V2 bleibt DRC-frei.
 
-- Default Safety Stage = FC0
-- kein öffentlicher DRC-Endpunkt
-- keine Browser-Direktsteuerung
-- M3E/M3T/M3M erhalten über Pilot Cloud keine automatische `control.flight`-Capability
-- Aktivierung verlangt FC3 und eine explizite Produkt-/API-Freigabe
+FH2 V3 darf DRC-Code enthalten, aber nur als standardmäßig gesperrte
+FC3-Funktion mit:
 
-Damit bleibt FH-Clone kompatibel zur Sicherheitsgrenze des FH2-Managers.
+- Control Lease
+- DJI Authority
+- separater DRC-Sitzung
+- Dead-Man
+- Broker-Isolation
 
-## CI und Integration
+## CI
 
-FH-Clone startet keine zentrale M4-CI.
+Nur der Direktor startet die finale zentrale CI.
 
-Änderungen, die in M4-Cloud übernommen werden sollen, werden dem Manager als klar abgegrenztes Arbeitspaket/Issue übergeben. Der Direktor entscheidet dort über CI und Freigabe.
+Nach V3.0 endet die FH2-Entwicklung, sofern kein neuer ausdrücklicher Auftrag
+erteilt wird.
