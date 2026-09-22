@@ -27,6 +27,7 @@ FH2 initialisiert die Bridge in dieser Reihenfolge:
 window.djiBridge vorhanden?
   -> platformIsVerified()
   -> optional platformVerifyLicense(appId, appKey, license)
+  -> platformIsVerified() erneut prüfen
   -> platformSetWorkspaceId(uuid)
   -> platformSetInformation(platformName, workspaceName, description)
   -> Controller-/Aircraft-SN lesen
@@ -45,6 +46,39 @@ und den typisierten Adapter:
 
 ```text
 apps/web/src/pilot-bridge/client.ts
+```
+
+## Identity-Abgleich mit FH2
+
+Nach erfolgreicher JSBridge-Initialisierung liest FH2 getrennt:
+
+```text
+platformGetRemoteControllerSN() -> gatewaySn-Kandidat
+platformGetAircraftSN()         -> aircraftSn-Kandidat
+```
+
+Diese Werte werden **nicht** als Security-Principal oder AuthZ-Quelle benutzt.
+
+Die WebUI übernimmt das Pilot2-Paar nur dann automatisch als aktuellen
+FH2-Kontext, wenn **beide** Werte exakt als Beziehung in der aktuellen
+`/api/dji/topology`-Sicht vorhanden sind:
+
+```text
+Pilot2 remoteControllerSn == topology.gatewaySn
+AND
+Pilot2 aircraftSn         == topology.subDevices[].sn
+```
+
+Fehlt einer der Werte oder existiert das Paar nicht in der Runtime-Topologie,
+wird keine Beziehung geraten. Danach gelten weiterhin die normale
+FH2-Konfiguration beziehungsweise die manuelle Auswahl.
+
+Damit bleiben getrennt:
+
+```text
+JSBridge Identity = WebView-/UI-Kontext
+Runtime update_topo = Gerätebeziehung
+EMQX AuthN/AuthZ = Sicherheitsidentität
 ```
 
 ## Unterstützte Bridge-Primitive
@@ -122,12 +156,14 @@ Benötigt:
 ### map / tsa
 
 DJI dokumentiert vor diesen Modulen den geladenen Cloud-/Thing- und
-WebSocket-Kontext.
+WebSocket-Kontext. Der FH2-Client prüft deshalb vor `loadMap()` und
+`loadTsa()` explizit `thing` + `ws` und bricht andernfalls ab.
 
 ### media
 
-Benötigt einen gesetzten Workspace und den Cloud-/Thing-Kontext. Parameter
-für Auto-Upload werden nur gesetzt, wenn sie explizit konfiguriert werden.
+Benötigt einen gesetzten Workspace und den Cloud-/Thing-Kontext. Vor
+`loadMedia()` muss `thing` geladen sein. Parameter für Auto-Upload werden
+nur gesetzt, wenn sie explizit konfiguriert werden.
 
 ### mission
 
@@ -140,7 +176,35 @@ aus JSBridge und Wayline Management:
 - API-Modul für HTTPS-Wayline-Operationen konfiguriert
 - erst danach Mission-Modul laden
 
-FH2 behauptet ohne diese Voraussetzungen keine Wayline-Management-Capability.
+Der Client erzwingt für `loadMission()` die geladenen Module
+`thing` + `ws` + `api`. FH2 behauptet ohne diese Voraussetzungen keine
+Wayline-Management-Capability.
+
+## Betriebs-Bootstrap
+
+Der JSBridge-Adapter ist absichtlich **nicht** mit statischen Thing-/API-/WS-
+Credentials verdrahtet.
+
+Für eine vollautomatische Pilot2-Cloud-Anmeldung benötigt FH2 noch einen
+authentisierten Runtime-Bootstrap, der ausschließlich die für die konkrete
+Pilot2-Sitzung vorgesehenen Parameter liefert:
+
+```text
+thing -> MQTT host + Gateway-Principal + Passwort + Callback
+api   -> HTTPS host + X-Auth-Token
+ws    -> WSS host + Token + Callback
+```
+
+Der bestehende öffentliche FH2-API-Bereich stellt dafür derzeit **keinen**
+Credential-Endpunkt bereit. Das ist beabsichtigt: persistente
+`gateway_credentials`, Backend-MQTT-Secrets, EMQX-Interntokens oder DRC-
+Credentials dürfen nicht über einen ungeschützten Browser-Endpunkt ausgegeben
+werden.
+
+Bis ein eigener authentisierter Pilot2-Bootstrap-Vertrag abgenommen ist, werden
+die Module nur über explizit vom Aufrufer gelieferte Runtimeparameter geladen.
+Es werden keine Credentials aus anderen FH2-Konfigurationen kopiert oder
+geraten.
 
 ## Livestream
 
