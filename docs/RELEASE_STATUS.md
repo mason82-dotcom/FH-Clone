@@ -83,7 +83,7 @@ Automatisiert vorhanden sind unter anderem:
 
 Die finale lokale Gesamtabnahme bleibt offen.
 
-## DJI-MQTT/AuthN – VERTRAG GEKLÄRT, IMPLEMENTIERUNG OFFEN
+## DJI-MQTT/AuthN – IMPLEMENTIERT, LOKALE ABNAHME OFFEN
 
 Der EMQX-5.7-Vertrag ist fachlich entschieden:
 
@@ -96,8 +96,20 @@ Der EMQX-5.7-Vertrag ist fachlich entschieden:
 - Credential Store darf PostgreSQL nutzen
 - Topologie und DRC bleiben Runtime-only
 
-Offen ist die Implementierung durch Manager #26 einschließlich
-Credential-Hashing, Fail-Closed-Tests und AuthZ-Entkopplung von `clientid`.
+Auf `main` vorhanden sind inzwischen:
+
+- `POST /internal/emqx/authn`
+- PostgreSQL-`gateway_credentials`
+- scrypt-Passwortprüfung
+- trusted `client_attrs.role`
+- trusted `client_attrs.gateway_sn`
+- AuthZ ohne `clientid` als Gateway-Identity
+- Prüfung aktiver Credential-Bindung während AuthZ
+- EMQX-HTTP-AuthN-Konfiguration
+- Startreihenfolge: interner Hook lauscht vor Backend-MQTT-Connect
+
+Offen bleibt die lokale Root-Compose-/MQTT-Abnahme einschließlich
+Credential-Deaktivierung und Fail-Closed-Fehlertests.
 
 ## Gate 4 – RC Pro: REAL ZU VERIFIZIEREN
 
