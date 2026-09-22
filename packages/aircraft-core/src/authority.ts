@@ -1,3 +1,4 @@
+import { SafetyGate } from "./safety.js";
 import type {
   AdapterDevice,
   AircraftAdapter,
@@ -94,7 +95,8 @@ export class CapabilityRouter {
 export class CommandCoordinator {
   constructor(
     private readonly authority: ControlAuthority,
-    private readonly router: CapabilityRouter
+    private readonly router: CapabilityRouter,
+    private readonly safety = new SafetyGate()
   ) {}
 
   async execute(
@@ -102,6 +104,15 @@ export class CommandCoordinator {
     command: AircraftCommand,
     now = Date.now()
   ): Promise<CommandResult> {
+    const safetyDecision = this.safety.authorize(command, now);
+    if (!safetyDecision.allowed) {
+      return {
+        ok: false,
+        code: "disabled",
+        message: safetyDecision.reason
+      };
+    }
+
     const lease = this.authority.get(command.deviceId, now);
     if (!lease) {
       return {
