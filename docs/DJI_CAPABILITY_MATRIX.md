@@ -309,6 +309,11 @@ Die Tabelle klassifiziert das Safety-Niveau **falls** eine solche Capability
 durch einen tatsächlich implementierten Adapterpfad bereitgestellt wird.
 Sie bedeutet nicht, dass FH2 V3 alle genannten Capabilities bereits meldet.
 
+Die Tabelle klassifiziert das Safety-Niveau nur für den Fall, dass eine solche
+Capability durch einen tatsächlich implementierten Adapterpfad bereitgestellt
+wird. Sie bedeutet nicht, dass FH2 V3 alle genannten Capabilities bereits
+meldet.
+
 Produktunterstützung hebt die Safety-Stufe niemals automatisch an.
 
 ## Noch real zu verifizieren
