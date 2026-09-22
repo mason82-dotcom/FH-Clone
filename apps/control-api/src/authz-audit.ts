@@ -3,7 +3,7 @@ import { isIP } from "node:net";
 import { Pool } from "pg";
 
 import type {
-  AuthzReason,
+  AuthzDecisionReason,
   EmqxAuthorizationResult
 } from "./authz.js";
 
@@ -211,8 +211,8 @@ export class AuthzAuditWriter {
    * New records may remain queued for the next batch.
    */
   async flush(): Promise<void> {
-    if (!this.writeBatch || this.buffer.size === 0) return;
     if (this.flushPromise) return this.flushPromise;
+    if (!this.writeBatch || this.buffer.size === 0) return;
 
     const targetCount = this.buffer.size;
     this.flushPromise = this.flushSnapshot(targetCount).finally(() => {
