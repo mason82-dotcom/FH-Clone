@@ -77,6 +77,24 @@ Image:     timescale/timescaledb:2.30.1-pg16
 
 `RTK_SOURCE_LABEL` und `RTK_SOURCE_PROVIDER` enthalten keine NTRIP-Secrets.
 
+## FlightHub 2 OpenAPI V2
+
+Der FH2-Pfad ist ausschließlich lesend.
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `FH2_ENABLED` | `false` | aktiviert den read-only FH2-OpenAPI-Client |
+| `FH2_BASE_URL` | leer | Basis-URL der FlightHub-2-OpenAPI |
+| `FH2_ORG_ID` | leer | Organization-ID für Geräteabfragen |
+| `FH2_PROJECT_ID` | leer | Workspace-/Projekt-ID für Waylines und Flight Tasks |
+| `FH2_USER_TOKEN` | leer | `X-User-Token`; Secret |
+| `FH2_TIMEOUT_MS` | `15000` | Request-Timeout in Millisekunden |
+
+Der Client sendet zusätzlich `X-Request-Id`, `X-Language: en` und bei
+Projektaufrufen `X-Project-Uuid`.
+
+Es werden nur GET-Anfragen ausgeführt; HTTP-Redirects werden nicht verfolgt.
+
 ## Diagnose
 
 | Variable | Standard | Bedeutung |
