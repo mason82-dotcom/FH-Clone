@@ -632,6 +632,7 @@ export class DrcSessionManager {
     const timer = setInterval(() => {
       void this.tick(gatewaySn);
     }, this.checkIntervalMs);
+    timer.unref();
     this.timers.set(gatewaySn, timer);
   }
 
