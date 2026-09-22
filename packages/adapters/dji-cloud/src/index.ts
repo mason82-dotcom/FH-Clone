@@ -12,6 +12,11 @@ import type {
 import { normalizeDjiPayload } from "./normalizer.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
+import {
+  DjiTopologyRegistry,
+  describeDjiProduct,
+  parseDjiTopologyUpdate
+} from "./topology.js";
 
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
@@ -67,6 +72,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   private readonly devices = new Map<string, AdapterDevice>();
   private readonly capabilities = new Map<string, Set<Capability>>();
   private readonly pendingServices = new Map<string, PendingServiceRequest>();
+  readonly topology = new DjiTopologyRegistry();
 
   constructor(private readonly options: DjiCloudAdapterOptions) {}
 
@@ -145,6 +151,23 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     return [...this.devices.values()];
   }
 
+  resolveGatewaySn(deviceOrGatewaySn: string): string | undefined {
+    return this.topology.resolveGatewaySn(deviceOrGatewaySn);
+  }
+
+  async requestServiceForDevice(
+    deviceSn: string,
+    method: string,
+    data: unknown,
+    timeoutMs = this.options.serviceTimeoutMs ?? 10_000
+  ): Promise<DjiServiceReply> {
+    const gatewaySn = this.resolveGatewaySn(deviceSn);
+    if (!gatewaySn) {
+      throw new Error(`No DJI gateway is known for device ${deviceSn}`);
+    }
+    return this.requestService(gatewaySn, method, data, timeoutMs);
+  }
+
   async requestService(
     gatewaySn: string,
     method: string,
@@ -212,6 +235,13 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     }
 
     const deviceId = deviceFromTopic(topic);
+
+    if (deviceId && topic.startsWith("sys/product/") && topic.endsWith("/status")) {
+      const topology = parseDjiTopologyUpdate(deviceId, payload, receivedAt);
+      if (topology) {
+        await this.applyTopology(topology, payload);
+      }
+    }
     const raw: RawMessage = {
       adapterId: this.id,
       ...(deviceId ? { deviceId } : {}),
@@ -222,6 +252,8 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     await this.events?.onRawMessage?.(raw);
 
     if (!deviceId) return;
+
+    if (!topic.endsWith("/osd") && !topic.endsWith("/state")) return;
 
     const normalized = normalizeDjiPayload(deviceId, payload, receivedAt);
     const knownCapabilities = this.capabilities.get(deviceId) ?? new Set<Capability>();
@@ -246,6 +278,86 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     for (const sample of normalized.samples) {
       await this.events?.onParameter?.(sample);
     }
+  }
+
+  private async applyTopology(
+    topology: ReturnType<typeof parseDjiTopologyUpdate> extends infer T
+      ? Exclude<T, undefined>
+      : never,
+    payload: unknown
+  ): Promise<void> {
+    const change = this.topology.apply(topology);
+
+    const gateway: AdapterDevice = {
+      identity: {
+        id: topology.gatewaySn,
+        serialNumber: topology.gatewaySn,
+        vendor: "DJI",
+        model: describeDjiProduct(topology.product),
+        productType: `${topology.product.domain ?? "?"}-${topology.product.type}-${topology.product.subType}`
+      },
+      adapterId: this.id,
+      capabilities: [],
+      connected: true,
+      lastSeenAt: topology.updatedAt
+    };
+    this.devices.set(topology.gatewaySn, gateway);
+    await this.events?.onDevice?.(gateway);
+
+    for (const subDevice of topology.subDevices) {
+      const existing = this.devices.get(subDevice.sn);
+      const device: AdapterDevice = {
+        identity: {
+          id: subDevice.sn,
+          serialNumber: subDevice.sn,
+          vendor: "DJI",
+          model: describeDjiProduct(subDevice.product),
+          productType: `${subDevice.product.domain ?? "?"}-${subDevice.product.type}-${subDevice.product.subType}`
+        },
+        adapterId: this.id,
+        capabilities: existing?.capabilities ?? [],
+        connected: true,
+        lastSeenAt: topology.updatedAt
+      };
+      this.devices.set(subDevice.sn, device);
+      await this.events?.onDevice?.(device);
+    }
+
+    for (const removed of change.removedSubDevices) {
+      const existing = this.devices.get(removed.sn);
+      if (!existing) continue;
+      const offline: AdapterDevice = {
+        ...existing,
+        connected: false,
+        lastSeenAt: topology.updatedAt
+      };
+      this.devices.set(removed.sn, offline);
+      await this.events?.onDevice?.(offline);
+    }
+
+    await this.replyToTopologyUpdate(topology.gatewaySn, payload);
+  }
+
+  private async replyToTopologyUpdate(gatewaySn: string, payload: unknown): Promise<void> {
+    const client = this.client;
+    if (!client || !isRecord(payload) || typeof payload.tid !== "string") return;
+
+    const reply = {
+      tid: payload.tid,
+      ...(typeof payload.bid === "string" ? { bid: payload.bid } : {}),
+      timestamp: Date.now(),
+      method: "update_topo",
+      data: { result: 0 }
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      client.publish(
+        `sys/product/${gatewaySn}/status_reply`,
+        JSON.stringify(reply),
+        { qos: 1 },
+        (error?: Error) => error ? reject(error) : resolve()
+      );
+    });
   }
 
   private resolveServiceReply(payload: unknown): void {
@@ -283,3 +395,4 @@ export { normalizeDjiPayload } from "./normalizer.js";
 export * from "./version.js";
 export * from "./service.js";
 export * from "./drc.js";
+export * from "./topology.js";
