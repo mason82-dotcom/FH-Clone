@@ -81,7 +81,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   readonly id = "dji-cloud";
-  private client?: MqttClient;
+  private client: MqttClient | undefined;
   private events?: AdapterEvents;
   private connected = false;
   private readonly devices = new Map<string, AdapterDevice>();
@@ -169,8 +169,10 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     await this.drcTransport.disconnect();
     if (!client) return;
-    await new Promise<void>((resolve) => {
-      client.end(false, {}, resolve);
+    await new Promise<void>((resolve, reject) => {
+      client.end(false, {}, (error?: Error) =>
+        error ? reject(error) : resolve()
+      );
     });
   }
 
