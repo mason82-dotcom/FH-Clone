@@ -23,12 +23,12 @@ M3T oder M3M übertragen, wenn DJI dies nicht ausdrücklich dokumentiert.
 
 | DJI-Feld | FH2-Schlüssel | Bedeutung |
 | --- | --- | --- |
-| `position_state.is_fixed` | `navigation.rtk.fix_state_code` | DJI-Fix-Statuscode |
-| abgeleitet | `navigation.rtk.fix_status` | normalisierter Status |
-| abgeleitet | `navigation.rtk.fixed` | boolescher Fixindikator |
-| `position_state.quality` | `navigation.rtk.quality_code` | Qualitätscode |
-| `gps_number` | `navigation.gnss.gps_satellites` | GPS-Satelliten |
-| `rtk_number` | `navigation.rtk.satellites` | RTK-Satelliten |
+| `position_state.is_fixed` | `navigation.gnss.fix_state_code` | allgemeiner DJI-Satelliten-Fixstatus |
+| `position_state.quality` | `navigation.gnss.quality_code` | Satelliten-Akquisitionsmodus; Wert 10 = RTK fixed |
+| `gps_number` | `navigation.gnss.gps_satellites` | GPS-Satelliten; allein kein RTK-Nachweis |
+| `rtk_number` | `navigation.rtk.satellites` | RTK-Satelliten und RTK-spezifische Evidenz |
+| abgeleitet | `navigation.rtk.fix_status` | Akquisitionsstatus im beobachteten RTK-Kontext |
+| abgeleitet | `navigation.rtk.fixed` | boolescher RTK-Fixindikator, nur aus RTK-spezifischer Evidenz |
 | `mode_code` | `flight.mode.code` | Aircraft-Betriebsmodus |
 | abgeleitet | `navigation.rtk.airborne_fixing_mode` | RTK-Fixing-Modus |
 
@@ -45,14 +45,27 @@ Verwendete Interpretation:
 3 = Fix fehlgeschlagen
 ```
 
-Daher:
+Diese Enum beschreibt den allgemeinen Satelliten-Fixvorgang. Sie ist allein
+**kein Nachweis eines RTK-Fixes**.
+
+Für FH2 gilt deshalb:
 
 ```text
-is_fixed == 2 -> fixed
+gps_number vorhanden
+  -> GNSS-/Flight-Telemetrie
+
+rtk_number vorhanden
+  -> RTK-Telemetrie beobachtet
+
+quality == 10
+  -> DJI kennzeichnet den Zustand als RTK fixed
+
+mode_code == 18
+  -> Airborne-RTK-Fixing-Modus, aber noch kein erfolgreicher Fix
 ```
 
-`mode_code == 18` wird separat als Airborne-RTK-Fixing-Modus geführt und
-nicht allein als erfolgreicher Fix interpretiert.
+`navigation.rtk.fixed=true` wird nur gesetzt, wenn DJI mit `quality=10`
+RTK fixed meldet und der allgemeine Fixstatus dem nicht widerspricht.
 
 ## Höhe
 
@@ -161,7 +174,10 @@ Telemetriedaten ableiten und nicht allein aus dem Modellnamen.
 
 Zu testen:
 
-- RTK-Fix korrekt erkannt
+- GPS-only erzeugt keine `telemetry.rtk`-Capability
+- `rtk_number` erzeugt RTK-Telemetrie, aber nicht automatisch einen Fix
+- `quality == 10` wird als RTK-fixed-Nachweis verwendet
+- widersprüchliche Fix-/Quality-Werte bleiben fail-closed
 - Fix-Verlust korrekt erkannt
 - Stale-Status
 - Reconnect
