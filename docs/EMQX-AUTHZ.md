@@ -26,21 +26,28 @@ HTTP AuthZ
 
 ### Implementiert
 
-- `POST /internal/emqx/authz`
-- Datei-ACL
-- Default-Deny
-- interner AuthZ-Service-Token
-- Topologie-basierte Sub-Device-Prüfung
-- Basic Link ohne permanente DRC-Rechte
-
-### V3-Ziel
-
 - `POST /internal/emqx/authn`
-- Gateway-Credential-Store
-- Passwortprüfung mit starkem Hashverfahren
+- `POST /internal/emqx/authz`
+- PostgreSQL-Gateway-Credential-Store
+- scrypt-Passwortprüfung
+- trusted `client_attrs.role`
 - trusted `client_attrs.gateway_sn`
 - AuthZ ohne Identitätsableitung aus `clientid`
-- persistentes Audit
+- Prüfung der aktiven Credential-Bindung auch während AuthZ
+- Datei-ACL
+- Default-Deny
+- getrennte interne AuthN-/AuthZ-Service-Tokens
+- Topologie-basierte Sub-Device-Prüfung
+- Basic Link ohne permanente DRC-Rechte
+- gepuffertes AuthZ-Audit
+
+### Noch lokal zu verifizieren
+
+- Root-Compose-Integration und Secret-Rendering für EMQX
+- MQTT-Connect des Backend-Service über AuthN
+- Gateway-Connect mit provisioniertem Credential
+- Credential-Deaktivierung bei bestehender Sitzung
+- Fail-Closed bei Datenbank-/Hook-Ausfall
 
 
 ## Interner Authentifizierungsendpunkt
