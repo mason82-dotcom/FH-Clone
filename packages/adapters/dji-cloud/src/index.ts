@@ -9,6 +9,7 @@ import type {
   RawMessage
 } from "@fh-clone/aircraft-core";
 import { normalizeDjiPayload } from "./normalizer.js";
+import { DJI_CLOUD_API_BASELINE } from "./version.js";
 
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
@@ -16,6 +17,11 @@ export interface DjiCloudAdapterOptions {
   password?: string;
   clientId?: string;
   topicFilters?: string[];
+  /**
+   * Dokumentations-/Kompatibilitätsprofil. Dies ist keine MQTT-Protokollverhandlung.
+   * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
+   */
+  apiVersion?: string;
 }
 
 const DEFAULT_TOPICS = [
@@ -49,6 +55,10 @@ export class DjiCloudAdapter implements AircraftAdapter {
 
   get isConnected(): boolean {
     return this.connected;
+  }
+
+  get apiVersion(): string {
+    return this.options.apiVersion ?? DJI_CLOUD_API_BASELINE;
   }
 
   async start(events: AdapterEvents): Promise<void> {
@@ -170,3 +180,4 @@ export class DjiCloudAdapter implements AircraftAdapter {
 }
 
 export { normalizeDjiPayload } from "./normalizer.js";
+export * from "./version.js";
