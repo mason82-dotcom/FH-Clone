@@ -38,6 +38,8 @@ export interface DjiCloudAdapterOptions {
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
    */
   apiVersion?: string;
+  /** Runtime-only DRC status sink. Never persisted as an authorization source. */
+  onDrcStatus?: (gatewaySn: string, drcState: 0 | 1 | 2, receivedAt: number) => void | Promise<void>;
   /** Optional inventory sink. Never used to hydrate runtime authorization state. */
   onTopologyChange?: (change: import("./topology.js").TopologyChange) => void | Promise<void>;
 }
@@ -308,6 +310,10 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     if (deviceId && topic.endsWith("/events")) {
       this.cloudAuthority.applyEvent(deviceId, payload, receivedAt);
+      const drcState = parseDrcStatusNotify(payload);
+      if (drcState !== undefined) {
+        await this.options.onDrcStatus?.(deviceId, drcState, receivedAt);
+      }
     }
 
     const isTopologyStatusTopic =
@@ -480,6 +486,14 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     pending.resolve(reply);
   }
+}
+
+export function parseDrcStatusNotify(message: unknown): 0 | 1 | 2 | undefined {
+  if (!isRecord(message) || message.method !== "drc_status_notify") return undefined;
+  const data = isRecord(message.data) ? message.data : undefined;
+  if (!data) return undefined;
+  const raw = data.drc_state;
+  return raw === 0 || raw === 1 || raw === 2 ? raw : undefined;
 }
 
 export { normalizeDjiPayload } from "./normalizer.js";
