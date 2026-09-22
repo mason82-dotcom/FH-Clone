@@ -15,6 +15,11 @@ export interface DjiCloudControlProfile {
   payloadControl: boolean;
   requiresCloudControlAuthority: boolean;
   drcProfile: DjiDrcProfile;
+  /**
+   * Capabilities that are safe to route through AircraftAdapter.execute().
+   * DJI product support handled by specialized runtime coordinators must not
+   * be advertised here until execute() can actually fulfill the command.
+   */
   capabilities: Capability[];
   reason: string;
 }
@@ -69,9 +74,9 @@ export function getDjiCloudControlProfile(
       payloadControl: supportedGateway,
       requiresCloudControlAuthority: supportedGateway,
       drcProfile: supportedGateway ? "pilot-m3-payload" : "none",
-      capabilities: supportedGateway
-        ? ["control.camera", "control.gimbal", "payload.control"]
-        : [],
+      // DJI documents payload control, but FH2 V3 has no generic
+      // AircraftAdapter.execute() payload implementation yet.
+      capabilities: [],
       reason: supportedGateway
         ? "DJI Pilot Cloud documents Mavic 3 Enterprise Series behind RC Pro Enterprise as payload-control only; cloud control still requires RC authorization, while the physical RC joystick remains available for flight."
         : "Mavic 3 Enterprise Pilot-Cloud capabilities are only enabled after a supported RC Pro Enterprise gateway is identified."
@@ -88,17 +93,12 @@ export function getDjiCloudControlProfile(
       payloadControl: supportedGateway,
       requiresCloudControlAuthority: supportedGateway,
       drcProfile: supportedGateway ? "pilot-m4-stick" : "none",
-      capabilities: supportedGateway
-        ? [
-            "control.flight",
-            "control.rth",
-            "control.pointing",
-            "control.orbit",
-            "control.camera",
-            "control.gimbal",
-            "payload.control"
-          ]
-        : [],
+      // M4 flight control is implemented through the dedicated
+      // ControlCoordinator/DRC runtime, not AircraftAdapter.execute().
+      // Payload control is documented by DJI but not implemented as a
+      // generic adapter command in V3. Therefore no write capability is
+      // advertised to CapabilityRouter here.
+      capabilities: [],
       reason: supportedGateway
         ? "DJI Pilot Cloud documents Matrice 4 Series behind RC Plus 2 as supporting cloud flight and payload control, including pointing/orbit modes; flight control still requires explicit authority and FH-Clone FC3."
         : "Matrice 4 Pilot-Cloud flight capabilities are only enabled after a supported RC Plus 2 gateway is identified."
