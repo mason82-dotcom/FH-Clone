@@ -56,16 +56,32 @@ if (dji) {
       const session = missions.observe(message);
 
       if (session && session.endedAt !== undefined) {
-        await missionStore.closeSession(session);
+        try {
+          await missionStore.closeSession(session);
+        } catch (error) {
+          console.error(
+            "[Mission] Failed to persist automatic mission end:",
+            session.missionId,
+            errorMessage(error)
+          );
+        }
       } else if (
         session &&
         session.missionId !== previousMissionId
       ) {
-        await missionStore.open(session, {
-          ...(message.deviceId
-            ? getMissionProduct(message.deviceId)
-            : {})
-        });
+        try {
+          await missionStore.open(session, {
+            ...(message.deviceId
+              ? getMissionProduct(message.deviceId)
+              : {})
+          });
+        } catch (error) {
+          console.error(
+            "[Mission] Failed to persist automatic mission start:",
+            session.missionId,
+            errorMessage(error)
+          );
+        }
       }
 
       rtk.observe(message);
