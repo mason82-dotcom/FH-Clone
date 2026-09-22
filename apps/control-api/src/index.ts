@@ -12,9 +12,10 @@ import {
   type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
 import {
-  authorizeEmqx,
+  evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest
 } from "./authz.js";
+import { AuthzAuditWriter } from "./authz-audit.js";
 import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
@@ -29,8 +30,23 @@ const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
 const djiOptions = getDjiOptions(topologyPersistence);
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const controlGuards = new RuntimeControlGuardRegistry();
+const drcRuntimeContext = new Map<
+  string,
+  { sessionId: string; aircraftSn: string; state: string }
+>();
 const drcSessions = dji
   ? new DrcSessionManager(dji.drc, new InMemoryDrcSessionStore(), {
+      onStateChange(record) {
+        if (record.state === "closed" || record.state === "idle") {
+          drcRuntimeContext.delete(record.gatewaySn);
+          return;
+        }
+        drcRuntimeContext.set(record.gatewaySn, {
+          sessionId: record.sessionId,
+          aircraftSn: record.aircraftSn,
+          state: record.state
+        });
+      },
       onAudit: (event) => console.info("[DRC]", event)
     })
   : undefined;
@@ -60,6 +76,11 @@ const missionStore = new MissionStore({
 const rtk = new RtkTelemetryService({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId),
   resolveMissionId: (deviceId) => missions.getActive(deviceId)?.missionId
+});
+const authzAudit = new AuthzAuditWriter({
+  ...(process.env.TIMESCALE_URL
+    ? { connectionString: process.env.TIMESCALE_URL }
+    : {})
 });
 
 if (missionStore.enabled) {
@@ -233,6 +254,7 @@ const internalServer = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && request.url === "/internal/emqx/authz") {
+      const startedAt = process.hrtime.bigint();
       try {
         const body = await readJson<unknown>(request, 16_384);
         if (!isEmqxAuthorizationRequest(body)) {
@@ -247,26 +269,31 @@ const internalServer = createServer(async (request, response) => {
           );
 
         if (dynamicRequest && !hasValidBearerToken(request, emqxAuthzToken)) {
-          auditAuthz("deny", body, "invalid_internal_token");
+          enqueueAuthzAudit(body, {
+            result: "deny",
+            reason: "internal_token_mismatch"
+          }, elapsedUs(startedAt));
           return json(response, 200, { result: "deny" });
         }
 
         if (!dji) {
           const result = dynamicRequest ? "deny" : "ignore";
-          auditAuthz(result, body, "dji_adapter_unavailable");
+          enqueueAuthzAudit(body, {
+            result,
+            reason: "internal_error"
+          }, elapsedUs(startedAt));
           return json(response, 200, { result });
         }
 
-        const result = await authorizeEmqx(dji.topology, body, {
+        const authzDecision = await evaluateEmqxAuthorization(dji.topology, body, {
           // Runtime-only session state. It is intentionally never rehydrated
           // from PostgreSQL after a process restart.
-          isDrcGatewayActive: (gatewaySn) => drcSessions?.isActive(gatewaySn) ?? false
+          isDrcGatewayActive: (gatewaySn) =>
+            drcSessions?.isActive(gatewaySn) ?? false
         });
 
-        if (result === "deny") {
-          auditAuthz(result, body, "policy_denied");
-        }
-        return json(response, 200, { result });
+        enqueueAuthzAudit(body, authzDecision, elapsedUs(startedAt));
+        return json(response, 200, { result: authzDecision.result });
       } catch (error) {
         console.error("[AuthZ] Evaluierungsfehler:", errorMessage(error));
         return json(response, 200, { result: "deny" });
@@ -293,6 +320,7 @@ async function shutdown(): Promise<void> {
   internalServer.close();
   await drcSessions?.shutdown();
   await dji?.stop();
+  await authzAudit.shutdown();
   await missionStore.close();
   await topologyPersistence.flush();
   await topologyStore?.close();
@@ -369,28 +397,53 @@ function hasValidBearerToken(
   );
 }
 
-function auditAuthz(
-  result: "allow" | "deny" | "ignore",
+function enqueueAuthzAudit(
   request: {
     username: string;
     clientid: string;
     action: string;
     topic: string;
+    qos?: string | number;
     peerhost?: string;
   },
-  reason: string
+  decision: {
+    result: "allow" | "deny" | "ignore";
+    reason: import("./authz.js").AuthzReason;
+    gatewaySn?: string;
+    aircraftSn?: string;
+  },
+  latencyUs: number
 ): void {
-  console.info("[AuthZ]", {
-    result,
-    reason,
-    username: request.username,
-    clientid: request.clientid,
+  const runtimeDrc = decision.gatewaySn
+    ? drcRuntimeContext.get(decision.gatewaySn)
+    : undefined;
+  const aircraftSn = decision.aircraftSn ?? runtimeDrc?.aircraftSn;
+  const missionId = aircraftSn
+    ? missions.getActive(aircraftSn)?.missionId
+    : undefined;
+
+  authzAudit.enqueue({
+    timeMs: Date.now(),
+    decision: decision.result,
+    reason: decision.reason,
     action: request.action,
     topic: request.topic,
-    ...(request.peerhost ? { peerhost: request.peerhost } : {})
+    ...(request.qos !== undefined ? { qos: request.qos } : {}),
+    username: request.username,
+    clientId: request.clientid,
+    ...(request.peerhost ? { peerIp: request.peerhost } : {}),
+    ...(decision.gatewaySn ? { gatewaySn: decision.gatewaySn } : {}),
+    ...(aircraftSn ? { aircraftSn } : {}),
+    ...(runtimeDrc?.sessionId ? { drcSessionId: runtimeDrc.sessionId } : {}),
+    ...(missionId ? { missionId } : {}),
+    cacheHit: false,
+    latencyUs
   });
 }
 
+function elapsedUs(startedAt: bigint): number {
+  return Number((process.hrtime.bigint() - startedAt) / 1000n);
+}
 
 async function persistSweptMissionEnds(): Promise<void> {
   const ended = missions.sweep();

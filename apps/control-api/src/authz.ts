@@ -11,16 +11,46 @@ export interface EmqxAuthorizationRequest {
 
 export type EmqxAuthorizationResult = "allow" | "deny" | "ignore";
 
+export const AUTHZ_REASONS = [
+  "no_match",
+  "gateway_own_topic",
+  "gateway_topology_mismatch",
+  "webui_read_only",
+  "webui_topic_out_of_scope",
+  "drc_session_active",
+  "drc_session_inactive",
+  "drc_backend_publish",
+  "internal_error",
+  "internal_token_mismatch"
+] as const;
+
+export type AuthzReason = (typeof AUTHZ_REASONS)[number];
+
+export interface EmqxAuthorizationDecision {
+  result: EmqxAuthorizationResult;
+  reason: AuthzReason;
+  gatewaySn?: string;
+  aircraftSn?: string;
+}
+
 export interface EmqxAuthorizationPolicy {
   /**
-   * Dynamic DRC gate. This must represent an active FH-Clone DRC session
-   * (FC3 + control lease + DJI authority), not merely an active mission.
+   * Runtime-only DRC gate from the current process lifetime.
+   * Never rehydrate this state from PostgreSQL inventory or mission storage.
    */
   isDrcGatewayActive?: (gatewaySn: string) => boolean | Promise<boolean>;
 }
 
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
 const SAFE_GATEWAY_USERNAME = /^dji-gateway-[A-Za-z0-9_-]+$/;
+
+function decision(
+  result: EmqxAuthorizationResult,
+  reason: AuthzReason,
+  context: Pick<EmqxAuthorizationDecision, "gatewaySn" | "aircraftSn"> = {}
+): EmqxAuthorizationDecision {
+  return { result, reason, ...context };
+}
 
 function splitProductTopic(topic: string): {
   family: "thing" | "sys";
@@ -37,22 +67,153 @@ function splitProductTopic(topic: string): {
   };
 }
 
+function isWebUiReadTopic(topic: string): boolean {
+  const parsed = splitProductTopic(topic);
+  if (!parsed) return false;
+  if (parsed.family === "sys") return parsed.suffix === "status";
+  return ["osd", "state", "events", "requests", "services_reply"].includes(
+    parsed.suffix
+  );
+}
+
+export async function evaluateEmqxAuthorization(
+  topology: DjiTopologyRegistry,
+  request: EmqxAuthorizationRequest,
+  policy: EmqxAuthorizationPolicy = {}
+): Promise<EmqxAuthorizationDecision> {
+  if (request.username.startsWith("dji-gateway-")) {
+    return evaluateDjiGatewayAuthorization(topology, request, policy);
+  }
+
+  if (request.username === "backend-service") {
+    return evaluateBackendDrc(topology, request, policy);
+  }
+
+  if (request.username === "webui-operator") {
+    if (request.action === "publish") {
+      return decision("deny", "webui_read_only");
+    }
+    if (request.action === "subscribe" && isWebUiReadTopic(request.topic)) {
+      // The static file ACL remains the source granting the read-only role.
+      return decision("ignore", "webui_read_only");
+    }
+    return decision("deny", "webui_topic_out_of_scope");
+  }
+
+  return decision("ignore", "no_match");
+}
+
 export async function authorizeEmqx(
   topology: DjiTopologyRegistry,
   request: EmqxAuthorizationRequest,
   policy: EmqxAuthorizationPolicy = {}
 ): Promise<EmqxAuthorizationResult> {
-  if (request.username.startsWith("dji-gateway-")) {
-    return authorizeDjiGateway(topology, request, policy);
+  return (await evaluateEmqxAuthorization(topology, request, policy)).result;
+}
+
+export async function evaluateDjiGatewayAuthorization(
+  topology: DjiTopologyRegistry,
+  request: EmqxAuthorizationRequest,
+  policy: EmqxAuthorizationPolicy = {}
+): Promise<EmqxAuthorizationDecision> {
+  if (!request.username.startsWith("dji-gateway-")) {
+    return decision("ignore", "no_match");
+  }
+  if (!SAFE_GATEWAY_USERNAME.test(request.username)) {
+    return decision("deny", "gateway_topology_mismatch");
+  }
+  if (!SAFE_ID.test(request.clientid)) {
+    return decision("deny", "gateway_topology_mismatch");
+  }
+  if (request.username !== `dji-gateway-${request.clientid}`) {
+    return decision("deny", "gateway_topology_mismatch");
   }
 
-  if (request.username === "backend-service") {
-    return authorizeBackendDrc(topology, request, policy);
+  const parsed = splitProductTopic(request.topic);
+  if (!parsed) return decision("deny", "no_match");
+
+  const gatewayContext = { gatewaySn: request.clientid };
+
+  if (request.action === "publish") {
+    if (
+      parsed.family === "thing" &&
+      parsed.sn === request.clientid &&
+      parsed.suffix === "drc/up"
+    ) {
+      const active =
+        (await policy.isDrcGatewayActive?.(request.clientid)) ?? false;
+      return active
+        ? decision("allow", "drc_session_active", gatewayContext)
+        : decision("deny", "drc_session_inactive", gatewayContext);
+    }
+
+    if (
+      (parsed.family === "sys" || parsed.family === "thing") &&
+      parsed.sn === request.clientid &&
+      parsed.suffix === "status"
+    ) {
+      return decision("allow", "gateway_own_topic", gatewayContext);
+    }
+
+    if (
+      parsed.family === "thing" &&
+      parsed.sn === request.clientid &&
+      ["osd", "state", "events", "requests", "services_reply"].includes(
+        parsed.suffix
+      )
+    ) {
+      return decision("allow", "gateway_own_topic", gatewayContext);
+    }
+
+    if (
+      parsed.family === "thing" &&
+      ["osd", "state"].includes(parsed.suffix)
+    ) {
+      if (topology.isDeviceBehindGateway(request.clientid, parsed.sn)) {
+        return decision("allow", "gateway_own_topic", {
+          gatewaySn: request.clientid,
+          aircraftSn: parsed.sn
+        });
+      }
+      return decision("deny", "gateway_topology_mismatch", {
+        gatewaySn: request.clientid,
+        aircraftSn: parsed.sn
+      });
+    }
+
+    return decision("deny", "no_match", gatewayContext);
   }
 
-  // All other identities intentionally fall through to the static file ACL.
-  // In particular, webui-operator remains read-only there.
-  return "ignore";
+  if (request.action === "subscribe") {
+    if (parsed.sn !== request.clientid) {
+      return decision("deny", "gateway_topology_mismatch", gatewayContext);
+    }
+
+    if (parsed.family === "thing" && parsed.suffix === "drc/down") {
+      const active =
+        (await policy.isDrcGatewayActive?.(request.clientid)) ?? false;
+      return active
+        ? decision("allow", "drc_session_active", gatewayContext)
+        : decision("deny", "drc_session_inactive", gatewayContext);
+    }
+
+    if (
+      parsed.family === "thing" &&
+      ["services", "property/set", "events_reply", "requests_reply"].includes(
+        parsed.suffix
+      )
+    ) {
+      return decision("allow", "gateway_own_topic", gatewayContext);
+    }
+
+    if (parsed.family === "sys" && parsed.suffix === "status_reply") {
+      return decision("allow", "gateway_own_topic", gatewayContext);
+    }
+
+    return decision("deny", "no_match", gatewayContext);
+  }
+
+  return decision("deny", "no_match", gatewayContext);
 }
 
 export async function authorizeDjiGateway(
@@ -60,115 +221,40 @@ export async function authorizeDjiGateway(
   request: EmqxAuthorizationRequest,
   policy: EmqxAuthorizationPolicy = {}
 ): Promise<EmqxAuthorizationResult> {
-  if (!request.username.startsWith("dji-gateway-")) return "ignore";
-  if (!SAFE_GATEWAY_USERNAME.test(request.username)) return "deny";
-  if (!SAFE_ID.test(request.clientid)) return "deny";
-  if (request.username !== `dji-gateway-${request.clientid}`) return "deny";
-
-  const parsed = splitProductTopic(request.topic);
-  if (!parsed) return "deny";
-
-  if (request.action === "publish") {
-    if (
-      (parsed.family === "sys" || parsed.family === "thing") &&
-      parsed.sn === request.clientid &&
-      parsed.suffix === "status"
-    ) {
-      // Bootstrap path: update_topo must be possible before sub-devices are known.
-      return "allow";
-    }
-
-    if (
-      parsed.family === "thing" &&
-      parsed.sn === request.clientid &&
-      [
-        "osd",
-        "state",
-        "events",
-        "requests",
-        "services_reply"
-      ].includes(parsed.suffix)
-    ) {
-      return "allow";
-    }
-
-    if (
-      parsed.family === "thing" &&
-      parsed.sn === request.clientid &&
-      parsed.suffix === "drc/up"
-    ) {
-      return (await policy.isDrcGatewayActive?.(request.clientid)) ? "allow" : "deny";
-    }
-
-    if (
-      parsed.family === "thing" &&
-      topology.isDeviceBehindGateway(request.clientid, parsed.sn) &&
-      ["osd", "state"].includes(parsed.suffix)
-    ) {
-      return "allow";
-    }
-
-    return "deny";
-  }
-
-  if (request.action === "subscribe") {
-    if (parsed.sn !== request.clientid) return "deny";
-
-    if (
-      parsed.family === "thing" &&
-      [
-        "services",
-        "property/set",
-        "events_reply",
-        "requests_reply"
-      ].includes(parsed.suffix)
-    ) {
-      return "allow";
-    }
-
-    if (
-      parsed.family === "thing" &&
-      parsed.suffix === "drc/down"
-    ) {
-      return (await policy.isDrcGatewayActive?.(request.clientid)) ? "allow" : "deny";
-    }
-
-    if (
-      parsed.family === "sys" &&
-      parsed.suffix === "status_reply"
-    ) {
-      return "allow";
-    }
-
-    return "deny";
-  }
-
-  return "deny";
+  return (
+    await evaluateDjiGatewayAuthorization(topology, request, policy)
+  ).result;
 }
 
-async function authorizeBackendDrc(
+async function evaluateBackendDrc(
   topology: DjiTopologyRegistry,
   request: EmqxAuthorizationRequest,
   policy: EmqxAuthorizationPolicy
-): Promise<EmqxAuthorizationResult> {
+): Promise<EmqxAuthorizationDecision> {
   const parsed = splitProductTopic(request.topic);
-  if (!parsed || parsed.family !== "thing") return "ignore";
+  if (!parsed || parsed.family !== "thing") {
+    return decision("ignore", "no_match");
+  }
 
+  const gatewayContext = { gatewaySn: parsed.sn };
   const isKnownGateway = Boolean(topology.getGateway(parsed.sn));
   const drcActive =
     isKnownGateway &&
     ((await policy.isDrcGatewayActive?.(parsed.sn)) ?? false);
 
   if (request.action === "publish" && parsed.suffix === "drc/down") {
-    return drcActive ? "allow" : "deny";
+    return drcActive
+      ? decision("allow", "drc_backend_publish", gatewayContext)
+      : decision("deny", "drc_session_inactive", gatewayContext);
   }
 
   if (request.action === "subscribe" && parsed.suffix === "drc/up") {
-    return drcActive ? "allow" : "deny";
+    return drcActive
+      ? decision("allow", "drc_session_active", gatewayContext)
+      : decision("deny", "drc_session_inactive", gatewayContext);
   }
 
-  // Non-DRC backend permissions remain in the file ACL.
-  return "ignore";
+  return decision("ignore", "no_match");
 }
 
 export function isEmqxAuthorizationRequest(

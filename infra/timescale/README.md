@@ -33,6 +33,7 @@ Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. De
 - Rohdaten-Retention nach 24 Monaten
 - Continuous Aggregate `telemetry_1m`
 - `002_rtk_fix_enum.sql` erzwingt für `is_fixed` ausschließlich `0/1/2/3` oder `NULL`
+- `003_authz_audit.sql` legt den AuthZ-Audit-Hypertable, 24-Monats-Retention, Columnstore-Policy und die stündliche Deny-Aggregation an
 
 ## Produktkennung
 
@@ -114,3 +115,24 @@ Ohne `TIMESCALE_URL` arbeitet die Live-Telemetrie vollständig ohne Datenbank we
 - [Missionen](../../docs/MISSIONEN.md)
 - [RTK und NTRIP](../../docs/RTK_NTRIP.md)
 - [Betrieb](../../docs/BETRIEB.md)
+
+
+## AuthZ-Audit
+
+Der HTTP-Authorizer schreibt **nicht synchron** nach TimescaleDB. Entscheidungen
+gehen zuerst in einen In-Memory-Ringbuffer (10.000 Einträge) und werden in
+Batches von bis zu 500 Zeilen bzw. alle 2 Sekunden geschrieben.
+
+Alle Entscheidungen werden zusätzlich als JSONL nach stdout ausgegeben.
+TimescaleDB speichert:
+
+- alle `deny`
+- alle `ignore`
+- `allow` nur für `drc/*`, `services` und `property/set`
+
+Die persistierte Topologie und das Audit sind reine Inventar-/Analyse-Senken.
+Sie dürfen niemals zur Runtime-Autorisierungsquelle werden.
+
+Ein EMQX-Cache-Hit erreicht den HTTP-Hook nicht. Daher tragen tatsächlich
+eingegangene Hook-Aufrufe `cache_hit=false`; die echte Cache-Hit-Rate muss
+aus EMQX-Metriken stammen.

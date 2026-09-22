@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   type DrcStickChannels,
   type NormalizedStickInput,
@@ -21,6 +23,7 @@ export interface DrcSessionGuards {
 }
 
 export interface DrcSessionRecord {
+  sessionId: string;
   aircraftSn: string;
   gatewaySn: string;
   state: DrcSessionState;
@@ -116,6 +119,7 @@ export interface DrcSessionManagerOptions {
 }
 
 export interface DrcSessionAuditEvent {
+  sessionId: string;
   gatewaySn: string;
   aircraftSn: string;
   at: number;
@@ -245,6 +249,7 @@ export class DrcSessionManager {
 
     const now = this.now();
     const record: DrcSessionRecord = {
+      sessionId: randomUUID(),
       aircraftSn: input.aircraftSn,
       gatewaySn: input.gatewaySn,
       state: "requesting",
@@ -572,6 +577,7 @@ export class DrcSessionManager {
     reason?: string
   ): Promise<void> {
     await this.onAudit?.({
+      sessionId: record.sessionId,
       gatewaySn: record.gatewaySn,
       aircraftSn: record.aircraftSn,
       at: this.now(),

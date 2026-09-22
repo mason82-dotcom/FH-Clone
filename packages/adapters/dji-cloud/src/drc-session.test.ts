@@ -225,3 +225,29 @@ test("loss of FH-Clone lease drains while DJI authority still exists", async () 
   assert.equal(transport.neutralCommands, 1);
   assert.equal(transport.exitCalls, 1);
 });
+
+
+test("assigns a new runtime session id and never rehydrates it", async () => {
+  const transport = new FakeTransport();
+  const store = new InMemoryDrcSessionStore();
+  const manager = new DrcSessionManager(transport, store, {
+    checkIntervalMs: 60_000
+  });
+
+  const session = await manager.request({
+    aircraftSn: "M4T-RUNTIME",
+    gatewaySn: "RC-RUNTIME",
+    guards: preAuthorityGuards
+  });
+
+  assert.match(
+    session.sessionId,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  );
+
+  const freshStore = new InMemoryDrcSessionStore();
+  const restarted = new DrcSessionManager(transport, freshStore, {
+    checkIntervalMs: 60_000
+  });
+  assert.equal(await restarted.get("RC-RUNTIME"), undefined);
+});
