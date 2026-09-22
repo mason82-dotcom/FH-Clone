@@ -9,9 +9,11 @@ Safety Stage = FC0
 DRC = nicht freigegeben
 ```
 
-Der EMQX-Authorizer ist derzeit absichtlich so verdrahtet, dass
-`isDrcGatewayActive()` immer `false` liefert. Damit besitzt der Broker im
-aktuellen Stand keine dynamisch aktive DRC-Sitzung.
+Der EMQX-Authorizer liest `isDrcGatewayActive()` ausschließlich aus dem
+laufenden `DrcSessionManager` derselben Prozesslaufzeit. Eine Freigabe
+existiert nur bei `state = controlling`, verbundenem DRC-Transport und
+weiterhin erfüllten FC3-/Lease-/Capability-/DJI-Authority-Guards.
+PostgreSQL/TimescaleDB wird dafür niemals als Autorisierungsquelle verwendet.
 
 ## Trennung von Basic Link und DRC
 
@@ -322,9 +324,16 @@ Aktuell vorhanden:
 
 - `InMemoryDrcSessionStore`
 
-Für einen mehrinstanzfähigen V3-Betrieb ist ein gemeinsamer persistenter oder
-verteilter Store erforderlich. Eine konkrete Redis-Abhängigkeit ist **nicht**
-verbindlich festgelegt.
+Der DRC-Autorisierungszustand ist bewusst **Runtime-only**. Nach einem
+Prozessneustart wird keine offene oder aktive DRC-Sitzung aus
+PostgreSQL/TimescaleDB, Missionsdaten oder Auditdaten wiederhergestellt.
+`sessionId`, Control-Lease, Transportstatus und aktive DRC-Freigabe gelten
+nur innerhalb der Prozesslaufzeit, in der sie erzeugt wurden.
+
+Ein späterer Mehrinstanzbetrieb darf hierfür nur explizite flüchtige
+Runtime-Koordination mit eindeutigem Session-Owner verwenden. Eine
+persistierte Inventar- oder Audit-Tabelle darf niemals
+`isDrcGatewayActive()` speisen.
 
 ## Audit
 
