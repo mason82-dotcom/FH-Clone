@@ -1,4 +1,5 @@
 import type { Capability, ParameterSample } from "@fh-clone/aircraft-core";
+import { isDjiM4dSensitivePropertyPath } from "./m4d-properties.js";
 import { parseDjiRtkStatus } from "./rtk.js";
 
 type JsonRecord = Record<string, unknown>;
@@ -47,6 +48,16 @@ const LEAF_FIELDS: Record<string, FieldSpec> = {
     unit: "deg",
     capability: "telemetry.flight"
   },
+  attitude_pitch: {
+    key: "flight.attitude.pitch_deg",
+    unit: "deg",
+    capability: "telemetry.flight"
+  },
+  attitude_roll: {
+    key: "flight.attitude.roll_deg",
+    unit: "deg",
+    capability: "telemetry.flight"
+  },
   yaw: {
     key: "flight.attitude.yaw_deg",
     unit: "deg",
@@ -61,6 +72,21 @@ const LEAF_FIELDS: Record<string, FieldSpec> = {
     key: "flight.attitude.roll_deg",
     unit: "deg",
     capability: "telemetry.flight"
+  },
+  gimbal_pitch: {
+    key: "payload.gimbal.pitch_deg",
+    unit: "deg",
+    capability: "telemetry.gimbal"
+  },
+  gimbal_roll: {
+    key: "payload.gimbal.roll_deg",
+    unit: "deg",
+    capability: "telemetry.gimbal"
+  },
+  gimbal_yaw: {
+    key: "payload.gimbal.yaw_deg",
+    unit: "deg",
+    capability: "telemetry.gimbal"
   },
   satellite_number: {
     key: "navigation.gnss.satellites",
@@ -90,6 +116,21 @@ function isRecord(value: unknown): value is JsonRecord {
 }
 
 function flatten(prefix: string, value: unknown, output: Array<[string, unknown]>): void {
+  if (prefix && isDjiM4dSensitivePropertyPath(prefix)) return;
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      output.push([prefix, value]);
+      return;
+    }
+
+    value.forEach((child, index) => {
+      const path = prefix ? `${prefix}.${index}` : String(index);
+      flatten(path, child, output);
+    });
+    return;
+  }
+
   if (!isRecord(value)) {
     output.push([prefix, value]);
     return;
@@ -97,8 +138,7 @@ function flatten(prefix: string, value: unknown, output: Array<[string, unknown]
 
   for (const [key, child] of Object.entries(value)) {
     const path = prefix ? `${prefix}.${key}` : key;
-    if (isRecord(child)) flatten(path, child, output);
-    else output.push([path, child]);
+    flatten(path, child, output);
   }
 }
 
@@ -133,7 +173,14 @@ function inferCapability(rawKey: string): Capability | undefined {
   ) {
     return "telemetry.flight";
   }
-  if (lower.includes("camera")) return "telemetry.camera";
+  if (
+    lower.includes("camera") ||
+    lower.includes("thermal_") ||
+    lower.includes("ir_metering") ||
+    lower.includes("measure_target")
+  ) {
+    return "telemetry.camera";
+  }
   if (lower.includes("gimbal")) return "telemetry.gimbal";
   if (
     lower.includes("latitude") ||
