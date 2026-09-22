@@ -197,6 +197,13 @@ Der Einstiegspunkt für alle Dokumente ist:
 - [Betrieb und Fehlersuche](docs/BETRIEB.md)
 - [Kompatibilität](docs/COMPATIBILITY.md)
 - [FH2-Manager-Abgleich](docs/FH2_MANAGER_ALIGNMENT.md)
+- [API-Referenz](docs/API.md)
+- [Betrieb](docs/BETRIEB.md)
+- [Konfiguration](docs/KONFIGURATION.md)
+- [Fehlersuche](docs/FEHLERSUCHE.md)
+- [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
+- [Medien und Multispektral](docs/MEDIEN_MULTISPEKTRAL.md)
+- [Glossar](docs/GLOSSAR.md)
 
 ## Projektsteuerung
 
