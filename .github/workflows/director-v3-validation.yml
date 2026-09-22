@@ -1,6 +1,9 @@
 name: Direktor V3 Validierung
 
 on:
+  push:
+    branches:
+      - director/frontend-fh2-layers-validation-v4
   workflow_dispatch:
     inputs:
       r1_bootstrap:
@@ -19,7 +22,7 @@ concurrency:
 jobs:
   r1-bootstrap:
     name: R1 Lockfile Bootstrap
-    if: ${{ inputs.r1_bootstrap }}
+    if: ${{ github.event_name == 'push' || inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -73,7 +76,7 @@ jobs:
 
   release-struktur:
     name: V3 Release-Struktur
-    if: ${{ !inputs.r1_bootstrap }}
+    if: ${{ github.event_name != 'push' && !inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
@@ -125,7 +128,7 @@ jobs:
 
   node:
     name: Node / TypeScript / Tests
-    if: ${{ !inputs.r1_bootstrap }}
+    if: ${{ github.event_name != 'push' && !inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
@@ -156,7 +159,7 @@ jobs:
 
   ugcs:
     name: UgCS-Bridge
-    if: ${{ !inputs.r1_bootstrap }}
+    if: ${{ github.event_name != 'push' && !inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
@@ -175,7 +178,7 @@ jobs:
 
   timescale:
     name: TimescaleDB / Migrationen
-    if: ${{ !inputs.r1_bootstrap }}
+    if: ${{ github.event_name != 'push' && !inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
@@ -234,7 +237,7 @@ jobs:
 
   dokumentation:
     name: Deutsche V3-Dokumentation
-    if: ${{ !inputs.r1_bootstrap }}
+    if: ${{ github.event_name != 'push' && !inputs.r1_bootstrap }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
