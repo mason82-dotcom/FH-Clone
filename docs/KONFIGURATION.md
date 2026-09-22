@@ -150,6 +150,37 @@ verwechselt oder wiederverwendet werden.
 
 Details: [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md).
 
+## Self-Hosted Livestreaming
+
+Verbindlicher Zielpfad:
+
+```text
+DJI Pilot 2 -> RTMP -> MediaMTX -> WebRTC -> FH2 WebUI
+```
+
+Der FlightHub-2-/SIKONG-CE-Bezahlstream bleibt deaktiviert.
+
+Die konkrete MediaMTX-Laufzeitkonfiguration ist noch nicht auf `main`
+implementiert. Vorgesehene Konfigurationsdomänen sind:
+
+```text
+LIVESTREAM_ENABLED
+MEDIAMTX_HOST
+MEDIAMTX_RTMP_PORT
+MEDIAMTX_WEBRTC_PORT
+MEDIAMTX_HLS_PORT
+LIVESTREAM_PUBLIC_WEBRTC_URL
+LIVESTREAM_PUBLIC_HLS_URL
+```
+
+Diese Namen sind bis zur tatsächlichen Compose-/Runtime-Implementierung
+**Zielkonfiguration**, keine bereits auswertbaren Environment-Variablen.
+
+RTMP-Publish-Keys, DJI-Credentials und sonstige Secrets dürfen nie über
+`VITE_*` in das Browser-Bundle gelangen.
+
+Details: [LIVESTREAM.md](LIVESTREAM.md).
+
 ## UgCS-UCS-Bridge
 
 | Variable | Standard | Bedeutung |
