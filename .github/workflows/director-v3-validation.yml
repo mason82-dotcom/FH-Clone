@@ -8,6 +8,34 @@ on:
         type: boolean
         required: false
         default: false
+      hardware_scope:
+        description: "Hardware-Evidence: main oder zusätzlich alle Draft-Gates"
+        type: choice
+        required: true
+        default: main
+        options:
+          - main
+          - all
+      multi_dock_required:
+        description: "Multi-Dock-Hardware als Pflichtgate aktivieren"
+        type: boolean
+        required: false
+        default: false
+      psdk_required:
+        description: "PSDK-Hardware als Pflichtgate aktivieren"
+        type: boolean
+        required: false
+        default: false
+      drc_hsi_required:
+        description: "DRC hsi_info_push als Pflichtgate aktivieren"
+        type: boolean
+        required: false
+        default: false
+      analyze_drafts:
+        description: "Draft-PRs #43-#46 gegen aktuellen main analysieren"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -251,3 +279,161 @@ jobs:
               exit 1
             }
           done
+
+
+  hardware-evidence:
+    name: DJI Hardware Evidence
+    if: ${{ !inputs.r1_bootstrap }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js 22.23.2 einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Reale DJI-Hardware-Nachweise prüfen
+        env:
+          FH2_HARDWARE_SCOPE: ${{ inputs.hardware_scope }}
+          FH2_MULTI_DOCK_REQUIRED: ${{ inputs.multi_dock_required }}
+          FH2_PSDK_REQUIRED: ${{ inputs.psdk_required }}
+          FH2_DRC_HSI_REQUIRED: ${{ inputs.drc_hsi_required }}
+        run: node scripts/hardware-evidence-audit.mjs
+
+      - name: Evidence-Vertrag muss vorhanden sein
+        run: test -s docs/HARDWARE_EVIDENCE.md
+
+  draft-analysis:
+    name: "Draft #${{ matrix.pr }} · ${{ matrix.label }}"
+    if: ${{ !inputs.r1_bootstrap && inputs.analyze_drafts }}
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pr: 43
+            ref: agent/m4d-dock3-properties-v4
+            label: Dock3 M4D/M4TD
+          - pr: 44
+            ref: agent/msdk-keymanager-contract-v3
+            label: MSDK KeyManager
+          - pr: 45
+            ref: agent/dji-wpml-readonly-v3
+            label: WPML/Pilot Waylines
+          - pr: 46
+            ref: agent/dji-jsbridge-v3
+            label: Pilot2 JSBridge
+    steps:
+      - name: Aktuellen main auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Draft und Branch-Drift erfassen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/${{ matrix.ref }}:refs/remotes/origin/${{ matrix.ref }}"
+          behind="$(git rev-list --count "origin/${{ matrix.ref }}..origin/main")"
+          ahead="$(git rev-list --count "origin/main..origin/${{ matrix.ref }}")"
+          merge_base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
+          {
+            echo "## Draft #${{ matrix.pr }} – ${{ matrix.label }}"
+            echo
+            echo "- Branch: `${{ matrix.ref }}`"
+            echo "- Ahead gegenüber main: **$ahead**"
+            echo "- Behind gegenüber main: **$behind**"
+            echo "- Merge-Base: `$merge_base`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ephemeren main+Draft-Stand erzeugen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -B "ci-draft-${{ matrix.pr }}" "origin/${{ matrix.ref }}"
+          if ! git merge --no-commit --no-ff origin/main; then
+            {
+              echo
+              echo "### Ergebnis"
+              echo
+              echo "**MERGE_CONFLICT**"
+              echo
+              echo "Konfliktdateien:"
+              git diff --name-only --diff-filter=U | sed 's/^/- /'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Node.js 22.23.2 und npm 11.19.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: npm 11.19.1 einrichten
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1 --no-audit --no-fund
+          test "$(npm --version)" = "11.19.1"
+
+      - name: Reproduzierbar installieren
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Draft-spezifische Safety-Grenzen prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
+          patch="/tmp/pr-${{ matrix.pr }}.patch"
+          git diff "$base..origin/${{ matrix.ref }}" > "$patch"
+
+          case "${{ matrix.pr }}" in
+            43)
+              if git diff "$base..origin/${{ matrix.ref }}" -- packages/adapters/dji-cloud/src                 | grep '^+'                 | grep -E '"control\.|property/set|drc/down'; then
+                echo "::error::PR #43 erweitert den read-only Codepfad um Control-/Write-Muster."
+                exit 1
+              fi
+              ;;
+            44)
+              node -e '
+                const fs = require("fs");
+                JSON.parse(fs.readFileSync("docs/contracts/msdk-keymanager-contract.json", "utf8"));
+              '
+              ;;
+            45)
+              if git diff "$base..origin/${{ matrix.ref }}" -- apps/control-api/src                 | grep '^+'                 | grep -E 'request\.method === "(POST|PUT|PATCH|DELETE)"'; then
+                echo "::error::PR #45 enthält neue schreibende öffentliche HTTP-Routen."
+                exit 1
+              fi
+              ;;
+            46)
+              if git diff "$base..origin/${{ matrix.ref }}" -- .env.example apps/web infra/docker                 | grep '^+'                 | grep -Ei 'VITE_.*(MQTT.*PASSWORD|EMQX.*TOKEN|DRC.*PASSWORD|AUTH_TOKEN)'; then
+                echo "::error::PR #46 würde Backend-/MQTT-/DRC-Secrets ins Browser-Bundle verdrahten."
+                exit 1
+              fi
+              ;;
+          esac
+
+      - name: Draft-Ergebnis dokumentieren
+        if: success()
+        run: |
+          {
+            echo
+            echo "### Ergebnis"
+            echo
+            echo "**MERGE_SIMULATION_BUILD_TEST_PASS**"
+            echo
+            echo "Hardware-Evidence wird separat im zentralen Hardware-Evidence-Job bewertet."
+          } >> "$GITHUB_STEP_SUMMARY"
