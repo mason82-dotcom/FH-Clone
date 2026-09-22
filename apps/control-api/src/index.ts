@@ -11,12 +11,16 @@ import {
   authorizeDjiGateway,
   type EmqxAuthorizationRequest
 } from "./authz.js";
+import { RtkTelemetryService } from "./rtk-service.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 
 const djiOptions = getDjiOptions();
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
+const rtk = new RtkTelemetryService({
+  resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
+});
 
 if (dji) {
   await dji.start({
@@ -27,6 +31,7 @@ if (dji) {
       parameters.update(sample);
     },
     onRawMessage(message) {
+      rtk.observe(message);
       if (process.env.LOG_RAW_DJI === "1") {
         console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
       }
@@ -61,6 +66,25 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/dji/topology") {
       return json(response, 200, dji?.topology.listGateways() ?? []);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/rtk") {
+      return json(response, 200, rtk.list());
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/events/rtk") {
+      const deviceId = url.searchParams.get("device") ?? undefined;
+      rtk.openEventStream(response, deviceId);
+      return;
+    }
+
+    const rtkMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/rtk$/);
+    if (request.method === "GET" && rtkMatch) {
+      const deviceId = decodeURIComponent(rtkMatch[1] ?? "");
+      const snapshot = rtk.get(deviceId);
+      return snapshot
+        ? json(response, 200, snapshot)
+        : json(response, 404, { error: "rtk_status_not_available", deviceId });
     }
 
     const telemetryMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/telemetry$/);
