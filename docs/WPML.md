@@ -288,8 +288,10 @@ produktspezifischen DJI-Grenzen.
 
 ## Projektion ins FH2-Missionsmodell
 
-Ein erfolgreich validiertes WPML-Bundle kann read-only in die
-herstellerneutralen FH2-Typen projiziert werden:
+Ein WPML-KMZ kann über `importWpmlKmzToGroundStation()` in einem
+read-only Schritt entpackt, validiert, geparst und anschließend in die
+herstellerneutralen FH2-Typen projiziert werden. Alternativ kann ein bereits
+geparstes Bundle über `projectWpmlToGroundStation()` projiziert werden:
 
 ```text
 WpmlBundle
