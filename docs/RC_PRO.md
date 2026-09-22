@@ -1,90 +1,165 @@
-# DJI RC Pro Enterprise als Cloud-API-Gateway
+# DJI RC Pro Enterprise – Gateway-Vertrag
+
+## Zweck
+
+Dieses Dokument beschreibt, wie FH-Clone die DJI RC Pro Enterprise im
+Pilot-2-Cloud-Pfad behandelt.
+
+Es trennt bewusst:
+
+- dokumentierte DJI-Produktidentität
+- aktuell implementiertes FH2-Modell
+- Punkte, die vor V3 mit realer Hardware verifiziert werden müssen
 
 ## Rollenmodell
 
-Bei DJI Pilot 2 ist die RC Pro Enterprise das **Gateway**. Das Aircraft ist ein **Sub-Device**.
+Im Pilot-2-Cloud-Pfad ist der Controller das Gateway; das Aircraft wird als
+Sub-Device geführt.
 
 ```text
-RC Pro Enterprise
+DJI RC Pro Enterprise
 gateway_sn
    |
-   +-- Mavic 3 Enterprise Series
+   +-- Mavic 3 Enterprise / Thermal / Multispectral
        device_sn
 ```
 
-Die Zuordnung wird aus:
+Die Zuordnung wird über `update_topo` gelernt.
+
+Typischer Topic-Pfad:
 
 ```text
 sys/product/{gateway_sn}/status
 method = update_topo
 ```
 
-gelernt.
-
 ## Produkt-IDs
 
-Aktuell dokumentierte relevante DJI-Enums:
+Aktuell im FH2-Profil verwendete DJI-Produktwerte:
 
 | Produkt | domain | type | sub_type |
 | --- | ---: | ---: | ---: |
 | DJI RC Pro Enterprise | 2 | 144 | 0 |
 | DJI RC Plus | 2 | 119 | 0 |
 | DJI RC Plus 2 | 2 | 174 | 0 |
-| Mavic 3 Enterprise Series, M3E | 0 | 77 | 0 |
-| Mavic 3 Enterprise Series, M3T | 0 | 77 | 1 |
-| Mavic 3 Enterprise Series, M3TA | 0 | 77 | 3 |
+| Mavic 3 Enterprise (M3E) | 0 | 77 | 0 |
+| Mavic 3 Thermal (M3T) | 0 | 77 | 1 |
+| Mavic 3TA | 0 | 77 | 3 |
+| Matrice 4E | 0 | 99 | 0 |
+| Matrice 4T | 0 | 99 | 1 |
 
-Typ 119 darf daher nicht als RC Pro Enterprise interpretiert werden.
+Produkt-IDs müssen gegen die verwendete DJI-Cloud-API-Dokumentation geprüft
+werden, wenn neue Geräteprofile aufgenommen werden.
 
-## Topic-Identität
+## Gateway- und Aircraft-Topics
 
-Die Cloud API unterscheidet `gateway_sn` und `device_sn`.
-
-### Device Properties
+Aircraft-Telemetrie:
 
 ```text
 thing/product/{device_sn}/osd
 thing/product/{device_sn}/state
 ```
 
-Aircraft-Telemetrie kann deshalb unter der Aircraft-SN liegen.
-
-### Gateway Services / DRC
+Gateway-Services:
 
 ```text
 thing/product/{gateway_sn}/services
 thing/product/{gateway_sn}/services_reply
-thing/product/{gateway_sn}/drc/down   Cloud -> RC Pro
-thing/product/{gateway_sn}/drc/up     RC Pro -> Cloud
 sys/product/{gateway_sn}/status
 ```
 
-FH-Clone hält beide Identitäten getrennt und löst vor einem Command:
+DRC ist davon getrennt und wird nur während einer zulässigen FC3-Sitzung
+verwendet.
+
+## Auflösung im Core
+
+Vor einem gatewaybezogenen Service:
 
 ```text
-Aircraft-SN -> TopologyRegistry -> RC-Pro-SN
+Aircraft device_sn
+ -> DjiTopologyRegistry
+ -> gateway_sn
+ -> Service-Topic
 ```
 
-auf.
+Dadurch bleibt die Aircraft-SN die Geräteidentität für Telemetrie, während der
+Controller als Transport-Gateway separat modelliert wird.
 
-## Mavic 3 Enterprise Cloud-Control
+## MQTT-Client-ID
 
-Die aktuelle DJI Pilot-Cloud-Dokumentation unterscheidet zwischen Payload- und Flugsteuerung.
+Wichtig für V3:
 
-Für **Mavic 3 Enterprise Series** wird aktuell nur Cloud-Payload-Control dokumentiert. Die Fernsteuerung kann das Aircraft weiterhin mit den physischen Sticks fliegen.
+```text
+clientid != Security Identity
+```
 
-Daher setzt FH-Clone für type 77:
+Die reale Pilot-2-Client-ID muss mit Hardware erfasst werden, wird aber nicht
+als alleinige Quelle für `gateway_sn` verwendet.
 
-- `control.camera`: ja
-- `control.gimbal`: ja
-- `payload.control`: ja
-- `control.flight`: nein
-- FlyTo über Pilot Cloud: nein
+V3-Ziel:
 
-Der generische DRC-Code bleibt für Plattformen erhalten, für die DJI Cloud-Flugsteuerung explizit freigibt.
+```text
+Credential
+ -> HTTP AuthN
+ -> trusted gateway_sn
+ -> AuthZ
+```
 
-## Firmware-Hinweis
+## Mavic 3 Enterprise Series
 
-Die Werte RC Pro Enterprise `02.00.04.07`, M3E/M3T `06.01.06.06` und Pilot 2 `6.1.2.2` sind historisch dokumentierte Mindeststände aus älteren Cloud-API-Releases. Sie dürfen nicht als aktuelle empfohlene Firmware-Versionen dargestellt werden.
+Für M3E/M3T/M3M wird Cloud-Flugsteuerung nicht aus vorhandenen DRC-Topics oder
+aus der Existenz von DRC-Code abgeleitet.
 
-FH-Clone behandelt Firmware deshalb als Capability-/Compatibility-Information und nicht als hart codierte globale Mindestversion.
+Das Capability-Profil entscheidet produktbezogen.
+
+Der aktuelle FH2-Sicherheitsstand behandelt die Mavic-3-Enterprise-Familie im
+Pilot-Cloud-Kontext als Payload-/Kamera-/Gimbal-orientiert; eine
+`control.flight`-Capability wird nicht automatisch vergeben.
+
+## Matrice 4 / RC Plus 2
+
+Matrice 4 und RC Plus 2 besitzen ein anderes Produkt-/Control-Profil. Dafür
+existiert bereits Code für Stick-Control und Cloud-Control-Authority.
+
+Trotzdem gilt:
+
+- Capability-Erkennung aktiviert FC3 nicht
+- DRC bleibt sitzungsbasiert
+- reale Hardwareverifikation ist vor V3-Freigabe erforderlich
+
+## Reale V3-Prüfpunkte
+
+RC-Pro-Agent #5 muss mindestens erfassen:
+
+1. MQTT-Username
+2. MQTT-Client-ID
+3. Gateway-SN
+4. Zeitpunkt, an dem Gateway-SN bekannt ist
+5. erstes `update_topo`
+6. Topic-Reihenfolge beim Start
+7. Aircraft-`osd/state`
+8. Reconnect nach Pilot-2-Neustart
+9. Reconnect nach Controller-Neustart
+10. Pair/Unpair
+11. falsches Passwort
+12. Broker nicht erreichbar
+13. Session-Verhalten bei gleicher Client-ID
+14. tatsächlich notwendige Publish-/Subscribe-Topics
+
+## Firmware
+
+Firmwarestände werden als Kompatibilitätsinformation dokumentiert, nicht als
+hart codierte globale Mindestversion.
+
+Aktuelle Herstellerstände gehören in
+[COMPATIBILITY.md](COMPATIBILITY.md).
+
+## Sicherheitsgrenze
+
+Bis die Hardwaretests abgeschlossen sind:
+
+```text
+FC0
+keine reale Aircraft-Control-Freigabe
+keine permanente DRC-Brokerberechtigung
+```
