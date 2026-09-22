@@ -1,5 +1,6 @@
 import type { Capability, ParameterSample } from "@fh-clone/aircraft-core";
 import { parseDjiRtkStatus } from "./rtk.js";
+import { normalizeDjiObstacleAvoidanceState } from "./obstacle.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -229,6 +230,18 @@ export function normalizeDjiPayload(
         sampledAt
       )
     );
+  }
+
+  const obstacle = normalizeDjiObstacleAvoidanceState(
+    deviceId,
+    payload,
+    sampledAt
+  );
+  for (const obstacleSample of obstacle.samples) {
+    samples.push(obstacleSample);
+  }
+  for (const capability of obstacle.capabilities) {
+    capabilities.add(capability);
   }
 
   return { samples, capabilities: [...capabilities] };
