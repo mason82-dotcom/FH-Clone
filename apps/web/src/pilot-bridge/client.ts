@@ -225,6 +225,18 @@ export class DjiPilotBridgeClient {
     );
   }
 
+  private requireLoaded(
+    operation: string,
+    modules: readonly DjiPilotModuleName[]
+  ): void {
+    const missing = modules.filter((module) => !this.isComponentLoaded(module));
+    if (missing.length > 0) {
+      throw new Error(
+        `DJI JSBridge ${operation} benötigt geladene Module: ${missing.join(", ")}`
+      );
+    }
+  }
+
   loadThing(config: DjiThingModuleConfig): void {
     this.loadComponent("thing", config as unknown as Record<string, unknown>);
   }
@@ -245,14 +257,17 @@ export class DjiPilotBridgeClient {
   }
 
   loadMap(config: DjiMapModuleConfig): void {
+    this.requireLoaded("loadMap", ["thing", "ws"]);
     this.loadComponent("map", config as unknown as Record<string, unknown>);
   }
 
   loadTsa(): void {
+    this.requireLoaded("loadTsa", ["thing", "ws"]);
     this.loadComponent("tsa", {});
   }
 
   loadMedia(config: DjiMediaModuleConfig = {}): void {
+    this.requireLoaded("loadMedia", ["thing"]);
     this.loadComponent(
       "media",
       config as unknown as Record<string, unknown>
@@ -260,6 +275,7 @@ export class DjiPilotBridgeClient {
   }
 
   loadMission(): void {
+    this.requireLoaded("loadMission", ["thing", "ws", "api"]);
     this.loadComponent("mission", {});
   }
 
