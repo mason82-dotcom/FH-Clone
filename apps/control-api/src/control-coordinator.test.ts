@@ -52,7 +52,7 @@ test("start orders authority before DRC activation", async () => {
   assert.deepEqual(f.calls, [
     "session.request", "authority.request", "session.authorized",
     "session.authorityGrabbed", "drc.enter", "transport.connect",
-    "session.drcModeActive", "session.activate"
+    "session.drcModeActive", "session.transportConnected", "session.activate"
   ]);
 });
 
