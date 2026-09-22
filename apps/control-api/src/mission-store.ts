@@ -102,6 +102,21 @@ export class MissionStore {
     );
   }
 
+  async recoverOpenAutomaticSessions(endedAt = Date.now()): Promise<number> {
+    if (!this.pool) return 0;
+
+    const result = await this.pool.query(
+      `UPDATE missions
+       SET ended_at = to_timestamp($1 / 1000.0),
+           end_reason = 'service_restart'
+       WHERE source = 'automatic'
+         AND ended_at IS NULL`,
+      [endedAt]
+    );
+
+    return result.rowCount ?? 0;
+  }
+
   async ping(): Promise<boolean> {
     if (!this.pool) return false;
     try {
