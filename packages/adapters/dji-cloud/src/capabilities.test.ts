@@ -17,9 +17,9 @@ test("M3E/M3T/M3TA behind RC Pro are payload-control only", () => {
     assert.equal(profile.flyTo, false);
     assert.equal(profile.pointingFlight, false);
     assert.equal(profile.orbitFlight, false);
-    assert.equal(profile.payloadControl, true);
-    assert.equal(profile.requiresCloudControlAuthority, true);
-    assert.equal(profile.drcProfile, "pilot-m3-payload");
+    assert.equal(profile.payloadControl, false);
+    assert.equal(profile.requiresCloudControlAuthority, false);
+    assert.equal(profile.drcProfile, "none");
     assert.deepEqual(profile.capabilities, []);
   }
 });
@@ -33,9 +33,9 @@ test("Matrice 4E/4T behind RC Plus 2 expose documented live-control set", () => 
 
     assert.equal(profile.flightControl, true);
     assert.equal(profile.flyTo, true);
-    assert.equal(profile.pointingFlight, true);
-    assert.equal(profile.orbitFlight, true);
-    assert.equal(profile.payloadControl, true);
+    assert.equal(profile.pointingFlight, false);
+    assert.equal(profile.orbitFlight, false);
+    assert.equal(profile.payloadControl, false);
     assert.equal(profile.requiresCloudControlAuthority, true);
     assert.equal(profile.drcProfile, "pilot-m4-stick");
 
@@ -110,14 +110,35 @@ test("documented product support does not imply generic adapter execution", () =
     rcPlus2
   );
 
-  assert.equal(m3.payloadControl, true);
+  assert.equal(m3.payloadControl, false);
   assert.equal(m3.flightControl, false);
+  assert.equal(m3.drcProfile, "none");
   assert.deepEqual(m3.capabilities, []);
 
-  assert.equal(m4.payloadControl, true);
+  assert.equal(m4.payloadControl, false);
   assert.equal(m4.flightControl, true);
   assert.equal(m4.flyTo, true);
-  assert.equal(m4.pointingFlight, true);
-  assert.equal(m4.orbitFlight, true);
+  assert.equal(m4.pointingFlight, false);
+  assert.equal(m4.orbitFlight, false);
+  assert.equal(m4.drcProfile, "pilot-m4-stick");
   assert.deepEqual(m4.capabilities, []);
+});
+
+
+test("unimplemented DJI-documented controls stay disabled in V3 runtime", () => {
+  const m4 = getDjiCloudControlProfile(
+    { domain: 0, type: 99, subType: 0 },
+    rcPlus2
+  );
+
+  // DJI documents these product functions, but FH2 V3 has no executable
+  // runtime path for them yet.
+  assert.equal(m4.pointingFlight, false);
+  assert.equal(m4.orbitFlight, false);
+  assert.equal(m4.payloadControl, false);
+  assert.deepEqual(m4.capabilities, []);
+
+  // Existing specialized runtime paths remain available.
+  assert.equal(m4.flightControl, true);
+  assert.equal(m4.flyTo, true);
 });
