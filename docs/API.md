@@ -172,6 +172,31 @@ FlightHub-2-/SIKONG-CE-Livestreaming ist in FH2 V3 ausdrücklich deaktiviert.
 Es gibt keinen lokalen Start-/Forwarding-Endpunkt und keine automatische
 Aktivierung eines kostenpflichtigen Streaming-Kanals.
 
+### UgCS – read-only Groundstation
+
+```http
+GET /api/ugcs/status
+GET /api/ugcs/vehicles
+GET /api/ugcs/routes
+GET /api/ugcs/telemetry
+```
+
+Ohne `UGCS_BRIDGE_URL` liefern die UgCS-Endpunkte `503
+ugcs_not_configured`. Bei konfigurierter, aber nicht erreichbarer Bridge wird
+`502 ugcs_bridge_unavailable` geliefert.
+
+`/api/ugcs/routes` enthält echte Segment-/FigurePoint-Geometrie aus UCS.
+`/api/ugcs/telemetry` erhält zusätzlich die ursprüngliche UgCS-Semantik,
+Subsystem und Feldcode.
+
+### GET /api/media/overlays
+
+Read-only Kartenfeed für georeferenzierte Thermal-/Multispektral-/NDVI-
+Captures aus dem internen `MediaOverlayRegistry`.
+
+Nur Assets mit gültiger realer Capture-Position werden als Overlaypunkt
+ausgegeben.
+
 ### GET /api/rtk
 
 Liefert alle aktuellen RTK-/GNSS-Snapshots.
@@ -224,6 +249,20 @@ Die interne API darf nicht öffentlich exponiert werden.
 ### GET /health
 
 Gesundheitsstatus des internen Control-API-Servers.
+
+### POST /internal/media/assets
+
+Interner Batch-/Single-Ingest für `MediaAsset`-Objekte.
+
+Authentisierung:
+
+```http
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+```
+
+Der Endpunkt akzeptiert maximal 500 Assets pro Request. Ungültige
+Capture-Koordinaten oder unvollständige Domainobjekte werden mit `400`
+abgelehnt. Der interne Port darf nicht öffentlich exponiert werden.
 
 ### POST /internal/emqx/authz
 
