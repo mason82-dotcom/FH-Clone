@@ -1,6 +1,7 @@
 export type GroundStationCapability =
   | "groundstation.vehicle.read"
   | "groundstation.telemetry.read"
+  | "groundstation.route.read"
   | "groundstation.route.plan"
   | "groundstation.route.import"
   | "groundstation.route.export"
@@ -15,6 +16,12 @@ export interface GroundStationVehicle {
   model?: string;
   serialNumber?: string;
   connected: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GroundStationRoute {
+  id: string;
+  name: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -44,6 +51,7 @@ export interface GroundStationAdapter {
   stop(): Promise<void>;
   health(): Promise<GroundStationHealth>;
   listVehicles(): Promise<GroundStationVehicle[]>;
+  listRoutes?(): Promise<GroundStationRoute[]>;
 
   importMission?(input: MissionBinary): Promise<GroundStationMission>;
   exportMission?(missionId: string, format: string): Promise<MissionBinary>;

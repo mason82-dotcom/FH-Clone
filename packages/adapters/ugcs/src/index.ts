@@ -3,6 +3,7 @@ import type {
   GroundStationCapability,
   GroundStationHealth,
   GroundStationMission,
+  GroundStationRoute,
   GroundStationVehicle,
   MissionBinary
 } from "@fh-clone/aircraft-core";
@@ -10,7 +11,7 @@ import type {
 /**
  * Transportgrenze zu UgCS.
  *
- * Eine konkrete Implementierung kann z. B. als lokaler Desktop-Bridge-Prozess
+ * Eine konkrete Implementierung kann z. B. als lokaler UCS-Bridge-Prozess
  * oder als nativer SkyHub-/ROS-2-Agent realisiert werden. Der FH-Clone-Core
  * kennt das proprietäre Transportprotokoll dadurch nicht.
  */
@@ -21,6 +22,7 @@ export interface UgcsBridgeTransport {
   disconnect(): Promise<void>;
   health(): Promise<GroundStationHealth>;
   listVehicles(): Promise<GroundStationVehicle[]>;
+  listRoutes?(): Promise<GroundStationRoute[]>;
 
   importMission?(input: MissionBinary): Promise<GroundStationMission>;
   exportMission?(missionId: string, format: string): Promise<MissionBinary>;
@@ -52,6 +54,13 @@ export class UgcsAdapter implements GroundStationAdapter {
     return this.bridge.listVehicles();
   }
 
+  async listRoutes(): Promise<GroundStationRoute[]> {
+    if (!this.bridge.listRoutes) {
+      throw new Error("UgCS bridge does not provide route listing");
+    }
+    return this.bridge.listRoutes();
+  }
+
   async importMission(input: MissionBinary): Promise<GroundStationMission> {
     if (!this.bridge.importMission) {
       throw new Error("UgCS bridge does not provide mission import");
@@ -73,3 +82,5 @@ export class UgcsAdapter implements GroundStationAdapter {
     await this.bridge.uploadMission(vehicleId, missionId);
   }
 }
+
+export * from "./http-bridge.js";
