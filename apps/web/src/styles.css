@@ -468,3 +468,270 @@ h2 {
     flex-wrap: wrap;
   }
 }
+
+
+/* ============================================================
+   DJI FlightHub 2 Standalone Component integration
+   ============================================================ */
+
+:root {
+  --fh2-basic-bg-color: #11171d;
+  --fh2-sub-bg-color: #151b22;
+  --fh2-primary-color: #55c895;
+  --fh2-primary-hover-color: #64d6a5;
+  --fh2-primary-focus-color: #46b886;
+  --fh2-primary-disabled-color: #355f4d;
+  --fh2-list-primary-active-color: rgba(85, 200, 149, 0.28);
+  --fh2-list-primary-hover-color: rgba(100, 214, 165, 0.2);
+  --fh2-sub-primary-color: #1b2530;
+  --fh2-sub-primary-hover-color: #263442;
+  --fh2-model-content-bg-color: #0d1319;
+  --fh2-input-highlight-color: #0c1218;
+  --fh2-input-border-color: #2a3743;
+}
+
+.fh2-workspace {
+  min-height: calc(100vh - 68px);
+  background: #0d1117;
+}
+
+.fh2-workspace__toolbar {
+  min-height: 58px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #26303a;
+  background: #11171d;
+}
+
+.fh2-view-tabs,
+.fh2-runtime-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fh2-view-tab {
+  padding: 8px 11px;
+  border: 1px solid #2b3742;
+  border-radius: 8px;
+  color: #aebbc5;
+  background: #141b22;
+  cursor: pointer;
+}
+
+.fh2-view-tab:hover,
+.fh2-view-tab.is-active {
+  color: #edf3f6;
+  border-color: #506274;
+  background: #202a34;
+}
+
+.fh2-view-tab.is-active {
+  box-shadow: inset 0 -2px 0 var(--fh2-primary-color);
+}
+
+.fh2-runtime-pill {
+  padding: 5px 8px;
+  border: 1px solid #34414d;
+  border-radius: 999px;
+  color: #95a4b1;
+  background: #10161c;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fh2-runtime-pill--ready {
+  color: #66d3a3;
+  border-color: #365d4d;
+}
+
+.fh2-runtime-pill--error {
+  color: #e27d82;
+  border-color: #643d42;
+}
+
+.fh2-context-bar {
+  min-height: 62px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  border-bottom: 1px solid #222c35;
+  background: #0f151b;
+}
+
+.fh2-context-bar label {
+  min-width: min(520px, 100%);
+  display: grid;
+  gap: 5px;
+}
+
+.fh2-context-bar label > span {
+  color: #7f91a3;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fh2-context-bar input,
+.fh2-context-bar select {
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 1px solid #2a3743;
+  border-radius: 7px;
+  color: #dbe4ea;
+  background: #0c1218;
+}
+
+.fh2-workspace__content {
+  min-height: calc(100vh - 188px);
+  position: relative;
+
+  /*
+   * DJI documents positioning issues when parent containers use transform,
+   * perspective, filter, will-change or contain: paint. Keep this tree plain.
+   */
+  transform: none;
+  perspective: none;
+  filter: none;
+  will-change: auto;
+  contain: none;
+}
+
+.fh2-runtime-state {
+  min-height: 420px;
+  padding: 40px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+  color: #aebac4;
+  background: #0f151b;
+}
+
+.fh2-runtime-state strong,
+.fh2-runtime-state span {
+  display: block;
+}
+
+.fh2-runtime-state span {
+  max-width: 720px;
+  color: #7f8f9d;
+  font-size: 13px;
+}
+
+.fh2-runtime-state--error strong {
+  color: #e27d82;
+}
+
+.fh2-component-frame {
+  min-height: calc(100vh - 188px);
+  position: relative;
+}
+
+.fh2-component-meta {
+  min-height: 30px;
+  padding: 7px 12px;
+  border-bottom: 1px solid #26313a;
+  color: #8f9da9;
+  background: #11171d;
+  font-size: 11px;
+}
+
+.fh2-official-shell,
+.fh2-fill-container {
+  width: 100%;
+  min-height: calc(100vh - 188px);
+  height: 100%;
+}
+
+.fh2-project-details {
+  width: 100%;
+  min-height: inherit;
+  height: 100%;
+  position: relative;
+  display: flex;
+  overflow: auto;
+}
+
+#project-app-container > div,
+#cockpit-app-container > div,
+.fh2-map-app-container > div,
+#wayline-create-app-container > div {
+  width: 100%;
+  height: 100%;
+}
+
+.fh2-right-micro-app {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex: 1;
+}
+
+.fh2-maps-micro-app {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex: 1;
+}
+
+.fh2-map-placeholder {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.fh2-map-app-container {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+}
+
+.fh2-wayline-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.fh2-cockpit-panel {
+  min-width: 320px;
+  max-width: 480px;
+  display: flex;
+}
+
+.fh2-cockpit-shell .fh2-map-app-container {
+  min-height: 620px;
+}
+
+@media (max-width: 900px) {
+  .fh2-workspace__toolbar,
+  .fh2-context-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fh2-context-bar label {
+    min-width: 0;
+  }
+
+  .fh2-project-details,
+  .fh2-right-micro-app {
+    min-height: 720px;
+  }
+
+  .fh2-cockpit-panel {
+    min-width: 280px;
+    max-width: 42vw;
+  }
+}
