@@ -346,3 +346,125 @@ h2 {
     flex-direction: column;
   }
 }
+
+
+.chart-panel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #27313b;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #151b22, #11171d);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
+}
+
+.chart-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.chart-device {
+  padding: 14px;
+  border: 1px solid #27313b;
+  border-radius: 12px;
+  background: #0f141a;
+}
+
+.chart-device__title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.satellite-chart {
+  min-height: 170px;
+}
+
+.satellite-chart__legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: #b7c3cd;
+}
+
+.satellite-chart__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-line {
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.legend-line--rtk,
+.chart-line--rtk {
+  stroke: #55c895;
+  background: #55c895;
+}
+
+.legend-line--gps,
+.chart-line--gps {
+  stroke: #6ba6d9;
+  background: #6ba6d9;
+}
+
+.satellite-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: #25313b;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-fix-loss {
+  stroke: #dc7075;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.42;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-axis-label,
+.chart-axis-caption {
+  fill: #71808d;
+  font-size: 10px;
+}
+
+.chart-empty {
+  min-height: 138px;
+  display: grid;
+  place-items: center;
+  color: #748391;
+  font-size: 12px;
+  text-align: center;
+  border: 1px dashed #293540;
+  border-radius: 10px;
+}
+
+@media (max-width: 720px) {
+  .chart-device__title,
+  .satellite-chart__legend {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
