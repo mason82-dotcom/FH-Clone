@@ -11,6 +11,7 @@ import type {
 } from "@fh-clone/aircraft-core";
 import { normalizeDjiPayload } from "./normalizer.js";
 import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
+import { DjiPilotCloudAuthorityCoordinator } from "./pilot-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import { DrcController, type DjiMqttPublisher, type MqttQos } from "./drc.js";
@@ -493,5 +494,6 @@ export * from "./rtk.js";
 export * from "./payloads.js";
 
 export * from "./cloud-authority.js";
+export * from "./pilot-authority.js";
 
 export * from "./drc-session.js";
