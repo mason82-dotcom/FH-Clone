@@ -244,3 +244,65 @@ Sie aktiviert niemals:
 
 Schreibende Missionsfunktionen beginnen frühestens mit FC2 und benötigen den
 zentralen Command-/Authority-Pfad.
+
+## Wayline-Beobachtungsmodell
+
+FH2 V3 unterscheidet ausdrücklich zwischen einem beobachteten Wayline-Flug und
+einer ausführbaren Wayline-Funktion.
+
+Während einer automatischen Flugsitzung werden zusätzlich gepflegt:
+
+```text
+lastActivity
+waylineObserved
+```
+
+Beispiel:
+
+```json
+{
+  "lastModeCode": 5,
+  "lastActivity": "wayline",
+  "waylineObserved": true
+}
+```
+
+`waylineObserved` bleibt für die laufende Flugsitzung wahr, sobald
+`mode_code == 5` mindestens einmal beobachtet wurde. Wechselt das Aircraft
+anschließend wieder in einen anderen Flugmodus, beschreibt `lastActivity`
+den aktuellen/zuletzt beobachteten Zustand, während `waylineObserved` die
+Wayline-Evidenz der Sitzung erhält.
+
+### Read-API
+
+```http
+GET /api/devices/{device_sn}/wayline
+```
+
+Die Antwort enthält unter anderem:
+
+- ob aktuell `mode_code == 5` aktiv ist,
+- ob in der aktiven Flugsitzung ein Wayline-Zustand beobachtet wurde,
+- gegebenenfalls die aktive `missionId`,
+- gegebenenfalls die letzte abgeschlossene Sitzung mit Wayline-Evidenz,
+- ob `mission.wayline` tatsächlich als ausführbare Adapter-Capability gemeldet wird.
+
+Der aktuelle DJI-Cloud-Pfad liefert keine authoritative Wayline-ID. Deshalb bleibt:
+
+```json
+{
+  "waylineId": null
+}
+```
+
+solange kein eigener Pilot-Wayline-/WPML-/FH2-Task-Vertrag diese Identität liefert.
+
+Wichtig:
+
+```text
+Wayline beobachtet
+  !=
+Wayline Management implementiert
+  !=
+mission.wayline ausführbar
+```
