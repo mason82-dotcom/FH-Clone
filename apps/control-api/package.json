@@ -12,7 +12,8 @@
   "dependencies": {
     "@fh-clone/aircraft-core": "0.1.0",
     "@fh-clone/adapter-dji-cloud": "0.1.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "@fh-clone/adapter-ugcs": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
