@@ -1,0 +1,123 @@
+{
+  "schema": "fh2.m3t.real-media-fixture.v1",
+  "status": "partial_real_hardware_fixture",
+  "sourceCommit": "b626e2fdb7292f5c59f5799bbd9a2b4b1b0bd0d2",
+  "policy": {
+    "rawExifXmpAuthoritative": true,
+    "derivedManifestRedacts": [
+      "gps_coordinates",
+      "device_serials",
+      "camera_serials",
+      "ntrip_endpoint"
+    ],
+    "syntheticDataAllowedAsReal": false
+  },
+  "samples": [
+    {
+      "id": "m3t-wide-gnss",
+      "image": {
+        "width": 4000,
+        "height": 3000,
+        "bitsPerSample": 8
+      },
+      "exif": "docs/DJI_20230426201904_0001_V.txt",
+      "gitBlobSha": "700c03acf53b8639aba6ae8b292d77f164f982a8",
+      "fileSizeBytes": 7725056,
+      "deviceModel": "M3T",
+      "imageSource": "WideCamera",
+      "optics": {
+        "focalLengthMm": 4.4,
+        "focalLength35Mm": 24,
+        "fNumber": 2.8
+      },
+      "gnss": {
+        "gpsStatus": "Normal",
+        "altitudeType": "GpsFusionAlt",
+        "rtkFlag": null,
+        "classification": "gnss_non_rtk"
+      },
+      "capture": {
+        "dateTimeOriginalLocal": "2023-04-26T20:19:04+02:00",
+        "utcAtExposure": "2023-04-26T18:19:25.140756Z"
+      },
+      "pose": {
+        "gimbal": {
+          "rollDeg": 0,
+          "yawDeg": -179.3,
+          "pitchDeg": -89.9
+        },
+        "aircraft": {
+          "rollDeg": -2.5,
+          "yawDeg": -179.6,
+          "pitchDeg": -0.7
+        },
+        "velocityNedLike": {
+          "x": -0.3,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "surveyingMode": 1
+    },
+    {
+      "id": "m3t-wide-rtk-fixed",
+      "image": {
+        "width": 4000,
+        "height": 3000,
+        "bitsPerSample": 8
+      },
+      "exif": "docs/DJI_20240225160726_0027_V.txt",
+      "gitBlobSha": "03af2cfea4baa2bb22c6f0498519f018710534f7",
+      "fileSizeBytes": 7454720,
+      "deviceModel": "M3T",
+      "imageSource": "WideCamera",
+      "optics": {
+        "focalLengthMm": 4.4,
+        "focalLength35Mm": 24,
+        "fNumber": 2.8
+      },
+      "gnss": {
+        "gpsStatus": "RTK",
+        "altitudeType": "RtkAlt",
+        "rtkFlag": 50,
+        "classification": "rtk_fixed",
+        "stdLonM": 0.00915,
+        "stdLatM": 0.0118,
+        "stdHgtM": 0.02135,
+        "diffAgeS": 1.4
+      },
+      "capture": {
+        "dateTimeOriginalLocal": "2024-02-25T16:07:26+01:00",
+        "utcAtExposure": "2024-02-25T15:07:47.379346Z"
+      },
+      "pose": {
+        "gimbal": {
+          "rollDeg": 180,
+          "yawDeg": 86.8,
+          "pitchDeg": -90
+        },
+        "aircraft": {
+          "rollDeg": -19,
+          "yawDeg": -95.9,
+          "pitchDeg": 4.1
+        },
+        "velocityNedLike": {
+          "x": -1.9,
+          "y": -6.7,
+          "z": 0
+        }
+      },
+      "surveyingMode": 1
+    }
+  ],
+  "missing": {
+    "wide": false,
+    "tele": true,
+    "thermalRjpeg": true,
+    "mqttUpdateTopo": true,
+    "mqttOsdState": true,
+    "mqttCameras": true,
+    "mqttRtkFixNoFixPair": true,
+    "mqttBatteryArray": true
+  }
+}
