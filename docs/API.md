@@ -49,6 +49,16 @@ Hinweise:
 - ein gesunder HTTP-Prozess bedeutet nicht automatisch eine funktionierende
   DJI-Verbindung.
 
+### GET /ready
+
+Readiness der für den lokalen V3-Stack erforderlichen Backend-Abhängigkeiten.
+
+Der Endpunkt liefert `200`, wenn die konfigurierten Runtime-Prüfungen
+erfolgreich sind, andernfalls `503`.
+
+FlightHub 2 OpenAPI ist optional und blockiert die allgemeine Readiness
+nicht, wenn `FH2_ENABLED=false` gesetzt ist.
+
 ### GET /api/devices
 
 Liefert die aktuell bekannte Geräte-Registry.
@@ -68,12 +78,35 @@ gateway_sn
 
 Die Daten stammen aus `update_topo`.
 
+### GET /api/dji/topology/persisted
+
+Liefert das persistierte Gateway-/Sub-Device-Inventar.
+
+Dieses Inventar ist **keine** aktuelle AuthZ-Quelle. MQTT-Autorisierung
+verwendet weiterhin ausschließlich die Runtime-Topologie.
+
+Ohne aktivierte Topologie-Persistenz liefert der Endpunkt `503`.
+
 ### GET /api/devices/{device_sn}/telemetry
 
 Liefert den aktuellen normalisierten Parametersnapshot eines Geräts.
 
 Unbekannte Herstellerfelder bleiben über die Rohdatenebene erhalten, werden
 aber nicht automatisch als kanonische Parameter ausgegeben.
+
+### GET /api/devices/{device_sn}/capabilities
+
+Read-only Capability-Sicht für ein Gerät.
+
+Die Antwort trennt:
+
+- tatsächlich gemeldete Adapter-Capabilities,
+- DJI-Produktsupport beziehungsweise spezialisierten Control-Support,
+- Wayline-/Missionsevidenz,
+- Status des optionalen FH2-Read-Pfads.
+
+DJI-Produktsupport erzeugt nicht automatisch eine ausführbare
+`AircraftAdapter.execute()`-Capability.
 
 ### GET /api/missions/active
 
@@ -96,6 +129,44 @@ Antwortstruktur:
 ```
 
 Je nach Zustand können `active` und `lastCompleted` befüllt sein.
+
+### GET /api/devices/{device_sn}/wayline
+
+Read-only Wayline-Beobachtung aus DJI-Telemetrie.
+
+`mode_code == 5` bedeutet, dass ein Wayline-Flug beobachtet wird. Der
+Endpunkt erfindet keine Wayline-ID und aktiviert keine
+`mission.wayline`-Capability.
+
+### FlightHub 2 OpenAPI V2 – read-only
+
+```http
+GET /api/fh2/status
+GET /api/fh2/waylines?page=1&size=100
+GET /api/fh2/flight-tasks?page=1&page_size=50
+```
+
+`/api/fh2/status` enthält ausschließlich nicht-sensitive
+Konfigurationszustände und `readOnly=true`.
+
+Waylines und Flight Tasks werden ausschließlich per GET aus der FH2 OpenAPI
+V2 gelesen. Redirects werden nicht verfolgt; nur HTTP 2xx und DJI
+Businesscode `0` gelten als Erfolg.
+
+Fehlende Konfiguration:
+
+```http
+503 {"error":"fh2_not_configured"}
+```
+
+FH2-Upstreamfehler:
+
+```http
+502 {"error":"fh2_upstream_error"}
+```
+
+Die gelieferten IDs können über `MissionExternalReference` korreliert
+werden. Zeitliche Nähe allein gilt nicht als authoritative Zuordnung.
 
 ### GET /api/rtk
 
@@ -226,8 +297,10 @@ Aktuell werden je nach Endpunkt JSON-Fehler ausgegeben.
 
 Allgemeine Fälle:
 
+- `400` – ungültige Query-/Anfrageparameter
 - `404` – Ressource/Route nicht gefunden
-- `400` – ungültige interne Anfrage
+- `502` – konfigurierter FH2-Upstream lieferte keinen gültigen Erfolg
+- `503` – optionale Ressource ist nicht konfiguriert/verfügbar
 - `500` – unerwarteter öffentlicher API-Fehler
 
 Für EMQX AuthZ gilt zusätzlich: Sicherheitsrelevante Evaluierungsfehler werden

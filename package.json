@@ -2,11 +2,13 @@
   "name": "fh-clone",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "npm@11",
+  "packageManager": "npm@11.19.1",
   "workspaces": [
-    "apps/*",
-    "packages/*",
-    "packages/adapters/*"
+    "packages/aircraft-core",
+    "packages/adapters/dji-cloud",
+    "packages/adapters/ugcs",
+    "apps/control-api",
+    "apps/web"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -15,6 +17,7 @@
     "test:authz": "npm run build && node --test apps/control-api/dist/authz.test.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12.0",
+    "npm": "11.19.1"
   }
 }

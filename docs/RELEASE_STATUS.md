@@ -7,7 +7,7 @@ Dieses Dokument ist die aktuelle Direktor-Sicht auf den V3-Abschluss.
 Kanonischer Stand:
 
 ```text
-main = 0851d5f4de0a1a5b734bb7500c1c722a82ee182a
+main = a7564ac8a9538a4ab7472e7bd1c1bd160bc51378
 ```
 
 ## Versionsstatus
@@ -42,8 +42,18 @@ Bewusst **nicht** gemergt:
 - ältere RC-Pro-/EMQX-/Gateway-/Mission-Branches – durch ihre aktuellen
   Direktor-Integrationen ersetzt
 
-Damit existiert derzeit kein offener fachlicher Merge-Kandidat. Neue Änderungen
-dürfen nur noch konkrete V3-Gates oder reproduzierbare Release-Defekte schließen.
+Aktuell offene Gate-Kandidaten:
+
+- PR #38 – M3M EXIF/XMP-Metadatenmapper; Gate 5, aber 51 Commits hinter dem
+  Integrationsstand und daher **nicht mergefähig als Release-Kandidat**.
+- PR #40 – Hindernis-/HSI-Telemetrie; Gate 5/6, auf aktuellem Integrationsstand
+  aufgebaut und statisch geprüft, aber bis zum realen Testlauf bewusst Draft.
+
+PR #39 wurde nicht vollständig gemergt; die beiden realen M3T-Fixture-Dateien
+wurden selektiv auf aktuellen `main` portiert und der PR geschlossen.
+
+Neue Änderungen dürfen nur noch konkrete V3-Gates oder reproduzierbare
+Release-Defekte schließen.
 
 ## Gate 1 – Build: OFFEN
 
@@ -77,7 +87,8 @@ Auf `main` vorhanden:
 - `GET /health`
 - `GET /ready`
 - Docker-Healthchecks
-- `scripts/verify.sh`
+- `scripts/verify.sh` mit ausführbarem Git-Modus `100755`
+- `scripts/provision-gateway.sh` mit ausführbarem Git-Modus `100755`
 - TimescaleDB-Restartprüfung
 - AuthN-Fail-Closed-Prüfung
 - EMQX-5.7-`emqx.conf`
@@ -284,6 +295,8 @@ Manager:
 4. `scripts/verify.sh` real ausführen und Ergebnis belegen
 5. Gateway-Credential lokal provisionieren und AuthN prüfen
 6. Credential-Deaktivierung/Fail-Closed prüfen
+7. PR #40 nach realem Testlauf bewerten
+8. PR #38 auf aktuellen `main` portieren und erst danach testen
 
 RC Pro:
 

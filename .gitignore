@@ -6,3 +6,7 @@ dist/
 .runtime/
 *.log
 .DS_Store
+local-fixtures/
+docs/DJI_*.JPG
+docs/DJI_*.JPEG
+docs/DJI_*.txt
