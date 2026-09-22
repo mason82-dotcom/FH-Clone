@@ -56,6 +56,76 @@ nicht mehr als Default-Subscriptions des Basic-Link-Adapters geführt.
 Der Datenpfad für DRC ist `DrcBrokerTransport`; der normale DJI-Basic-Link
 bleibt davon getrennt.
 
+## Hindernis-Telemetrie
+
+FH2 trennt zwei DJI-Datenquellen:
+
+### Normaler Basic-Link-Status
+
+Die Aircraft-Eigenschaft `obstacle_avoidance` wird aus OSD/State gelesen:
+
+```text
+obstacle_avoidance.horizon
+obstacle_avoidance.upside
+obstacle_avoidance.downside
+```
+
+Sie beschreibt nur, ob horizontale, obere beziehungsweise untere
+Hinderniserkennung aktiviert ist. Daraus wird **keine Entfernung** abgeleitet.
+
+Kanonische FH2-Keys:
+
+```text
+safety.obstacle.horizontal.enabled
+safety.obstacle.up.enabled
+safety.obstacle.down.enabled
+```
+
+### DRC-`hsi_info_push`
+
+Konkrete Hindernisdistanzen kommen nur während einer aktiven DRC-Sitzung über:
+
+```text
+thing/product/{gateway_sn}/drc/up
+method = hsi_info_push
+```
+
+Der dedizierte `DrcBrokerTransport` abonniert dafür **nur** das exakte
+`drc/up`-Topic des aktiven Gateways. Es gibt kein dauerhaftes Wildcard-Abo.
+
+FH2 bindet jede eingehende HSI-Nachricht an das Aircraft der aktiven
+Control-Sitzung und normalisiert unter anderem:
+
+```text
+safety.obstacle.front.enabled
+safety.obstacle.front.working
+safety.obstacle.back.enabled
+safety.obstacle.back.working
+safety.obstacle.left.enabled
+safety.obstacle.left.working
+safety.obstacle.right.enabled
+safety.obstacle.right.working
+safety.obstacle.up.enabled
+safety.obstacle.up.working
+safety.obstacle.down.enabled
+safety.obstacle.down.working
+safety.obstacle.horizontal.enabled
+safety.obstacle.horizontal.working
+safety.obstacle.vertical.enabled
+safety.obstacle.vertical.working
+safety.obstacle.up.distance_m
+safety.obstacle.down.distance_m
+safety.obstacle.around.distance_m
+```
+
+DJI liefert die Distanzen in Millimetern; FH2 normalisiert sie auf Meter.
+Für das horizontale Array gilt 0° als Flugzeugnase, die Winkel laufen im
+Uhrzeigersinn.
+
+Die HSI-Daten sind **Telemetrie**, keine eigenständige
+Kollisionsvermeidungslogik. Sie ändern weder Safety Stage noch Lease,
+DJI-Authority oder Dead-Man-Regeln.
+
 ## Produktprofile
 
 Der DJI-Adapter unterscheidet produktspezifische DRC-Profile, zum Beispiel:
