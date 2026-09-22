@@ -28,6 +28,8 @@ const DEFAULT_TOPICS = [
   "thing/product/+/osd",
   "thing/product/+/state",
   "thing/product/+/events",
+  "thing/product/+/services_reply",
+  "thing/product/+/drc/up",
   "sys/product/+/status"
 ];
 
@@ -127,7 +129,7 @@ export class DjiCloudAdapter implements AircraftAdapter {
       ok: false,
       code: "disabled",
       message:
-        "DJI Cloud flight-control publishing is disabled until the exact command method and payload are verified."
+        "Direct DJI flight-control publishing remains disabled in the adapter; use the backend CommandCoordinator/DRC service."
     };
   }
 
@@ -181,3 +183,4 @@ export class DjiCloudAdapter implements AircraftAdapter {
 
 export { normalizeDjiPayload } from "./normalizer.js";
 export * from "./version.js";
+export * from "./drc.js";
