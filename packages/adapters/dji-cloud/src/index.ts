@@ -16,7 +16,9 @@ import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import {
   DjiTopologyRegistry,
   describeDjiProduct,
-  parseDjiTopologyUpdate
+  parseDjiTopologyUpdate,
+  toPublicDjiTopologyPayload,
+  type TopologyChange
 } from "./topology.js";
 import {
   getDjiCloudControlProfile,
@@ -31,6 +33,7 @@ export interface DjiCloudAdapterOptions {
   clientId?: string;
   topicFilters?: string[];
   serviceTimeoutMs?: number;
+  onTopologyChange?: (change: TopologyChange) => void | Promise<void>;
   /**
    * Dokumentations-/Kompatibilitätsprofil. Dies ist keine MQTT-Protokollverhandlung.
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
@@ -50,6 +53,7 @@ const DEFAULT_TOPICS = [
   "thing/product/+/state",
   "thing/product/+/events",
   "thing/product/+/services_reply",
+  "thing/product/+/status",
   "sys/product/+/status"
 ];
 
@@ -289,18 +293,25 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       this.cloudAuthority.applyEvent(deviceId, payload, receivedAt);
     }
 
-    if (deviceId && topic.startsWith("sys/product/") && topic.endsWith("/status")) {
-      const topology = parseDjiTopologyUpdate(deviceId, payload, receivedAt);
-      if (topology) {
-        await this.applyTopology(topology, payload);
-      }
+    const topologyUpdate =
+      deviceId &&
+      topic.endsWith("/status") &&
+      (topic.startsWith("sys/product/") || topic.startsWith("thing/product/"))
+        ? parseDjiTopologyUpdate(deviceId, payload, receivedAt)
+        : undefined;
+
+    if (topologyUpdate) {
+      await this.applyTopology(topologyUpdate, payload);
     }
+
     const raw: RawMessage = {
       adapterId: this.id,
       ...(deviceId ? { deviceId } : {}),
       receivedAt,
       channel: topic,
-      payload
+      payload: topologyUpdate
+        ? toPublicDjiTopologyPayload(topologyUpdate)
+        : payload
     };
     await this.events?.onRawMessage?.(raw);
 
@@ -340,6 +351,14 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     payload: unknown
   ): Promise<void> {
     const change = this.topology.apply(topology);
+
+    if (this.options.onTopologyChange) {
+      try {
+        await this.options.onTopologyChange(change);
+      } catch (error) {
+        console.error("DJI topology persistence failed", error);
+      }
+    }
 
     const gateway: AdapterDevice = {
       identity: {

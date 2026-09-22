@@ -13,11 +13,13 @@ import {
   isEmqxAuthorizationRequest
 } from "./authz.js";
 import { RtkTelemetryService } from "./rtk-service.js";
+import { PostgresGatewayRegistryStore } from "./topology-store.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 
-const djiOptions = getDjiOptions();
+const topologyStore = await createTopologyStore();
+const djiOptions = getDjiOptions(topologyStore);
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const rtk = new RtkTelemetryService({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
@@ -64,6 +66,10 @@ const publicServer = createServer(async (request, response) => {
           enabled: Boolean(dji),
           connected: dji?.isConnected ?? false,
           apiVersion: dji?.apiVersion
+        },
+        topologyPersistence: {
+          configured: Boolean(topologyStore),
+          authorizationSource: "runtime-update_topo"
         }
       });
     }
@@ -74,6 +80,23 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/dji/topology") {
       return json(response, 200, dji?.topology.listGateways() ?? []);
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/dji/topology/persisted"
+    ) {
+      if (!topologyStore) {
+        return json(response, 503, {
+          error: "topology_persistence_not_configured"
+        });
+      }
+
+      return json(response, 200, {
+        authorizationSource: "runtime-update_topo",
+        persistedInventoryOnly: true,
+        gateways: await topologyStore.list()
+      });
     }
 
     if (request.method === "GET" && url.pathname === "/api/rtk") {
@@ -177,12 +200,15 @@ async function shutdown(): Promise<void> {
   publicServer.close();
   internalServer.close();
   await dji?.stop();
+  await topologyStore?.close();
 }
 
 process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
 process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
 
-function getDjiOptions(): DjiCloudAdapterOptions | undefined {
+function getDjiOptions(
+  topologyStore: PostgresGatewayRegistryStore | undefined
+): DjiCloudAdapterOptions | undefined {
   const brokerUrl = process.env.DJI_MQTT_URL;
   if (!brokerUrl) return undefined;
 
@@ -191,7 +217,14 @@ function getDjiOptions(): DjiCloudAdapterOptions | undefined {
     ...(process.env.DJI_MQTT_USERNAME ? { username: process.env.DJI_MQTT_USERNAME } : {}),
     ...(process.env.DJI_MQTT_PASSWORD ? { password: process.env.DJI_MQTT_PASSWORD } : {}),
     clientId: process.env.DJI_MQTT_CLIENT_ID ?? "fh-clone-backend",
-    ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {})
+    ...(process.env.DJI_CLOUD_API_VERSION
+      ? { apiVersion: process.env.DJI_CLOUD_API_VERSION }
+      : {}),
+    ...(topologyStore
+      ? {
+          onTopologyChange: (change) => topologyStore.save(change)
+        }
+      : {})
   };
 }
 
@@ -269,4 +302,17 @@ function auditAuthz(
     topic: request.topic,
     ...(request.peerhost ? { peerhost: request.peerhost } : {})
   });
+}
+
+
+async function createTopologyStore(): Promise<
+  PostgresGatewayRegistryStore | undefined
+> {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) return undefined;
+
+  const store = new PostgresGatewayRegistryStore(connectionString);
+  await store.assertReady();
+  console.info("[Topology] PostgreSQL gateway registry enabled.");
+  return store;
 }
