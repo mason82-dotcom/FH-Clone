@@ -6,6 +6,11 @@ authorization {
     enable = true
     max_size = 1024
     ttl = 5s
+    excludes = [
+      "thing/product/+/services",
+      "thing/product/+/property/set",
+      "thing/product/+/drc/down"
+    ]
   }
 
   sources = [
