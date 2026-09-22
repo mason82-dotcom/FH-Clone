@@ -9,7 +9,9 @@ Sie verbindet:
 - DJI-Cloud-MQTT-Ingest
 - Geräte- und Parameter-Registry
 - Gateway-/Sub-Device-Topologie
+- automatische Flugsitzungen
 - RTK-/GNSS-Auswertung
+- optionale Missionspersistenz
 - öffentliche Lese-API
 - interne EMQX-Autorisierung
 
@@ -23,23 +25,31 @@ angeboten.
 | `8080` | öffentliche FH2-API | lokal/LAN nach Deployment-Regeln |
 | `8081` | interne Infrastruktur-API | **nicht öffentlich veröffentlichen** |
 
-Die Ports können über `PORT` und `INTERNAL_PORT` geändert werden.
+Konfigurierbar über:
+
+- `BIND`
+- `PORT`
+- `INTERNAL_BIND`
+- `INTERNAL_PORT`
 
 ## Startverhalten
 
-Wenn `DJI_MQTT_URL` gesetzt ist, startet der Prozess den DJI-Cloud-Adapter
-und verbindet sich mit dem konfigurierten MQTT-Broker.
+Wenn `DJI_MQTT_URL` gesetzt ist, startet der DJI-Cloud-Adapter und verbindet
+sich mit dem konfigurierten MQTT-Broker.
 
-Ohne `DJI_MQTT_URL` bleibt die API lauffähig, der DJI-Adapter ist jedoch
+Ohne `DJI_MQTT_URL` bleibt die HTTP-API lauffähig, der DJI-Adapter ist jedoch
 deaktiviert.
+
+Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
+`MissionStore` für automatische Missionssitzungen.
 
 ## Umgebungsvariablen
 
 ### HTTP
 
-- `BIND` – Bind-Adresse der öffentlichen API, Standard `0.0.0.0`
+- `BIND` – öffentliche Bind-Adresse, Standard `0.0.0.0`
 - `PORT` – öffentlicher Port, Standard `8080`
-- `INTERNAL_BIND` – Bind-Adresse der internen API, Standard `0.0.0.0`
+- `INTERNAL_BIND` – interne Bind-Adresse, Standard `0.0.0.0`
 - `INTERNAL_PORT` – interner Port, Standard `8081`
 
 ### DJI MQTT
@@ -50,15 +60,18 @@ deaktiviert.
 - `DJI_MQTT_CLIENT_ID`
 - `DJI_CLOUD_API_VERSION`
 
-### Security und Diagnose
+### EMQX und Diagnose
 
 - `EMQX_AUTHZ_TOKEN` – internes Secret für EMQX -> Control API
-- `LOG_RAW_DJI=1` – Rohmeldungen diagnostisch ausgeben
-- `TIMESCALE_URL` – aktiviert Missionspersistenz über TimescaleDB/PostgreSQL
-- `RTK_SOURCE_LABEL` – optionale nicht-sensitive Bezeichnung der RTK-Quelle
-- `RTK_SOURCE_PROVIDER` – optionaler Anbietername
+- `LOG_RAW_DJI=1` – DJI-Rohmeldungen diagnostisch ausgeben
 
-Secrets gehören in Runtime-Konfiguration und niemals ins Repository.
+### TimescaleDB und RTK-Metadaten
+
+- `TIMESCALE_URL` – aktiviert Missionspersistenz
+- `RTK_SOURCE_LABEL` – optionale nicht-sensitive Bezeichnung der RTK-Quelle
+- `RTK_SOURCE_PROVIDER` – optionaler nicht-sensitiver Anbietername
+
+Secrets gehören ausschließlich in Runtime-Konfiguration.
 
 ## Öffentliche API
 
@@ -68,7 +81,13 @@ Secrets gehören in Runtime-Konfiguration und niemals ins Repository.
 GET /health
 ```
 
-Liefert den Dienststatus sowie den Zustand des DJI-Adapters.
+Liefert unter anderem:
+
+- Dienststatus
+- DJI-Adapter aktiviert/verbunden
+- DJI-API-Kompatibilitätsprofil
+- Anzahl aktiver Missionssitzungen
+- Status der Missionspersistenz
 
 ### Geräte
 
@@ -76,7 +95,7 @@ Liefert den Dienststatus sowie den Zustand des DJI-Adapters.
 GET /api/devices
 ```
 
-Liefert die aktuell bekannte DeviceRegistry.
+Liefert die aktuelle `DeviceRegistry`.
 
 ### DJI-Topologie
 
@@ -84,9 +103,9 @@ Liefert die aktuell bekannte DeviceRegistry.
 GET /api/dji/topology
 ```
 
-Liefert die bekannten Gateways und Sub-Devices.
+Liefert bekannte Gateway-/Sub-Device-Beziehungen.
 
-### Telemetrie eines Geräts
+### Telemetrie
 
 ```http
 GET /api/devices/{device_sn}/telemetry
@@ -101,28 +120,24 @@ GET /api/missions/active
 GET /api/devices/{device_sn}/mission
 ```
 
-Die Control API erkennt aus flugaktiven DJI-`mode_code`-Werten automatisch
-eine Flugsitzung und vergibt eine `missionId`. Die aktuelle Zuordnung ist
-In-Memory und dient zunächst der Korrelation von RTK-/Telemetriedaten.
+Die Control API erkennt aus DJI-`mode_code`-Werten automatisch eine
+Flugsitzung und vergibt eine `missionId`.
 
-Details: [Missionen](../../docs/MISSIONEN.md).
+Eine Sitzung startet nur bei als flugaktiv eingestuften Modi. Details und
+deutsche Modusbeschreibung:
 
-### Missionen
+- [Missionen](../../docs/MISSIONEN.md)
 
-```http
-GET /api/missions/active
-GET /api/devices/{device_sn}/mission
-```
+`GET /api/devices/{device_sn}/mission` liefert:
 
-`/api/missions/active` liefert die aktuell erkannten Missionssitzungen.
+- aktuell aktive Sitzung
+- zuletzt abgeschlossene Sitzung
 
-`/api/devices/{device_sn}/mission` liefert für ein Gerät:
+Bei gesetztem `TIMESCALE_URL` werden Start und Ende automatisch in
+TimescaleDB/PostgreSQL persistiert.
 
-- aktive Mission, sofern vorhanden
-- zuletzt abgeschlossene Mission, sofern vorhanden
-
-Die Missionszuordnung stammt aus dem laufenden `MissionSessionTracker`.
-Persistente Missionshistorie ist Teil des V3-Persistenz-Gates.
+Beim Service-Neustart werden noch offene automatische DB-Sitzungen mit
+`service_restart` abgeschlossen, bevor neuer DJI-Ingest beginnt.
 
 ### RTK/GNSS
 
@@ -137,9 +152,11 @@ GET /api/events/rtk?device={device_sn}
 
 `/api/events/rtk` verwendet Server-Sent Events.
 
+RTK-Snapshots können zusätzlich die aktuelle `missionId` tragen.
+
 ## RTK-Snapshot
 
-Ein Snapshot enthält unter anderem:
+Beispiel:
 
 ```json
 {
@@ -159,20 +176,37 @@ Ein Snapshot enthält unter anderem:
 }
 ```
 
-Ein Snapshot wird lokal als `stale` markiert, wenn über das konfigurierte
-Monitoringfenster keine relevanten neuen Daten eintreffen. Diese Regel ist
-eine FH2-Monitoringlogik und keine DJI-Protokollkonstante.
+`stale` ist eine lokale Monitoringbewertung und keine
+DJI-Protokollkonstante.
 
 ## RTK-Zustandswechsel
 
-Gespeichert werden echte Fix-Wechsel:
+Echte Fix-Wechsel:
 
 ```text
 false -> true  = acquired
 true  -> false = lost
 ```
 
-Der aktuelle RTK-Verlauf ist In-Memory. RTK-Snapshots können zusätzlich die aktive `missionId` tragen. Automatische Missionssitzungen werden bei gesetztem `TIMESCALE_URL` bereits in TimescaleDB/PostgreSQL geöffnet und geschlossen.
+Die RTK-Verlaufshistorie ist aktuell In-Memory.
+
+## Missionspersistenz
+
+Aktivierung:
+
+```env
+TIMESCALE_URL=postgresql://fhclone:<passwort>@timescaledb:5432/fhclone
+```
+
+Optionale sichere RTK-Metadaten:
+
+```env
+RTK_SOURCE_LABEL=SAPOS BW
+RTK_SOURCE_PROVIDER=Landesdienst
+```
+
+Ohne `TIMESCALE_URL` bleibt Live-Telemetrie, RTK und automatische
+Missionssitzung funktionsfähig; nur die Datenbankpersistenz entfällt.
 
 ## Interne EMQX-API
 
@@ -182,8 +216,8 @@ Aktuell implementiert:
 POST /internal/emqx/authz
 ```
 
-Dieser Endpunkt darf nur durch EMQX im internen Servicenetz angesprochen
-werden.
+Dieser Endpunkt ist ausschließlich für EMQX im internen Servicenetz
+vorgesehen.
 
 V3-Ziel zusätzlich:
 
@@ -193,11 +227,6 @@ POST /internal/emqx/authn
 
 Die geplante AuthN bindet Gateway-Credentials serverseitig an eine
 vertrauenswürdige `gateway_sn`.
-
-Details:
-
-- [EMQX AuthN/AuthZ](../../docs/EMQX-AUTHZ.md)
-- [DJI-MQTT-Sicherheit](../../docs/DJI_MQTT_SECURITY.md)
 
 ## Topologie
 
@@ -224,109 +253,39 @@ werden über `gateway_sn` geroutet.
 
 ## NTRIP-Grenze
 
-Für M3E/M3T/M3M speichert oder setzt die Control API keine NTRIP-Credentials.
+Für M3E/M3T/M3M setzt oder speichert die Control API keine
+NTRIP-Zugangsdaten.
 
 Host, Port, Mountpoint, Benutzername und Passwort bleiben im unterstützten
 DJI-Pilot-2-Konfigurationspfad.
 
-## Fehlersuche
+## Herunterfahren
 
-Bei fehlender DJI-Verbindung zuerst prüfen:
+Bei `SIGINT` oder `SIGTERM`:
 
-1. `DJI_MQTT_URL`
-2. Credentials
-3. Broker-Erreichbarkeit
-4. EMQX-ACL/AuthZ
-5. Topic-Rechte
-6. `update_topo`
+- Missions-Sweep wird beendet
+- HTTP-Server werden geschlossen
+- DJI-Adapter wird beendet
+- MissionStore schließt seinen Connection Pool
 
-Bei fehlenden RTK-Werten prüfen:
-
-1. Aircraft sendet `osd/state`
-2. Payload enthält RTK-/GNSS-Felder
-3. `device_sn` wird korrekt erkannt
-4. Snapshot ist nicht nur `stale`
-
-## Lokale Betriebsdokumentation
+## Weiterführende Dokumentation
 
 - [API-Referenz](../../docs/API.md)
 - [Betrieb](../../docs/BETRIEB.md)
 - [Konfiguration](../../docs/KONFIGURATION.md)
+- [Missionen](../../docs/MISSIONEN.md)
+- [Persistenz](../../docs/PERSISTENZ.md)
+- [RTK und NTRIP](../../docs/RTK_NTRIP.md)
+- [EMQX AuthN/AuthZ](../../docs/EMQX-AUTHZ.md)
+- [DJI-MQTT-Sicherheit](../../docs/DJI_MQTT_SECURITY.md)
 - [Fehlersuche](../../docs/FEHLERSUCHE.md)
-- [Glossar](../../docs/GLOSSAR.md)
 
 ## V3-Grenze
 
-Vor V3 fehlen noch:
+Vor V3 fehlen insbesondere noch:
 
-- vollständige Persistenz
+- vollständiger Telemetrie-Writer
+- vollständige V3-Persistenz
 - HTTP AuthN
 - finaler Root-Compose-Gesamtstart
 - vollständige automatisierte Abnahme
-
-
-## Automatische Flugsession / mission_id
-
-Der Control-Service erzeugt für Ad-hoc-Flüge automatisch eine flüchtige Session-ID, die bei aktivierter Timescale-Persistenz synchron in `missions` angelegt wird.
-
-Start nur bei flugaktiven DJI-`mode_code`-Werten:
-
-```text
-3  Manual flight
-4  Automatic takeoff
-5  Wayline flight
-6  Panoramic photography
-7  Intelligent tracking
-8  ADS-B avoidance
-9  Auto returning to home
-10 Automatic landing
-11 Forced landing
-12 Three-blade landing
-15 APAS
-16 Virtual stick state
-17 Live flight controls
-18 Airborne RTK fixing mode
-```
-
-Kein automatischer Start bei:
-
-```text
-0  Standby
-1  Takeoff preparation
-2  Takeoff preparation completed
-13 Upgrading
-14 Not connected
-```
-
-Beendigung:
-
-- `mode_code = 0` mindestens 5 s stabil -> `standby`
-- 30 s ohne Telemetrie -> `telemetry_timeout`
-- 30 s stabil `mode_code = 14` -> `device_disconnected`
-- Service-Neustart schließt alte offene DB-Sessions mit `service_restart`
-
-Öffentliche Read-Endpunkte:
-
-```text
-GET /api/missions/active
-GET /api/devices/{device_sn}/mission
-```
-
-Der aktuelle `missionId` wird außerdem in RTK-Snapshots und RTK-SSE-Events mitgeführt.
-
-## TimescaleDB-Persistenz
-
-Aktivierung:
-
-```text
-TIMESCALE_URL=postgres://fhclone:<passwort>@timescaledb:5432/fhclone
-```
-
-Optional sichere RTK-Quellenmetadaten:
-
-```text
-RTK_SOURCE_LABEL=SAPOS BW
-RTK_SOURCE_PROVIDER=Landesdienst
-```
-
-Ohne `TIMESCALE_URL` bleibt der komplette Live-/RTK-Pfad funktionsfähig; Persistenz ist optional und darf die Telemetrie nicht blockieren.
