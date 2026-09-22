@@ -25,6 +25,14 @@ export interface GroundStationRoute {
   metadata?: Record<string, unknown>;
 }
 
+export interface GroundStationTelemetryValue {
+  time?: number;
+  value: unknown;
+}
+
+export type GroundStationTelemetrySnapshot =
+  Record<string, Record<string, GroundStationTelemetryValue>>;
+
 export interface GroundStationMission {
   id: string;
   name: string;
@@ -52,6 +60,7 @@ export interface GroundStationAdapter {
   health(): Promise<GroundStationHealth>;
   listVehicles(): Promise<GroundStationVehicle[]>;
   listRoutes?(): Promise<GroundStationRoute[]>;
+  readTelemetrySnapshot?(): Promise<GroundStationTelemetrySnapshot>;
 
   importMission?(input: MissionBinary): Promise<GroundStationMission>;
   exportMission?(missionId: string, format: string): Promise<MissionBinary>;

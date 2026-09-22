@@ -2,6 +2,7 @@ import type {
   GroundStationCapability,
   GroundStationHealth,
   GroundStationRoute,
+  GroundStationTelemetrySnapshot,
   GroundStationVehicle
 } from "@fh-clone/aircraft-core";
 import type { UgcsBridgeTransport } from "./index.js";
@@ -50,8 +51,8 @@ export class HttpUgcsBridgeTransport implements UgcsBridgeTransport {
     return this.getJson<GroundStationRoute[]>("/routes");
   }
 
-  async telemetrySnapshot(): Promise<Record<string, Record<string, unknown>>> {
-    return this.getJson<Record<string, Record<string, unknown>>>("/telemetry");
+  async readTelemetrySnapshot(): Promise<GroundStationTelemetrySnapshot> {
+    return this.getJson<GroundStationTelemetrySnapshot>("/telemetry");
   }
 
   private async getJson<T>(path: string): Promise<T> {

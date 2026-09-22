@@ -4,17 +4,11 @@ import type {
   GroundStationHealth,
   GroundStationMission,
   GroundStationRoute,
+  GroundStationTelemetrySnapshot,
   GroundStationVehicle,
   MissionBinary
 } from "@fh-clone/aircraft-core";
 
-/**
- * Transportgrenze zu UgCS.
- *
- * Eine konkrete Implementierung kann z. B. als lokaler UCS-Bridge-Prozess
- * oder als nativer SkyHub-/ROS-2-Agent realisiert werden. Der FH-Clone-Core
- * kennt das proprietäre Transportprotokoll dadurch nicht.
- */
 export interface UgcsBridgeTransport {
   readonly capabilities: readonly GroundStationCapability[];
 
@@ -23,6 +17,7 @@ export interface UgcsBridgeTransport {
   health(): Promise<GroundStationHealth>;
   listVehicles(): Promise<GroundStationVehicle[]>;
   listRoutes?(): Promise<GroundStationRoute[]>;
+  readTelemetrySnapshot?(): Promise<GroundStationTelemetrySnapshot>;
 
   importMission?(input: MissionBinary): Promise<GroundStationMission>;
   exportMission?(missionId: string, format: string): Promise<MissionBinary>;
@@ -59,6 +54,13 @@ export class UgcsAdapter implements GroundStationAdapter {
       throw new Error("UgCS bridge does not provide route listing");
     }
     return this.bridge.listRoutes();
+  }
+
+  async readTelemetrySnapshot(): Promise<GroundStationTelemetrySnapshot> {
+    if (!this.bridge.readTelemetrySnapshot) {
+      throw new Error("UgCS bridge does not provide telemetry snapshots");
+    }
+    return this.bridge.readTelemetrySnapshot();
   }
 
   async importMission(input: MissionBinary): Promise<GroundStationMission> {
