@@ -95,6 +95,25 @@ Projektaufrufen `X-Project-Uuid`.
 
 Es werden nur GET-Anfragen ausgeführt; HTTP-Redirects werden nicht verfolgt.
 
+## DJI Pilot Waypoint Management – read-only
+
+Der Pilot-Wayline-Katalog ist ein eigener Pilot-to-Cloud-HTTPS-Pfad und nicht
+mit FlightHub-2-OpenAPI-Waylines gleichzusetzen.
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `DJI_PILOT_WAYLINE_ENABLED` | `false` | aktiviert den read-only Pilot-Wayline-Katalog |
+| `DJI_PILOT_BASE_URL` | leer | Basis-URL des Pilot-to-Cloud-HTTPS-Servers |
+| `DJI_PILOT_WORKSPACE_ID` | leer | Workspace-ID für Waypoint-Dateien |
+| `DJI_PILOT_AUTH_TOKEN` | leer | serverseitiges `x-auth-token`; Secret |
+| `DJI_PILOT_TIMEOUT_MS` | `15000` | Request-Timeout |
+
+Der Token wird ausschließlich serverseitig verwendet. FH2 implementiert hier
+nur die Waypoint-Dateiliste per GET; STS, Upload, Download-Proxy, Collect und
+Missionsausführung bleiben gesperrt.
+
+Details: [WPML.md](WPML.md).
+
 ## Diagnose
 
 | Variable | Standard | Bedeutung |
@@ -264,7 +283,7 @@ Nicht in Git:
 - MQTT-Passwörter
 - EMQX-Interntoken
 - UgCS-Zugangsdaten
-- DJI-Tokens
+- DJI-Tokens einschließlich `DJI_PILOT_AUTH_TOKEN`
 - DRC-Relay-Credentials
 - NTRIP-Zugangsdaten
 - Datenbankpasswörter

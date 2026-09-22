@@ -30,6 +30,25 @@ Die offiziellen DJI-Cloud-API-Demos werden seit dem 10. April 2025 nicht mehr
 gewartet. Sie dienen nur als Protokollreferenz und werden nicht als
 Produktionsbasis übernommen.
 
+## DJI WPML
+
+FH2 integriert WPML read-only auf Basis der aktuellen DJI-Spezifikation:
+
+- KMZ als Archivformat,
+- `template.kml` für Planungs-/Template-Attribute,
+- `waylines.wpml` für Ausführungsdetails,
+- optionale `res/`-Ressourcen,
+- Common Elements für MissionConfig, Produkt-/Payload-Identität und Actions.
+
+Die aktuell verifizierte Common-Element-Tabelle enumeriert unter anderem
+M300/M350/M30/M3E/M3T/M3M/M3D/M3TD. Neuere, dort nicht eindeutig
+enumerierte Produktwerte werden von FH2 nicht geraten.
+
+WPML-Produktschlüssel, Pilot-`*_model_key` und MQTT-`payload_index` bleiben
+getrennte Identitätsverträge.
+
+Details: [WPML.md](WPML.md).
+
 ## Android Mobile SDK V5
 
 **Aktuell verifizierter Release: 5.18.0 vom 22. Mai 2026**
@@ -114,6 +133,8 @@ konkreten Produkts zu prüfen.
   https://developer.dji.com/doc/cloud-api-tutorial/cn/
 - Cloud API Produktunterstützung:
   https://developer.dji.com/doc/cloud-api-tutorial/en/overview/product-support.html
+- DJI WPML:
+  https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/overview.html
 - Mobile SDK V5:
   https://developer.dji.com/doc/mobile-sdk-tutorial/en/
 - Payload SDK:
