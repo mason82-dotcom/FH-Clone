@@ -344,9 +344,9 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     const change = this.topology.apply(topology);
     if (this.options.onTopologyChange) {
       try {
-        await this.options.onTopologyChange(change);
+        void this.options.onTopologyChange(change);
       } catch (error) {
-        console.error("DJI topology inventory persistence failed", error);
+        console.error("DJI topology inventory hook failed", error);
       }
     }
 
