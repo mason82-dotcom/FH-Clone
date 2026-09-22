@@ -31,13 +31,13 @@ set +a
 API_PORT="${FH2_API_PORT:-8080}"
 WEB_PORT="${FH2_WEB_PORT:-8088}"
 
-echo "[1/8] Compose validieren"
+echo "[1/10] Compose validieren"
 docker compose --env-file .env config >/dev/null
 
-echo "[2/8] Images bauen"
+echo "[2/10] Images bauen"
 docker compose --env-file .env build
 
-echo "[3/8] Stack starten"
+echo "[3/10] Stack starten"
 docker compose --env-file .env up -d
 
 wait_http() {
@@ -56,20 +56,20 @@ wait_http() {
   return 1
 }
 
-echo "[4/8] Control API Health/Readiness"
+echo "[4/10] Control API Health/Readiness"
 wait_http "http://127.0.0.1:$API_PORT/health" "Control API Health"
 wait_http "http://127.0.0.1:$API_PORT/ready" "Control API Readiness"
 
-echo "[5/8] Web prüfen"
+echo "[5/10] Web prüfen"
 wait_http "http://127.0.0.1:$WEB_PORT/health" "Web/Proxy"
 
-echo "[6/8] Interne API darf nicht veröffentlicht sein"
+echo "[6/10] Interne API darf nicht veröffentlicht sein"
 if docker compose --env-file .env port control-api 8081 2>/dev/null | grep -q .; then
   echo "FEHLER: interner Control-API-Port 8081 ist als Host-Port veröffentlicht."
   exit 1
 fi
 
-echo "[7/8] AuthN Fail-Closed lokal prüfen"
+echo "[7/10] AuthN Fail-Closed lokal prüfen"
 authn_result="$(
   docker compose --env-file .env exec -T control-api     node -e "
       fetch('http://127.0.0.1:8081/internal/emqx/authn', {
@@ -91,7 +91,173 @@ if [ "$authn_result" != "200:deny" ]; then
   exit 1
 fi
 
-echo "[8/8] Persistenz-Restart prüfen"
+echo "[8/10] AuthN/AuthZ Credential-Bindung und Revocation prüfen"
+verify_gateway="VERIFY-GW-$(date +%s)"
+verify_user="dji-gateway-verify-$(date +%s)"
+verify_password="Verify-Only-$verify_gateway-A9!"
+
+docker compose --env-file .env exec -T \
+  -e VERIFY_GATEWAY="$verify_gateway" \
+  -e VERIFY_USER="$verify_user" \
+  -e VERIFY_PASSWORD="$verify_password" \
+  control-api \
+  node --input-type=module -e '
+    import { randomUUID } from "node:crypto";
+    import { Pool } from "pg";
+    import { hashGatewayPassword } from "./apps/control-api/dist/authn.js";
+
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      const hash = await hashGatewayPassword(process.env.VERIFY_PASSWORD);
+      await pool.query(
+        `INSERT INTO gateway_credentials (
+           principal_id, username, password_hash, gateway_sn, enabled
+         ) VALUES ($1, $2, $3, $4, TRUE)`,
+        [
+          randomUUID(),
+          process.env.VERIFY_USER,
+          hash,
+          process.env.VERIFY_GATEWAY
+        ]
+      );
+    } finally {
+      await pool.end();
+    }
+  '
+
+authn_allow="$(
+  docker compose --env-file .env exec -T \
+    -e VERIFY_GATEWAY="$verify_gateway" \
+    -e VERIFY_USER="$verify_user" \
+    -e VERIFY_PASSWORD="$verify_password" \
+    control-api \
+    node --input-type=module -e '
+      const response = await fetch("http://127.0.0.1:8081/internal/emqx/authn", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "authorization": "Bearer " + process.env.EMQX_AUTHN_TOKEN
+        },
+        body: JSON.stringify({
+          username: process.env.VERIFY_USER,
+          password: process.env.VERIFY_PASSWORD,
+          clientid: "verify-session"
+        })
+      });
+      const body = await response.json();
+      process.stdout.write(
+        String(response.status) + ":" +
+        String(body.result) + ":" +
+        String(body.client_attrs?.gateway_sn ?? "")
+      );
+    '
+)"
+if [ "$authn_allow" != "200:allow:$verify_gateway" ]; then
+  echo "FEHLER: AuthN Credential-Bindung unerwartet: $authn_allow"
+  exit 1
+fi
+
+authz_allow="$(
+  docker compose --env-file .env exec -T \
+    -e VERIFY_GATEWAY="$verify_gateway" \
+    -e VERIFY_USER="$verify_user" \
+    control-api \
+    node --input-type=module -e '
+      const response = await fetch("http://127.0.0.1:8081/internal/emqx/authz", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "authorization": "Bearer " + process.env.EMQX_AUTHZ_TOKEN
+        },
+        body: JSON.stringify({
+          username: process.env.VERIFY_USER,
+          clientid: "arbitrary-session-id",
+          role: "dji_gateway",
+          gateway_sn: process.env.VERIFY_GATEWAY,
+          action: "publish",
+          topic: "sys/product/" + process.env.VERIFY_GATEWAY + "/status",
+          qos: 0
+        })
+      });
+      const body = await response.json();
+      process.stdout.write(String(response.status) + ":" + String(body.result));
+    '
+)"
+if [ "$authz_allow" != "200:allow" ]; then
+  echo "FEHLER: AuthZ trusted gateway_sn unerwartet: $authz_allow"
+  exit 1
+fi
+
+docker compose --env-file .env exec -T \
+  -e VERIFY_USER="$verify_user" \
+  control-api \
+  node --input-type=module -e '
+    import { Pool } from "pg";
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      await pool.query(
+        "UPDATE gateway_credentials SET enabled = FALSE WHERE username = $1",
+        [process.env.VERIFY_USER]
+      );
+    } finally {
+      await pool.end();
+    }
+  '
+
+authz_revoked="$(
+  docker compose --env-file .env exec -T \
+    -e VERIFY_GATEWAY="$verify_gateway" \
+    -e VERIFY_USER="$verify_user" \
+    control-api \
+    node --input-type=module -e '
+      const response = await fetch("http://127.0.0.1:8081/internal/emqx/authz", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "authorization": "Bearer " + process.env.EMQX_AUTHZ_TOKEN
+        },
+        body: JSON.stringify({
+          username: process.env.VERIFY_USER,
+          clientid: "arbitrary-session-id",
+          role: "dji_gateway",
+          gateway_sn: process.env.VERIFY_GATEWAY,
+          action: "publish",
+          topic: "sys/product/" + process.env.VERIFY_GATEWAY + "/status",
+          qos: 0
+        })
+      });
+      const body = await response.json();
+      process.stdout.write(String(response.status) + ":" + String(body.result));
+    '
+)"
+if [ "$authz_revoked" != "200:deny" ]; then
+  echo "FEHLER: deaktiviertes Credential behält AuthZ-Rechte: $authz_revoked"
+  exit 1
+fi
+
+docker compose --env-file .env exec -T \
+  -e VERIFY_USER="$verify_user" \
+  control-api \
+  node --input-type=module -e '
+    import { Pool } from "pg";
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      await pool.query(
+        "DELETE FROM gateway_credentials WHERE username = $1",
+        [process.env.VERIFY_USER]
+      );
+    } finally {
+      await pool.end();
+    }
+  '
+
+echo "[9/10] Statische ACL darf keine permanenten DRC-Rechte enthalten"
+if grep -Eq 'drc/(up|down)' infra/emqx/acl.conf; then
+  echo "FEHLER: statische Basic-Link-ACL enthält DRC-Rechte."
+  exit 1
+fi
+
+echo "[10/10] Persistenz-Restart prüfen"
 verify_id="fh2-verify-$(date +%s)"
 docker compose --env-file .env exec -T timescaledb \
   psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
