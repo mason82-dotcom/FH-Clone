@@ -21,11 +21,14 @@ export interface DjiControlRuntime {
 export interface ControlCoordinatorOptions {
   authorityTimeoutMs?: number;
   authorityPollMs?: number;
+  credentialSafetyWindowS?: number;
 }
 
 export class ControlCoordinator {
   private readonly authorityTimeoutMs: number;
   private readonly authorityPollMs: number;
+  private readonly credentialSafetyWindowS: number;
+  private readonly runtime = new Map<string, { holder: string; credentials: EnterDrcModeOptions["mqttBroker"] }>();
 
   constructor(
     private readonly dji: DjiControlRuntime,
@@ -35,6 +38,7 @@ export class ControlCoordinator {
   ) {
     this.authorityTimeoutMs = options.authorityTimeoutMs ?? 15_000;
     this.authorityPollMs = options.authorityPollMs ?? 100;
+    this.credentialSafetyWindowS = options.credentialSafetyWindowS ?? 15;
   }
 
   async start(input: {
@@ -71,7 +75,9 @@ export class ControlCoordinator {
       await this.dji.connectDrcTransport(input.drc.mqttBroker);
       await this.sessions.markDrcModeActive(gatewaySn);
       const finalGuards = this.guards(input.aircraftSn, input.holder);
-      return await this.sessions.activate({ gatewaySn, guards: finalGuards });
+      const activated = await this.sessions.activate({ gatewaySn, guards: finalGuards });
+      this.runtime.set(gatewaySn, { holder: input.holder, credentials: input.drc.mqttBroker });
+      return activated;
     } catch (error) {
       if (drcEntered) {
         await this.sessions.closeGracefully(gatewaySn, "activation_failed").catch(() => undefined);
@@ -89,10 +95,26 @@ export class ControlCoordinator {
   async stop(aircraftSn: string, reason = "operator_release") {
     const gatewaySn = this.dji.resolveGatewaySn(aircraftSn);
     if (!gatewaySn) throw new Error("dji_gateway_unknown");
+    this.runtime.delete(gatewaySn);
     const closed = await this.sessions.closeGracefully(gatewaySn, reason);
     await this.dji.disconnectDrcTransport();
     await this.dji.drc.releaseCloudControlAuthority(gatewaySn);
     return closed;
+  }
+
+  async recoverTransport(aircraftSn: string): Promise<boolean> {
+    const gatewaySn = this.dji.resolveGatewaySn(aircraftSn);
+    if (!gatewaySn) return false;
+    const runtime = this.runtime.get(gatewaySn);
+    if (!runtime) return false;
+    const guards = this.guards(aircraftSn, runtime.holder);
+    if (!guards.fc3 || !guards.controlLease || !guards.capability || !guards.djiAuthority) return false;
+    if (await this.sessions.getDrcStatus(gatewaySn) !== 2) return false;
+    const nowS = Math.floor(Date.now() / 1000);
+    if (runtime.credentials.expire_time <= nowS + this.credentialSafetyWindowS) return false;
+    await this.dji.connectDrcTransport(runtime.credentials);
+    await this.sessions.setTransportConnected(gatewaySn, true);
+    return true;
   }
 
   private async waitForAuthority(gatewaySn: string): Promise<void> {
