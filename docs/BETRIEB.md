@@ -5,9 +5,9 @@
 Dieses Dokument beschreibt den aktuellen lokalen Entwicklungsbetrieb und den
 verbindlichen V3-Zielbetrieb.
 
-Der finale Root-Compose-Gesamtstack ist noch ein offenes Release-Gate. Daher
-werden hier keine noch nicht existierenden Startbefehle als bereits
-funktionierend dargestellt.
+Der Root-Compose-Gesamtstack ist auf `main` vorhanden. Seine lokale
+Ausführung und Abnahme ist weiterhin ein Release-Gate; die Dokumentation
+unterscheidet deshalb zwischen **implementiert** und **lokal verifiziert**.
 
 ## Voraussetzungen
 
@@ -41,10 +41,41 @@ docker compose ps
 
 Der Datenbankport wird nicht standardmäßig auf den Host veröffentlicht.
 
-Der vollständige Root-Compose für alle V3-Pflichtdienste ist davon getrennt
-noch ein offenes Release-Gate.
+Der separate Unterstack bleibt für Datenbankdiagnose nutzbar. Für die
+V3-Gesamtabnahme wird jedoch der Root-Compose im Repository-Wurzelverzeichnis
+verwendet.
+
+## V3-Gesamtstack lokal starten
+
+```bash
+cp .env.example .env
+```
+
+Danach **alle** `change-me-...`-Werte in `.env` durch eigene starke Secrets
+ersetzen.
+
+Gesamtabnahme:
+
+```bash
+sh scripts/verify.sh
+```
+
+Das Verify-Skript:
+
+- validiert den Root-Compose,
+- baut Control API und Web,
+- startet `control-api`, `emqx`, `web` und `timescaledb`,
+- prüft `/health` und `/ready`,
+- prüft den Web-Proxy,
+- stellt sicher, dass Port 8081 nicht am Host veröffentlicht ist,
+- prüft AuthN mit ungültigem Token auf `HTTP 200 + deny`,
+- startet TimescaleDB neu und wartet erneut auf Readiness.
+
+Der Stack bleibt nach erfolgreicher Prüfung gestartet.
 
 ## Lokale Node.js-Prüfung
+
+Solange das Root-`package-lock.json` noch fehlt:
 
 ```bash
 npm install
@@ -52,6 +83,8 @@ npm run build
 npm run typecheck
 npm test
 ```
+
+Für den Release Candidate ist `npm ci` mit committed Lockfile verbindlich.
 
 Zusätzlicher AuthZ-Testpfad:
 
@@ -84,8 +117,12 @@ DJI_CLOUD_API_VERSION=1.16.1
 ### Interner EMQX-Zugriff
 
 ```env
+EMQX_AUTHN_TOKEN=...
 EMQX_AUTHZ_TOKEN=...
 ```
+
+Der Root-Compose reicht beide Werte zusätzlich als EMQX-Konfigurations-
+Overrides an die HTTP-AuthN/AuthZ-Header weiter.
 
 ### Missionspersistenz
 
@@ -120,7 +157,7 @@ auf dem internen Control-API-Port.
 
 ## V3-Gesamtstack
 
-Der finale Stack muss mindestens enthalten:
+Der Root-Compose enthält:
 
 ```text
 control-api
@@ -131,7 +168,16 @@ timescaledb
 
 UgCS bleibt optional.
 
-Das V3-Release-Gate verlangt:
+Netztrennung:
+
+- `frontend`: Web + Control API
+- `backend`: Control API + EMQX + TimescaleDB, Docker-intern
+- `mqtt_edge`: EMQX für den veröffentlichten MQTT-Listener
+
+Port 8081 wird nur über `expose` im Docker-Netz bekannt gemacht und nicht als
+Host-Port veröffentlicht.
+
+Das noch offene lokale V3-Abnahme-Gate verlangt:
 
 - reproduzierbaren Start
 - Health/Readiness aller Pflichtdienste
