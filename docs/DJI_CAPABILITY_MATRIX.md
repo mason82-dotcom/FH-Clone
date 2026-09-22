@@ -163,6 +163,67 @@ automatische Pilot-Cloud-Live-Control-Capability
 Ohne eindeutige offizielle Cloud-Enumeration beziehungsweise real verifizierte
 `update_topo`-Identität erhält M3M **kein** M3E/M3T-Live-Control-Profil.
 
+## Telemetrie- und Plattform-Capabilities
+
+DJI-Properties und FH2-Capabilities werden getrennt nach tatsächlich
+beobachteter Telemetrie und vollständig implementierter Plattformfunktion
+behandelt.
+
+| DJI-Evidenz/Funktion | FH2 V3 | Regel |
+| --- | --- | --- |
+| Fluglage/Position/Geschwindigkeit | `telemetry.flight` | aus tatsächlich beobachteten Flight-/GNSS-Feldern |
+| Battery-Struktur | `telemetry.battery` | aus tatsächlich beobachteter Battery-Telemetrie |
+| `cameras` / Kameraeigenschaften | `telemetry.camera` | aus tatsächlich beobachteten Kamera-Properties |
+| `gimbal_pitch/roll/yaw` | `telemetry.gimbal` | aus tatsächlich beobachteten Gimbal-Properties |
+| `gps_number` | `telemetry.flight` | GPS/GNSS; allein **kein** RTK-Nachweis |
+| `rtk_number` | `telemetry.rtk` | RTK-spezifische Telemetrie |
+| `quality == 10` | `telemetry.rtk` + RTK fixed | DJI kennzeichnet explizit RTK fixed |
+| `mode_code == 18` | `telemetry.rtk` | Airborne RTK fixing; kein Fix-Nachweis |
+| `live_capacity` | derzeit **kein** `livestream.read` | DJI-Fähigkeit ist dokumentiert, FH2-Livestream-Integration für V3 noch nicht vollständig implementiert |
+| Pilot Media Management | derzeit **kein** `media.read` | DJI-Funktion läuft über Pilot-2/JSBridge/Object-Storage; FH2-Media-Integration bleibt separates Gate |
+
+### GNSS/RTK
+
+DJI trennt GPS- und RTK-Satelliten ausdrücklich. Außerdem beschreibt
+`position_state.is_fixed` den allgemeinen Satelliten-Fixvorgang, während
+`position_state.quality=10` ausdrücklich **RTK fixed** bedeutet.
+
+FH2 darf deshalb weder aus `gps_number` noch aus `is_fixed==2` allein
+eine positive RTK-Capability beziehungsweise einen RTK-Fix ableiten.
+
+### Kamera und Gimbal
+
+Die Telemetrie-Capabilities `telemetry.camera` und
+`telemetry.gimbal` sind **beobachtungsbasiert**: Sie werden erst gesetzt,
+wenn entsprechende DJI-Properties tatsächlich empfangen wurden.
+
+Das ist unabhängig von den schreibenden Capabilities
+`control.camera` und `control.gimbal`.
+
+### Livestream
+
+DJI dokumentiert Pilot-Livestreaming einschließlich `live_capacity` sowie
+Start/Stop/Lens-/Quality-Services. FH2 V3 hat diese komplette
+Livestream-Verarbeitung noch nicht als Produktfunktion integriert.
+
+Deshalb gilt bis dahin:
+
+```text
+DJI live_capacity beobachtet
+  !=
+FH2 livestream.read freigegeben
+```
+
+### Media Management
+
+DJI Pilot 2 unterstützt Media Management über das Media-Modul und
+Object-Storage-Upload. Das ist fachlich getrennt von Kamera-Telemetrie und
+vom M3M-Media-/NDVI-Datenmodell.
+
+Solange der vollständige FH2-Media-Ingest nicht implementiert und abgenommen
+ist, wird `media.read` nicht aus Foto-/Recording-Feldern oder Modellnamen
+abgeleitet.
+
 ## Kamera-Identitäten
 
 Die im Adapter hinterlegten festen Payload-Identitäten stimmen mit der
