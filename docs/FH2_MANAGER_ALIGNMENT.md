@@ -8,6 +8,47 @@ Schwerpunkten.
 Der Abgleich verhindert, dass Sicherheits- oder Protokollregeln
 widersprüchlich umgesetzt werden.
 
+## Verbindliche DJI-OpenAPI-V2-Referenz
+
+Für den FlightHub-2-OpenAPI-V2-Pfad gilt zusätzlich das offizielle DJI-Repository
+
+`dji-sdk/FlightHub-2-OpenAPI-V2-Demo`
+
+als Upstream-Referenz. Die vom Projektinhaber bereitgestellte
+`OpenAPI-V2-Demo.zip` wurde über die Git-Blob-SHAs gegen den aktuellen
+DJI-`main`-Stand geprüft; die enthaltenen Dateien entsprechen dem offiziellen
+Stand.
+
+Für FH2 gelten daraus folgende Referenzstufen:
+
+1. **Privatization** ist der primäre API-Vertrag für das lokale/On-Premises-
+   FlightHub-2-Szenario.
+2. **Shared/request.ts** und **Shared/types.ts** sind Referenz für
+   Header-, Query- und DJI-`code/data/message`-Semantik.
+3. **PublicCloud** ist eine Vergleichsreferenz. Public-Cloud-spezifische
+   Endpunkte werden nicht automatisch auf Privatization übertragen.
+4. Demo-Polling von 30 Sekunden ist ein zulässiges Muster für
+   Inventar-/Task-/Supervision-Snapshots, nicht für hochfrequente
+   Flugtelemetrie.
+5. Schreibende Demo-Funktionen wie
+   `POST .../flight-tasks` sind keine automatische FH2-Freigabe. In FH2
+   bleiben FC-Stufe, Control Authority, Lease und Release-Freeze maßgeblich.
+6. DJI-Tokens aus der Server-OpenAPI bleiben in FH2 serverseitige Secrets.
+   Ein Demo-`KeyCenter.ts` ist kein Sicherheitsmuster für die produktive
+   Browserarchitektur.
+
+Als normative Referenz gelten insbesondere:
+
+- `Privatization/DeviceList`
+- `Privatization/FlightTaskLibrary`
+- `Shared/request.ts`
+- `Shared/types.ts`
+- die zugehörigen README-Verträge
+
+Bei späterem Drift zwischen dem gespeicherten ZIP-Snapshot und dem offiziellen
+DJI-Repository wird vor einer Änderung der aktuelle DJI-Upstream erneut
+verifiziert.
+
 ## Referenzstand M4
 
 M4-Cloud bleibt der stabile V2-Referenzpfad für:
