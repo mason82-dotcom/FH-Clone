@@ -1,119 +1,134 @@
-# FH-Clone Dokumentation
+# FH-Clone – Dokumentationsübersicht
 
-Diese Übersicht ist der verbindliche Einstieg in die V3-Dokumentation.
+Diese Datei ist der verbindliche Einstieg in die FH2-V3-Dokumentation.
 
-Alle erklärenden Projektdokumente werden auf Deutsch geführt. Technische
-Protokollnamen, API-Pfade, MQTT-Topics, JSON-Felder und Quellcode-Bezeichner
-bleiben unverändert, damit die Dokumentation direkt mit Herstellerunterlagen
-und Code vergleichbar bleibt.
+Alle erklärenden Projektunterlagen werden auf Deutsch geführt. Technische
+Bezeichner wie API-Pfade, MQTT-Topics, JSON-Felder, Umgebungsvariablen,
+Klassen- und Methodennamen bleiben unverändert, damit Dokumentation, Code und
+Herstellerunterlagen eindeutig vergleichbar bleiben.
 
 ## Statuskennzeichnung
 
-Die Dokumentation unterscheidet drei Zustände:
+Jede technische Aussage soll einem dieser Zustände zuordenbar sein:
 
-- **Implementiert** – auf `main` vorhanden.
-- **V3-Ziel** – für V3.0 verbindlich, aber noch nicht vollständig umgesetzt.
-- **Real zu verifizieren** – Herstellervertrag oder Hardwareverhalten muss
-  noch mit der echten DJI-Hardware bestätigt werden.
+- **Implementiert** – auf `main` im Code vorhanden.
+- **V3-Ziel** – für V3.0 verbindlich, aber noch nicht vollständig umgesetzt
+  oder abgenommen.
+- **Real zu verifizieren** – Verhalten muss mit echter DJI-Hardware oder dem
+  tatsächlich eingesetzten Fremdsystem bestätigt werden.
 
-Diese Unterscheidung ist wichtig: Dokumentierte Zielarchitektur darf nicht als
-bereits bestandene Hardware- oder Laufzeitabnahme missverstanden werden.
+Eine Zielarchitektur ist kein bestandener Laufzeit- oder Hardwaretest.
 
-## Kernunterlagen
+## Zentrale Unterlagen
 
 | Dokument | Inhalt | Status |
 | --- | --- | --- |
-| [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md) | verbindliches V3-Zielbild und Release-Gates | V3-Ziel |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | SDK-neutrale Kernarchitektur | Implementiert/V3-Ziel |
-| [DJI_MQTT_SECURITY.md](DJI_MQTT_SECURITY.md) | MQTT-Identität, AuthN/AuthZ, Basic Link, DRC-Trennung | V3-Ziel |
-| [EMQX-AUTHZ.md](EMQX-AUTHZ.md) | EMQX-Vertrag und interne Endpunkte | Implementiert/V3-Ziel |
-| [RC_PRO.md](RC_PRO.md) | Gateway-/Aircraft-Modell und reale RC-Pro-Prüfpunkte | teilweise real zu verifizieren |
-| [DRC.md](DRC.md) | DRC-Protokoll, Authority, Dead-Man und Safety | Implementiert, standardmäßig gesperrt |
-| [RTK_NTRIP.md](RTK_NTRIP.md) | RTK-/GNSS-Telemetrie und NTRIP-Zuständigkeitsgrenze | Implementiert |
-| [MULTISPEKTRAL.md](MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | V3-Ziel |
-| [MISSIONEN.md](MISSIONEN.md) | automatische Flugsitzungen und Missionskorrelation | Implementiert/V3-Ziel |
-| [PERSISTENZ.md](PERSISTENZ.md) | TimescaleDB/PostgreSQL, Retention und Missionsspeicher | Implementiert/V3-Ziel |
-| [BETRIEB.md](BETRIEB.md) | lokaler Betrieb, Netzwerkgrenzen und Fehlersuche | Implementiert/V3-Ziel |
-| [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK-/Produktstände | verifizierte Referenz |
-| [FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) | Abgrenzung zum stabilen M4-/FH2-Manager-Pfad | Referenz |
+| [V3_ARCHITECTURE.md](V3_ARCHITECTURE.md) | V3-Zielbild, Release-Gates, Projektabschluss | V3-Ziel |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | SDK-neutrale Gesamtarchitektur | Implementiert/V3-Ziel |
+| [API.md](API.md) | öffentliche und interne HTTP-Endpunkte | Implementiert/V3-Ziel |
+| [DATENMODELL.md](DATENMODELL.md) | Core-Datenmodell und Persistenzgrenzen | Implementiert/V3-Ziel |
+| [SICHERHEIT.md](SICHERHEIT.md) | Safety, Trust Boundaries, Control Lease, Kill Switch | Implementiert/V3-Ziel |
+| [KONFIGURATION.md](KONFIGURATION.md) | Umgebungsvariablen und Secrets | Implementiert/V3-Ziel |
+| [BETRIEB.md](BETRIEB.md) | lokaler Betrieb und V3-Zielbetrieb | Implementiert/V3-Ziel |
+| [FEHLERSUCHE.md](FEHLERSUCHE.md) | strukturierte Diagnose | Implementiert |
+| [TESTS_UND_ABNAHME.md](TESTS_UND_ABNAHME.md) | lokale Tests, Hardware-Gates, Direktor-CI | V3-Ziel |
+| [GLOSSAR.md](GLOSSAR.md) | zentrale Fachbegriffe | Referenz |
 
-## Komponentenunterlagen
+## DJI, MQTT und Steuerung
 
-| Dokument | Inhalt |
-| --- | --- |
-| [../apps/control-api/README.md](../apps/control-api/README.md) | Control API, Ports, Endpunkte und Umgebungsvariablen |
-| [../infra/emqx/README.md](../infra/emqx/README.md) | EMQX-Rollen, ACL und Betriebsgrenzen |
-| [../packages/adapters/ugcs/README.md](../packages/adapters/ugcs/README.md) | TypeScript-UgCS-Adapter |
-| [../services/ugcs-bridge/README.md](../services/ugcs-bridge/README.md) | Java/UCS-Bridge |
+| Dokument | Inhalt | Status |
+| --- | --- | --- |
+| [DJI_MQTT_SECURITY.md](DJI_MQTT_SECURITY.md) | Gateway-Identität, AuthN/AuthZ, Basic Link | V3-Ziel |
+| [EMQX-AUTHZ.md](EMQX-AUTHZ.md) | Broker-Autorisierung und interne API | Implementiert/V3-Ziel |
+| [RC_PRO.md](RC_PRO.md) | Gateway-/Aircraft-Modell und Hardwareprüfungen | teilweise real zu verifizieren |
+| [DRC.md](DRC.md) | DRC-Protokoll, Sitzungsmaschine, Dead-Man | implementiert, standardmäßig gesperrt |
+| [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK- und Produktstände | verifizierte Referenz |
 
-## V3-Fachbereiche
+Komponentenbezogen:
 
-### Runtime und Manager
+- [EMQX-Komponente](../infra/emqx/README.md)
+- [Control API](../apps/control-api/README.md)
 
-Der Manager verantwortet:
+## Flug, RTK, Missionen und Medien
+
+| Dokument | Inhalt | Status |
+| --- | --- | --- |
+| [RTK_NTRIP.md](RTK_NTRIP.md) | RTK/GNSS und NTRIP-Zuständigkeitsgrenze | Implementiert |
+| [MISSIONEN.md](MISSIONEN.md) | automatische Flugsitzungen und Korrelation | Implementiert/V3-Ziel |
+| [PERSISTENZ.md](PERSISTENZ.md) | TimescaleDB, Retention, Missionsspeicher | Implementiert/V3-Ziel |
+| [MEDIEN_MULTISPEKTRAL.md](MEDIEN_MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | V3-Ziel |
+
+Datenbankkomponente:
+
+- [TimescaleDB-Komponente](../infra/timescale/README.md)
+
+## UgCS
+
+- [TypeScript-UgCS-Adapter](../packages/adapters/ugcs/README.md)
+- [UgCS-UCS-Bridge](../services/ugcs-bridge/README.md)
+
+UgCS bleibt ein optionaler Bodenstationsadapter und darf den zentralen
+Command-, Authority- oder Safety-Pfad nicht umgehen.
+
+## Abgleich zum stabilen Manager-Pfad
+
+[FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) beschreibt die
+Abgrenzung zum eingefrorenen M4-Cloud-/FH2-Manager-Referenzstand.
+
+## Verantwortlichkeiten bis V3.0
+
+### Manager
 
 - Gesamtstart und Deployment
-- Health/Readiness
 - TimescaleDB-/PostgreSQL-Persistenz
+- Health/Readiness
 - lokale Verify-Suite
-- öffentliche Read-API
-- Integration der bestätigten RC-Pro-, MQTT- und Multispektralverträge
+- öffentliche Lese-API
+- Integration bestätigter Fachverträge
 
 ### RC Pro
 
-Zu bestätigen sind insbesondere:
-
-- reale MQTT-Client-ID
-- reale Credential-Semantik
+- reale MQTT-Client-ID und Credential-Semantik
 - `update_topo`
-- Gateway- vs. Aircraft-Topics
+- Gateway-/Aircraft-Topic-Matrix
 - Reconnect und Pair/Unpair
-- Produkt-/Capability-Matrix
+- reale Capability-Matrix
 
 ### Multispektral
 
-Der V3-Vertrag umfasst:
-
-```text
-MediaAsset
-SensorSource
-SpectralBand
-CaptureContext
-ProcessingProfile
-```
-
-Pflichtprofile:
-
-```text
-GENERIC
-RGB
-THERMAL
-MULTISPECTRAL
-NDVI
-```
-
-Red und NIR müssen für `NDVI_READY` eindeutig und authoritative
-identifiziert sein.
+- Feld-/Quellenmatrix
+- Sensor-/Bandidentität
+- Media-Korrelation
+- NDVI-Validierung
+- reale Hardware-Testfälle
 
 ### DJI-MQTT
 
-Verbindlich ist die Trennung:
+- AuthN-Vertrag
+- AuthZ-Vertrag
+- Gateway-Credential-Lebenszyklus
+- Basic-Link-ACL
+- DRC-Sitzungsisolation
+- Audit
 
-```text
-Basic Link
-  !=
-DRC Relay
-```
+### Direktor
 
-Die MQTT-Client-ID ist keine Sicherheitsidentität.
+- Architekturkonvergenz
+- Release-Gates
+- finale zentrale CI
+- V3.0-Freigabe und anschließender Projektstopp
 
 ## Dokumentationsregeln
 
-1. Deutsche Erklärungstexte.
-2. Keine erfundenen DJI-Felder oder Endpunkte.
-3. Herstellerwerte mit Quelle oder als noch zu verifizieren kennzeichnen.
-4. Tatsächlichen Implementierungsstand von Zielarchitektur trennen.
-5. Secrets niemals in Beispiele übernehmen.
-6. Sicherheitsrelevante Defaults ausdrücklich nennen.
-7. V3.0 ist der Abschlussstand; nach Release keine Folgeplanung ohne neuen
-   Auftrag.
+1. Erklärtexte sind deutsch.
+2. Keine erfundenen DJI-Felder, Endpunkte oder Fähigkeiten.
+3. Herstellerwerte werden belegt oder als noch zu verifizieren gekennzeichnet.
+4. Implementierungsstand und Zielzustand werden getrennt.
+5. Secrets erscheinen weder real noch beispielhaft im Klartext.
+6. Sicherheitsrelevante Standardwerte werden ausdrücklich genannt.
+7. Jede V3-Codeänderung mit Außenwirkung aktualisiert gleichzeitig die
+   zugehörige deutsche Dokumentation.
+8. Es gibt pro Thema genau eine kanonische Fachseite; Doppelstände werden
+   entfernt.
+9. V3.0 ist der Abschlussstand. Danach endet die Entwicklung ohne neuen
+   ausdrücklichen Auftrag.
