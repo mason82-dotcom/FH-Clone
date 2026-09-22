@@ -72,7 +72,7 @@ const LEAF_FIELDS: Record<string, FieldSpec> = {
   },
   gps_number: {
     key: "navigation.gnss.gps_satellites",
-    capability: "telemetry.rtk"
+    capability: "telemetry.flight"
   },
   rtk_number: {
     key: "navigation.rtk.satellites",
@@ -107,15 +107,15 @@ function knownField(rawKey: string): FieldSpec | undefined {
 
   if (lower.endsWith("position_state.is_fixed")) {
     return {
-      key: "navigation.rtk.fix_state_code",
-      capability: "telemetry.rtk"
+      key: "navigation.gnss.fix_state_code",
+      capability: "telemetry.flight"
     };
   }
 
   if (lower.endsWith("position_state.quality")) {
     return {
-      key: "navigation.rtk.quality_code",
-      capability: "telemetry.rtk"
+      key: "navigation.gnss.quality_code",
+      capability: "telemetry.flight"
     };
   }
 
@@ -126,12 +126,12 @@ function knownField(rawKey: string): FieldSpec | undefined {
 function inferCapability(rawKey: string): Capability | undefined {
   const lower = rawKey.toLowerCase();
   if (lower.includes("battery")) return "telemetry.battery";
+  if (lower.includes("rtk")) return "telemetry.rtk";
   if (
-    lower.includes("rtk") ||
     lower.includes("position_state") ||
     lower.endsWith("gps_number")
   ) {
-    return "telemetry.rtk";
+    return "telemetry.flight";
   }
   if (lower.includes("camera")) return "telemetry.camera";
   if (lower.includes("gimbal")) return "telemetry.gimbal";
@@ -213,7 +213,7 @@ export function normalizeDjiPayload(
         sample(
           deviceId,
           "navigation.rtk.fixed",
-          "derived:position_state.is_fixed|position_state.quality",
+          "derived:position_state.quality|position_state.is_fixed",
           rtk.isFixed,
           sampledAt
         )
