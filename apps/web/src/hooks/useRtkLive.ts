@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   RtkDeviceSnapshot,
+  RtkHistorySample,
   RtkStatusEvent,
   RtkTransitionEvent
 } from "../types/rtk.js";
@@ -8,6 +9,7 @@ import type {
 export interface RtkLiveState {
   devices: RtkDeviceSnapshot[];
   transitions: RtkTransitionEvent[];
+  history: Record<string, RtkHistorySample[]>;
   connected: boolean;
   error: string | null;
 }
@@ -15,6 +17,7 @@ export interface RtkLiveState {
 export function useRtkLive(): RtkLiveState {
   const [devices, setDevices] = useState<Record<string, RtkDeviceSnapshot>>({});
   const [transitions, setTransitions] = useState<RtkTransitionEvent[]>([]);
+  const [history, setHistory] = useState<Record<string, RtkHistorySample[]>>({});
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +70,33 @@ export function useRtkLive(): RtkLiveState {
           }
         };
       });
+
+      setHistory((current) => {
+        const nextSample: RtkHistorySample = {
+          sampledAt: payload.status.sampledAt,
+          fixState: payload.status.fixState,
+          ...(payload.status.gpsSatellites !== undefined
+            ? { gpsSatellites: payload.status.gpsSatellites }
+            : {}),
+          ...(payload.status.rtkSatellites !== undefined
+            ? { rtkSatellites: payload.status.rtkSatellites }
+            : {}),
+          ...(payload.status.isFixed !== undefined
+            ? { isFixed: payload.status.isFixed }
+            : {})
+        };
+
+        const previous = current[payload.deviceId] ?? [];
+        const deduplicated =
+          previous.at(-1)?.sampledAt === nextSample.sampledAt
+            ? previous
+            : [...previous, nextSample];
+
+        return {
+          ...current,
+          [payload.deviceId]: deduplicated.slice(-120)
+        };
+      });
     });
 
     source.addEventListener("rtk-fix-transition", (event) => {
@@ -111,6 +141,7 @@ export function useRtkLive(): RtkLiveState {
   return {
     devices: sortedDevices,
     transitions,
+    history,
     connected,
     error
   };
