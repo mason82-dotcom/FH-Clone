@@ -199,7 +199,7 @@ aktuellen V3-Abschluss gilt Feature-Freeze.
 
 ## Persistenz
 
-V3 sieht PostgreSQL für folgende Daten vor:
+V3 verwendet TimescaleDB auf PostgreSQL-Basis. Ein erstes Schema und die automatische Missionspersistenz sind bereits vorhanden. Vollständig zu persistieren sind:
 
 - Rohmeldungen
 - normalisierte Parameter
@@ -209,8 +209,7 @@ V3 sieht PostgreSQL für folgende Daten vor:
 - Media-Metadaten
 - Missions- und RTK-Kontext
 
-Die Persistenz ersetzt nicht die In-Memory-Registries, sondern ergänzt sie um
-Neustartfestigkeit und Historie.
+Die Persistenz ersetzt nicht die In-Memory-Registries, sondern ergänzt sie um Neustartfestigkeit und Historie. Details: [PERSISTENZ.md](PERSISTENZ.md).
 
 ## Weboberfläche
 
