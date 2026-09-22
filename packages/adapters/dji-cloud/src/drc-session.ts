@@ -7,11 +7,31 @@ import {
 export type DrcSessionState =
   | "idle"
   | "requesting"
-  | "active"
+  | "authorized"
+  | "authority_grabbed"
+  | "drc_mode_active"
+  | "controlling"
+  | "degraded"
   | "draining"
   | "closed";
 
 export type DrcSessionHealth = "healthy" | "degraded";
+
+const DRC_TRANSITIONS: Readonly<Record<DrcSessionState, readonly DrcSessionState[]>> = {
+  idle: ["requesting"],
+  requesting: ["authorized", "closed"],
+  authorized: ["authority_grabbed", "closed"],
+  authority_grabbed: ["drc_mode_active", "closed"],
+  drc_mode_active: ["controlling", "closed"],
+  controlling: ["degraded", "closed"],
+  degraded: ["controlling", "draining", "closed"],
+  draining: ["closed"],
+  closed: ["requesting"]
+};
+
+export function isAllowedDrcTransition(from: DrcSessionState, to: DrcSessionState): boolean {
+  return DRC_TRANSITIONS[from].includes(to);
+}
 
 export interface DrcSessionGuards {
   fc3: boolean;
@@ -274,7 +294,7 @@ export class DrcSessionManager {
 
     const record: DrcSessionRecord = {
       ...current,
-      state: "active",
+      state: "controlling",
       health: "healthy",
       updatedAt: now,
       lastInputAt: now
@@ -299,6 +319,7 @@ export class DrcSessionManager {
 
     const record = withoutReason({
       ...current,
+      state: "controlling",
       health: "healthy",
       updatedAt: now,
       lastInputAt: now
@@ -413,7 +434,7 @@ export class DrcSessionManager {
 
   async isActive(gatewaySn: string): Promise<boolean> {
     const current = await this.store.get(gatewaySn);
-    return current?.state === "active";
+    return current?.state === "controlling" || current?.state === "degraded";
   }
 
   /** Deterministic dead-man evaluation hook used by tests and schedulers. */
@@ -430,7 +451,7 @@ export class DrcSessionManager {
 
     await Promise.allSettled(
       open.map(async (session) => {
-        if (session.state === "active" || session.state === "requesting") {
+        if (session.state === "controlling" || session.state === "degraded" || session.state === "drc_mode_active" || session.state === "authority_grabbed" || session.state === "authorized" || session.state === "requesting") {
           await this.closeGracefully(session.gatewaySn, "backend_shutdown");
           return;
         }
@@ -451,7 +472,7 @@ export class DrcSessionManager {
 
     try {
       const current = await this.store.get(gatewaySn);
-      if (!current || current.state !== "active") {
+      if (!current || (current.state !== "controlling" && current.state !== "degraded")) {
         this.stopTimer(gatewaySn);
         return;
       }
@@ -470,6 +491,7 @@ export class DrcSessionManager {
       ) {
         const degraded: DrcSessionRecord = {
           ...current,
+          state: "degraded",
           health: "degraded",
           updatedAt: this.now(),
           reason: "input_stale"
@@ -507,7 +529,7 @@ export class DrcSessionManager {
 
   private async requireActive(gatewaySn: string): Promise<DrcSessionRecord> {
     const current = await this.require(gatewaySn);
-    if (current.state !== "active") {
+    if (current.state !== "controlling" && current.state !== "degraded") {
       throw new Error(
         `DRC session for gateway ${gatewaySn} is not active (state=${current.state})`
       );
