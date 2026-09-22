@@ -1,35 +1,48 @@
-# FH-Clone UgCS UCS Bridge
+# FH2-UgCS-UCS-Bridge
 
-Read-first Bridge zwischen FH-Clone und dem UgCS Universal Control Server (UCS).
+## Aufgabe
+
+Die Java-Bridge verbindet FH-Clone mit dem UgCS Universal Control Server
+(UCS).
+
+Der aktuelle Schwerpunkt ist **lesen zuerst**.
 
 ## Verifizierte Basis
 
-- UgCS Java SDK: 5.17.1
-- UgCS HCI protocol: v2.0 laut Release 5.17.1
-- UCS Standardport für Desktop-Clients: TCP 3334
-- Java SDK unterstützt Fahrzeuge, Routen, Telemetrie, Route Processing/Upload und Fahrzeugkommandos.
+Aktuell dokumentierter Referenzstand im Projekt:
 
-## Aktueller Funktionsumfang
+- UgCS Java SDK 5.17.1
+- HCI-Protokoll v2.0 laut zugehörigem Release
+- UCS-Standardport für Desktop-Clients: TCP 3334
+- Java-17-kompatibler Bridge-Code
 
-Die Bridge aktiviert absichtlich nur lesende HTTP-Endpunkte:
+Vor einem V3-Release ist die eingesetzte lokale UgCS-Version gegen diesen
+Referenzstand zu prüfen.
 
-- `GET /health`
-- `GET /vehicles`
-- `GET /routes`
-- `GET /telemetry`
+## Aktuelle HTTP-Endpunkte
 
-Schreibende UgCS-Befehle werden erst über den zentralen FH-Clone Command-/Authority-Pfad freigegeben.
+Nur lesend:
+
+```http
+GET /health
+GET /vehicles
+GET /routes
+GET /telemetry
+```
+
+Schreibende UgCS-Befehle werden nicht direkt von der Bridge für die
+Weboberfläche freigegeben.
 
 ## Umgebungsvariablen
 
 - `UGCS_HOST` – Standard `localhost`
 - `UGCS_PORT` – Standard `3334`
-- `UGCS_USER` – UgCS-Benutzer
-- `UGCS_PASSWORD` – UgCS-Passwort
+- `UGCS_USER`
+- `UGCS_PASSWORD`
 - `BRIDGE_BIND` – Standard `0.0.0.0`
 - `BRIDGE_PORT` – Standard `8092`
 
-Zugangsdaten gehören in Runtime-Secrets und niemals ins Repository.
+Zugangsdaten gehören in Runtime-Secrets.
 
 ## Build
 
@@ -37,4 +50,10 @@ Zugangsdaten gehören in Runtime-Secrets und niemals ins Repository.
 mvn -B -DskipTests package
 ```
 
-Die SDK-Abhängigkeit wird entsprechend der offiziellen UgCS-Java-SDK-Dokumentation über JitPack bezogen.
+## V3-Sicherheitsgrenze
+
+- Lesen/Planung: FC0
+- Mission Execution: frühestens FC2
+- Aircraft-Control außerhalb einer Mission: eigene Capability/Safety-Prüfung
+
+Die Bridge darf den zentralen FH2-Command- und Safety-Pfad nicht umgehen.
