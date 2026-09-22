@@ -273,6 +273,24 @@ test("requires positive trigger parameters for repeated timing/distance triggers
   );
 });
 
+test("ignores commented-out WPML blocks during structural parsing", () => {
+  const commented = templateXml.replace(
+    "<Document>",
+    `<Document>
+  <!--
+    <wpml:missionConfig>
+      <wpml:flyToWaylineMode>pointToPoint</wpml:flyToWaylineMode>
+    </wpml:missionConfig>
+  -->`
+  );
+  const bundle = parseWpmlBundle(commented, waylinesXml);
+  assert.equal(bundle.template.missionConfig.flyToWaylineMode, "safely");
+  assert.equal(
+    bundle.template.issues.some((issue) => issue.code === "mission.finish_action_missing"),
+    false
+  );
+});
+
 test("rejects unsafe XML declarations instead of resolving external entities", () => {
   assert.throws(
     () => parseWpmlBundle("<!DOCTYPE kml><kml/>", waylinesXml),
