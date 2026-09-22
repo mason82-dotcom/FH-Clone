@@ -85,3 +85,66 @@ static role ACL
 ## Interner Port
 
 Der Control-Service-Port `8081` ist nur für EMQX bestimmt und darf nicht über den öffentlichen Reverse Proxy veröffentlicht werden.
+
+
+## Bearer-Token zwischen EMQX und Control API
+
+Der HTTP-Authorizer ist zusätzlich durch ein gemeinsames Secret geschützt.
+
+Control API:
+
+```env
+EMQX_AUTHZ_TOKEN=<zufälliger-langer-token>
+```
+
+EMQX:
+
+```text
+EMQX_AUTHORIZATION__SOURCES__1__HEADERS__AUTHORIZATION='"Bearer <derselbe-token>"'
+```
+
+`base.hocon` enthält absichtlich nur den nicht nutzbaren Default
+`Bearer __FH_CLONE_AUTHZ_DISABLED__`. Secrets werden nicht ins Repository
+geschrieben.
+
+Bei fehlendem/falschem Token antwortet die Control API mit HTTP 200 +
+`{"result":"deny"}`. Auch Parser- und Evaluierungsfehler werden so beantwortet.
+
+Das ist wichtig, weil EMQX HTTP-Statuscodes außer 200 und 204 als
+`ignore` behandelt. Der Endpoint verlässt sich deshalb nicht auf 4xx/5xx, um
+eine Aktion zu sperren.
+
+## Cache-Strategie
+
+Der Client-Authorization-Cache ist explizit aktiviert:
+
+```hocon
+cache {
+  enable = true
+  max_size = 1024
+  ttl = 5s
+}
+```
+
+Die kurze TTL begrenzt die Zeit, in der eine geänderte
+Gateway↔Sub-Device-Zuordnung noch aus dem Session-Cache beantwortet werden kann.
+
+Vor einer produktiven DRC-Freigabe wird separat entschieden, ob Control-Topics
+wie `thing/product/+/drc/down` und `thing/product/+/services` vom Cache
+ausgenommen werden. Diese Ausnahme wird erst aktiviert, wenn sie mit der
+eingesetzten EMQX-Version verifiziert ist.
+
+## Authorizer-Reihenfolge
+
+Der HTTP-Authorizer bleibt **vor** der File-ACL, weil die statische ACL
+`dji-gateway-*` am Ende ausdrücklich sperrt. Würde die Datei zuerst
+ausgewertet, könnte die dynamische Gateway/Sub-Device-Prüfung nie erreicht
+werden.
+
+Ablauf:
+
+```text
+dji-gateway-* -> HTTP topology authz -> allow/deny
+andere Rollen -> HTTP precondition übersprungen -> File ACL
+kein Treffer -> no_match = deny
+```

@@ -6,11 +6,13 @@ export interface EmqxAuthorizationRequest {
   action: "publish" | "subscribe" | string;
   topic: string;
   qos?: string | number;
+  peerhost?: string;
 }
 
 export type EmqxAuthorizationResult = "allow" | "deny" | "ignore";
 
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
+const SAFE_GATEWAY_USERNAME = /^dji-gateway-[A-Za-z0-9_-]+$/;
 
 function splitProductTopic(topic: string): {
   family: "thing" | "sys";
@@ -32,6 +34,7 @@ export function authorizeDjiGateway(
   request: EmqxAuthorizationRequest
 ): EmqxAuthorizationResult {
   if (!request.username.startsWith("dji-gateway-")) return "ignore";
+  if (!SAFE_GATEWAY_USERNAME.test(request.username)) return "deny";
   if (!SAFE_ID.test(request.clientid)) return "deny";
 
   const parsed = splitProductTopic(request.topic);
@@ -100,4 +103,38 @@ export function authorizeDjiGateway(
   }
 
   return "deny";
+}
+
+
+export function isEmqxAuthorizationRequest(
+  value: unknown
+): value is EmqxAuthorizationRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const request = value as Record<string, unknown>;
+  if (typeof request.username !== "string") return false;
+  if (typeof request.clientid !== "string") return false;
+  if (request.action !== "publish" && request.action !== "subscribe") {
+    return false;
+  }
+  if (typeof request.topic !== "string" || request.topic.length === 0) {
+    return false;
+  }
+  if (
+    request.qos !== undefined &&
+    typeof request.qos !== "string" &&
+    typeof request.qos !== "number"
+  ) {
+    return false;
+  }
+  if (
+    request.peerhost !== undefined &&
+    typeof request.peerhost !== "string"
+  ) {
+    return false;
+  }
+
+  return true;
 }

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import {
   DeviceRegistry,
@@ -9,7 +10,7 @@ import {
 } from "@fh-clone/adapter-dji-cloud";
 import {
   authorizeDjiGateway,
-  type EmqxAuthorizationRequest
+  isEmqxAuthorizationRequest
 } from "./authz.js";
 
 const devices = new DeviceRegistry();
@@ -38,6 +39,13 @@ const publicPort = envInt("PORT", 8080);
 const internalPort = envInt("INTERNAL_PORT", 8081);
 const bind = process.env.BIND ?? "0.0.0.0";
 const internalBind = process.env.INTERNAL_BIND ?? "0.0.0.0";
+const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
+
+if (!emqxAuthzToken) {
+  console.warn(
+    "[AuthZ] EMQX_AUTHZ_TOKEN ist nicht gesetzt; DJI-Gateway-Autorisierung bleibt fail-closed."
+  );
+}
 
 const publicServer = createServer(async (request, response) => {
   try {
@@ -82,10 +90,25 @@ const internalServer = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && request.url === "/internal/emqx/authz") {
-      const body = await readJson<EmqxAuthorizationRequest>(request, 16_384);
-      if (!dji) return json(response, 200, { result: "ignore" });
-      const result = authorizeDjiGateway(dji.topology, body);
-      return json(response, 200, { result });
+      if (!hasValidBearerToken(request, emqxAuthzToken)) {
+        return json(response, 200, { result: "deny" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 16_384);
+        if (!isEmqxAuthorizationRequest(body)) {
+          return json(response, 200, { result: "deny" });
+        }
+        if (!dji) {
+          return json(response, 200, { result: "deny" });
+        }
+
+        const result = authorizeDjiGateway(dji.topology, body);
+        return json(response, 200, { result });
+      } catch (error) {
+        console.error("[AuthZ] Evaluierungsfehler:", errorMessage(error));
+        return json(response, 200, { result: "deny" });
+      }
     }
 
     return json(response, 404, { error: "not_found" });
@@ -154,4 +177,26 @@ function envInt(name: string, fallback: number): number {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+
+function hasValidBearerToken(
+  request: IncomingMessage,
+  expectedToken: string | undefined
+): boolean {
+  if (!expectedToken) return false;
+
+  const header = request.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const presented = header.slice("Bearer ".length);
+  const expected = Buffer.from(expectedToken);
+  const actual = Buffer.from(presented);
+
+  return (
+    expected.length === actual.length &&
+    timingSafeEqual(expected, actual)
+  );
 }

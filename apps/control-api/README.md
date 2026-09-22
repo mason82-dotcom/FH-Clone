@@ -48,3 +48,33 @@ Standard-OSD/State kann unter der Aircraft-SN erscheinen. Service- und DRC-Pfade
 - nur eigene Downstream-Topics als Subscription.
 
 Andere Rollen werden mit `ignore` an die nachfolgende Datei-ACL weitergegeben.
+
+
+## EMQX-HTTP-Authorizer absichern
+
+Der interne Authorizer verlangt einen Bearer-Token.
+
+Control API:
+
+```env
+EMQX_AUTHZ_TOKEN=<starker-zufälliger-token>
+```
+
+EMQX erhält denselben Wert über den Konfigurations-Override:
+
+```text
+EMQX_AUTHORIZATION__SOURCES__1__HEADERS__AUTHORIZATION='"Bearer <starker-zufälliger-token>"'
+```
+
+Fehlt der Token oder ist er falsch, antwortet
+`POST /internal/emqx/authz` immer mit HTTP 200 und:
+
+```json
+{"result":"deny"}
+```
+
+Dasselbe gilt für ungültige JSON-Payloads, unvollständige Requests und interne
+Evaluierungsfehler. Damit wird ein Fehler nicht durch einen HTTP-Status ungleich
+200 versehentlich zu EMQX-`ignore`.
+
+Der interne Port 8081 bleibt ausschließlich im privaten Infrastruktur-Netz.

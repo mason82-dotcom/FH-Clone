@@ -32,3 +32,9 @@ Nicht jedes DJI-Modell und nicht jedes SDK stellt dieselben Parameter bereit. FH
 4. **Control Authority** – zentrale Freigabe, welcher Adapter ein Fluggerät steuern darf.
 
 So bleibt die Anwendung erweiterbar, ohne Backend oder Frontend für jedes SDK neu zu implementieren.
+
+
+## EMQX Authorization
+
+Der dynamische RC-Pro-/Sub-Device-Authorizer und sein Fail-closed-/Token-Modell
+sind in `docs/EMQX-AUTHZ.md` dokumentiert.

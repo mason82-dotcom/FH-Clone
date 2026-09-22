@@ -3,6 +3,7 @@ authorization {
   deny_action = ignore
 
   cache {
+    enable = true
     max_size = 1024
     ttl = 5s
   }
@@ -20,6 +21,11 @@ authorization {
 
       headers {
         "Content-Type" = "application/json"
+
+        # Sicherer Default: funktioniert absichtlich nicht.
+        # Produktion überschreibt diesen Wert per Environment:
+        # EMQX_AUTHORIZATION__SOURCES__1__HEADERS__AUTHORIZATION='"Bearer <token>"'
+        "Authorization" = "Bearer __FH_CLONE_AUTHZ_DISABLED__"
       }
 
       body {
@@ -28,6 +34,7 @@ authorization {
         action = "${action}"
         topic = "${topic}"
         qos = "${qos}"
+        peerhost = "${peerhost}"
       }
     },
     {
