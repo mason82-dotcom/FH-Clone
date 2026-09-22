@@ -20,14 +20,17 @@ function fixture(authorized = true) {
   const dji = {
     resolveGatewaySn: () => "RC-PLUS2-001",
     supportsFlightControl: () => true,
-    isCloudControlAuthorized: () => authorized,
     async connectDrcTransport() { calls.push("transport.connect"); },
     async disconnectDrcTransport() { calls.push("transport.disconnect"); },
-    drc: {
-      async requestCloudControlAuthority() { calls.push("authority.request"); },
-      async releaseCloudControlAuthority() { calls.push("authority.release"); },
-      async enterDrcMode() { calls.push("drc.enter"); }
-    }
+    pilotAuthority: {
+      async requestFlightAuthority() {
+        calls.push("authority.request");
+        if (!authorized) throw new Error("Pilot cloud-control authorization ended with status timeout");
+        return {};
+      },
+      async releaseFlightAuthority() { calls.push("authority.release"); return {}; }
+    },
+    drc: { async enterDrcMode() { calls.push("drc.enter"); } }
   };
   return { calls, guards, sessions, dji };
 }
@@ -38,7 +41,7 @@ test("start orders authority before DRC activation", async () => {
     f.dji,
     f.sessions as never,
     () => f.guards,
-    { authorityTimeoutMs: 20, authorityPollMs: 1 }
+    { authorityTimeoutMs: 20 }
   );
   await coordinator.start({
     aircraftSn: "M4T-001",
@@ -59,7 +62,7 @@ test("authority timeout force-closes and releases authority", async () => {
     f.dji,
     f.sessions as never,
     () => f.guards,
-    { authorityTimeoutMs: 2, authorityPollMs: 1 }
+    { authorityTimeoutMs: 2 }
   );
   await assert.rejects(
     coordinator.start({
@@ -68,7 +71,7 @@ test("authority timeout force-closes and releases authority", async () => {
       authority: { userId: "u1", userCallsign: "OP-A" },
       drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: 1, enable_tls: false } }
     }),
-    /authority_timeout/
+    /status timeout/
   );
   assert.deepEqual(f.calls, ["session.request", "authority.request", "session.forceClose", "transport.disconnect", "authority.release"]);
 });
