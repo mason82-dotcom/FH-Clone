@@ -285,12 +285,12 @@ Missionsausführung erfordert mindestens FC2 und eine gesonderte Freigabe.
 
 ### Gate 7 – Dokumentation
 
-- [ ] alle Projektdokumente deutsch
-- [ ] Implementiert/Ziel/zu verifizieren klar getrennt
-- [ ] API-/Umgebungsvariablen dokumentiert
-- [ ] Security-/Safety-Grenzen vollständig
-- [ ] Betriebs- und Fehlerhinweise vollständig
-- [ ] keine widersprüchlichen Altstände
+- [x] alle Projektdokumente deutsch
+- [x] Implementiert/Ziel/zu verifizieren klar getrennt
+- [x] API-/Umgebungsvariablen dokumentiert
+- [x] Security-/Safety-Grenzen vollständig
+- [x] Betriebs- und Fehlerhinweise vollständig
+- [x] keine widersprüchlichen Altstände
 
 ### Gate 8 – Direktor-CI
 
