@@ -118,6 +118,7 @@ Liefert den aktuellen normalisierten Parametersnapshot.
 ```http
 GET /api/missions/active
 GET /api/devices/{device_sn}/mission
+GET /api/devices/{device_sn}/wayline
 ```
 
 Die Control API erkennt aus DJI-`mode_code`-Werten automatisch eine
@@ -138,6 +139,27 @@ TimescaleDB/PostgreSQL persistiert.
 
 Beim Service-Neustart werden noch offene automatische DB-Sitzungen mit
 `service_restart` abgeschlossen, bevor neuer DJI-Ingest beginnt.
+
+### Capabilities
+
+```http
+GET /api/devices/{device_sn}/capabilities
+```
+
+Der Endpunkt trennt:
+
+- tatsächlich gemeldete Adapter-Capabilities,
+- DJI-Produktsupport und spezialisierte Control-Profile,
+- Mission-/Wayline-Evidenz.
+
+Produktunterstützung ist nicht automatisch eine ausführbare
+`AircraftAdapter.execute()`-Capability.
+
+### Wayline-Beobachtung
+
+`GET /api/devices/{device_sn}/wayline` ist read-only. Der Endpunkt zeigt
+Telemetrieevidenz aus `mode_code == 5`, aber keine erfundene Wayline-ID
+und keine implizite `mission.wayline`-Freigabe.
 
 ### RTK/GNSS
 
