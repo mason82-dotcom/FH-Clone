@@ -10,7 +10,7 @@
     "test": "npm run build && node --test dist/*.test.js"
   },
   "dependencies": {
-    "@fh-clone/aircraft-core": "0.1.0",
+    "@fh-clone/aircraft-core": "3.0.0",
     "mqtt": "^5.0.0"
   },
   "devDependencies": {
