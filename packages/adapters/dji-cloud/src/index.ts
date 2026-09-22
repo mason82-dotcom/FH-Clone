@@ -500,6 +500,7 @@ export { normalizeDjiPayload } from "./normalizer.js";
 export * from "./version.js";
 export * from "./service.js";
 export * from "./drc.js";
+export * from "./drc-transport.js";
 export * from "./topology.js";
 export * from "./capabilities.js";
 export * from "./rtk.js";
