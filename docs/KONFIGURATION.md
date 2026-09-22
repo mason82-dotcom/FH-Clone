@@ -191,6 +191,26 @@ Details: [LIVESTREAM.md](LIVESTREAM.md).
 | `UGCS_PASSWORD` | leer | UgCS-Passwort |
 | `BRIDGE_BIND` | `0.0.0.0` | Bind-Adresse der HTTP-Bridge |
 | `BRIDGE_PORT` | `8092` | Port der HTTP-Bridge |
+| `UGCS_BRIDGE_URL` | leer | serverseitige URL der HTTP-Bridge für die Control API |
+| `UGCS_BRIDGE_TIMEOUT_MS` | `5000` | Timeout des read-only Bridge-Clients |
+
+Die Root-Compose enthält `ugcs-bridge` als optionales Profil:
+
+```bash
+docker compose --profile ugcs up -d
+```
+
+Für den In-Compose-Pfad wird typischerweise
+`UGCS_BRIDGE_URL=http://ugcs-bridge:8092` gesetzt.
+
+## Media-Ingest
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `MEDIA_INGEST_TOKEN` | leer | internes Bearer-Secret für `POST /internal/media/assets`; ohne Wert ist der Ingest gesperrt |
+
+Der Ingest akzeptiert ausschließlich `MediaAsset`-Domainobjekte. Die
+browserseitige Kartenansicht liest nur `GET /api/media/overlays`.
 
 ## Root-Compose-Konfiguration
 
