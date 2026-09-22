@@ -50,6 +50,9 @@ test("never infers a band from filename or sensor index alone", () => {
 
   assert.equal(result.asset.band, undefined);
   assert.equal(result.sensorIndex, 4);
+  assert.equal(result.asset.profile, "GENERIC");
+  assert.equal(result.asset.sensor.kind, "unknown");
+  assert.equal(result.asset.sensor.confidence, "unavailable");
 });
 
 test("reports authoritative metadata conflicts instead of silently resolving them", () => {
