@@ -54,6 +54,9 @@ deaktiviert.
 
 - `EMQX_AUTHZ_TOKEN` – internes Secret für EMQX -> Control API
 - `LOG_RAW_DJI=1` – Rohmeldungen diagnostisch ausgeben
+- `TIMESCALE_URL` – aktiviert Missionspersistenz über TimescaleDB/PostgreSQL
+- `RTK_SOURCE_LABEL` – optionale nicht-sensitive Bezeichnung der RTK-Quelle
+- `RTK_SOURCE_PROVIDER` – optionaler Anbietername
 
 Secrets gehören in Runtime-Konfiguration und niemals ins Repository.
 
@@ -152,7 +155,7 @@ false -> true  = acquired
 true  -> false = lost
 ```
 
-Der aktuelle Verlauf ist In-Memory. Persistenz ist ein V3-Release-Gate. RTK-Snapshots können zusätzlich die aktive `missionId` tragen.
+Der aktuelle RTK-Verlauf ist In-Memory. RTK-Snapshots können zusätzlich die aktive `missionId` tragen. Automatische Missionssitzungen werden bei gesetztem `TIMESCALE_URL` bereits in TimescaleDB/PostgreSQL geöffnet und geschlossen.
 
 ## Interne EMQX-API
 
