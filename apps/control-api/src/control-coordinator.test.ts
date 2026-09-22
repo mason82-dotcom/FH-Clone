@@ -13,7 +13,10 @@ function fixture(authorized = true) {
     async markAuthorityGrabbed() { calls.push("session.authorityGrabbed"); return {} as never; },
     async markDrcModeActive() { calls.push("session.drcModeActive"); return {} as never; },
     async activate() { calls.push("session.activate"); return { state: "drc_mode_active" } as never; },
-    async getDrcStatus() { calls.push("session.drcStatus"); return 2 as const; },
+    async getDrcStatus(): Promise<0 | 1 | 2 | "unknown"> {
+      calls.push("session.drcStatus");
+      return 2;
+    },
     async setTransportConnected() { calls.push("session.transportConnected"); return {} as never; },
     async closeGracefully() { calls.push("session.close"); return { state: "closed" } as never; },
     async forceClose() { calls.push("session.forceClose"); return { state: "closed" } as never; }
