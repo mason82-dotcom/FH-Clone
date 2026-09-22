@@ -116,7 +116,7 @@ test("CommandCoordinator requires SafetyGate and matching lease owner", async ()
   const authority = new ControlAuthority();
   const safety = new SafetyGate();
   const router = new CapabilityRouter(
-    new Map([[adapter.id, adapter]]),
+    new Map<string, AircraftAdapter>([[adapter.id, adapter]]),
     () => [device()]
   );
   const coordinator = new CommandCoordinator(authority, router, safety);
