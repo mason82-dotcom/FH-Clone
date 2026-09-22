@@ -73,6 +73,17 @@ echo "[4/13] Control API Health/Readiness"
 wait_http "http://127.0.0.1:$API_PORT/health" "Control API Health"
 wait_http "http://127.0.0.1:$API_PORT/ready" "Control API Readiness"
 
+echo "       FH2 OpenAPI Read-only Status prüfen"
+fh2_status="$(curl -fsS "http://127.0.0.1:$API_PORT/api/fh2/status")"
+if ! printf '%s' "$fh2_status" | grep -q '"readOnly":true'; then
+  echo "FEHLER: FH2 OpenAPI Status meldet keinen read-only Betrieb: $fh2_status"
+  exit 1
+fi
+if printf '%s' "$fh2_status" | grep -Eiq '"(userToken|token|password|secret)"'; then
+  echo "FEHLER: FH2 OpenAPI Status enthält sensitive Felder."
+  exit 1
+fi
+
 echo "[5/13] Interne Control API im Container prüfen"
 internal_health="$(
   docker compose --env-file .env exec -T control-api \
