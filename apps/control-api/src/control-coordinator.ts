@@ -8,7 +8,11 @@ import type {
 export interface DjiControlRuntime {
   resolveGatewaySn(deviceSn: string): string | undefined;
   supportsFlightControl(deviceSn: string): boolean;
-  connectDrcTransport(credentials: EnterDrcModeOptions["mqttBroker"]): Promise<void>;
+  connectDrcTransport(
+    gatewaySn: string,
+    aircraftSn: string,
+    credentials: EnterDrcModeOptions["mqttBroker"]
+  ): Promise<void>;
   disconnectDrcTransport(): Promise<void>;
   pilotAuthority: {
     requestFlightAuthority(gatewaySn: string, request: PilotCloudAuthorityRequest): Promise<unknown>;
@@ -75,7 +79,11 @@ export class ControlCoordinator {
       await this.dji.drc.enterDrcMode(gatewaySn, input.drc);
       drcEntered = true;
       await this.sessions.markDrcModeActive(gatewaySn);
-      await this.dji.connectDrcTransport(input.drc.mqttBroker);
+      await this.dji.connectDrcTransport(
+        gatewaySn,
+        input.aircraftSn,
+        input.drc.mqttBroker
+      );
       await this.sessions.setTransportConnected(gatewaySn, true);
       const finalGuards = this.guards(input.aircraftSn, input.holder);
       const activated = await this.sessions.activate({ gatewaySn, guards: finalGuards });
@@ -119,7 +127,11 @@ export class ControlCoordinator {
     if (await this.sessions.getDrcStatus(gatewaySn) !== 2) return false;
     const nowS = Math.floor(Date.now() / 1000);
     if (runtime.credentials.expire_time <= nowS + this.credentialSafetyWindowS) return false;
-    await this.dji.connectDrcTransport(runtime.credentials);
+    await this.dji.connectDrcTransport(
+      gatewaySn,
+      aircraftSn,
+      runtime.credentials
+    );
     await this.sessions.setTransportConnected(gatewaySn, true);
     return true;
   }
