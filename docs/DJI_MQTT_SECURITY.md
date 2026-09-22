@@ -26,9 +26,6 @@ Geräteidentität entsteht serverseitig.
 - keine permanenten DRC-Rechte in der Basic-Link-ACL
 - interner AuthZ-Service-Token
 - FC0 als Standard-Sicherheitsstufe
-
-### Implementiert
-
 - `POST /internal/emqx/authn`
 - eigener PostgreSQL-Gateway-Credential-Speicher
 - scrypt-Passwort-Hashing/-Prüfung
