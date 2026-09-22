@@ -498,3 +498,34 @@ nicht die Bedeutung der Bänder.
 
 Bis diese Punkte geschlossen sind, darf FH2 keine unbestätigten
 Multispektralwerte erfinden.
+
+
+## Runtime-Ingest in den FH2-Cesium-Layer
+
+Der DJI-M3M-Metadatenmapper ist wieder auf aktuellem `main` verfügbar:
+
+```ts
+normalizeDjiM3mMediaMetadata()
+```
+
+Externe Media-/ExifTool-Prozesse können extrahierte M3M-Metadaten serverseitig
+an die Control API übergeben:
+
+```text
+POST /internal/media/dji-m3m
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+```
+
+Das normalisierte `MediaAsset` wird anschließend vom öffentlichen,
+read-only Feed:
+
+```text
+GET /api/media/overlays
+```
+
+an den Multispektral-Layer in
+`window.FH2.cesiumViewer.global` geliefert.
+
+Der Control-API-Endpunkt ist bewusst **kein Datei-/TIFF-/EXIF-Parser**.
+Originaldateien und sensible reale EXIF/XMP-Fixtures bleiben außerhalb des
+öffentlichen Repositories.
