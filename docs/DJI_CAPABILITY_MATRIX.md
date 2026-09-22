@@ -201,7 +201,7 @@ behandelt.
 | `rtk_number` | `telemetry.rtk` | RTK-spezifische Telemetrie |
 | `quality == 10` | `telemetry.rtk` + RTK fixed | DJI kennzeichnet explizit RTK fixed |
 | `mode_code == 18` | `telemetry.rtk` | Airborne RTK fixing; kein Fix-Nachweis |
-| `live_capacity` | derzeit **kein** `livestream.read` | DJI-Fähigkeit ist dokumentiert, FH2-Livestream-Integration für V3 noch nicht vollständig implementiert |
+| `live_capacity` | **kein** `livestream.read` | FlightHub-2-/SIKONG-CE-Bezahlstreaming ist für V3 ausdrücklich deaktiviert; Herstellerfähigkeit allein schaltet nichts frei |
 | Pilot Media Management | derzeit **kein** `media.read` | DJI-Funktion läuft über Pilot-2/JSBridge/Object-Storage; FH2-Media-Integration bleibt separates Gate |
 
 ### GNSS/RTK
@@ -225,16 +225,22 @@ Das ist unabhängig von den schreibenden Capabilities
 ### Livestream
 
 DJI dokumentiert Pilot-Livestreaming einschließlich `live_capacity` sowie
-Start/Stop/Lens-/Quality-Services. FH2 V3 hat diese komplette
-Livestream-Verarbeitung noch nicht als Produktfunktion integriert.
+Start/Stop/Lens-/Quality-Services.
 
-Deshalb gilt bis dahin:
+Für FH2 V3 gilt jedoch ausdrücklich:
 
 ```text
 DJI live_capacity beobachtet
   !=
 FH2 livestream.read freigegeben
+
+FlightHub-2 / SIKONG CE paid livestream
+  = DISABLED
 ```
+
+Der kostenpflichtige FlightHub-2-/SIKONG-CE-Pfad wird nicht implementiert,
+nicht automatisch aktiviert und nicht aus Hersteller-Capabilities abgeleitet.
+Eine spätere Aktivierung erfordert einen neuen ausdrücklichen Auftrag.
 
 ### Media Management
 
