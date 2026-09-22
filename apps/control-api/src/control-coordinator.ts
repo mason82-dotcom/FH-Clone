@@ -94,9 +94,13 @@ export class ControlCoordinator {
     const gatewaySn = this.dji.resolveGatewaySn(aircraftSn);
     if (!gatewaySn) throw new Error("dji_gateway_unknown");
     this.runtime.delete(gatewaySn);
-    const closed = await this.sessions.closeGracefully(gatewaySn, reason);
-    await this.dji.disconnectDrcTransport();
-    await this.dji.pilotAuthority.releaseFlightAuthority(gatewaySn);
+    let closed;
+    try {
+      closed = await this.sessions.closeGracefully(gatewaySn, reason);
+    } finally {
+      await this.dji.disconnectDrcTransport().catch(() => undefined);
+      await this.dji.pilotAuthority.releaseFlightAuthority(gatewaySn).catch(() => undefined);
+    }
     return closed;
   }
 
