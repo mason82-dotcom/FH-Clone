@@ -105,5 +105,73 @@ test("bounded buffer drops the oldest DB record without blocking enqueue", async
   assert.equal(writer.status.droppedFromDatabaseBuffer, 1);
 
   await writer.shutdown();
-  assert.equal(batches.flat().length, 2);
+  assert.deepEqual(
+    batches.flat().map((entry) => entry.topic),
+    [
+      "thing/product/RC-2/drc/down",
+      "thing/product/RC-3/drc/down"
+    ]
+  );
+});
+
+test("failed batch is restored in FIFO order and shutdown retries it", async () => {
+  const written: AuthzAuditRecord[] = [];
+  let attempts = 0;
+  const writer = new AuthzAuditWriter({
+    capacity: 4,
+    batchSize: 10,
+    flushIntervalMs: 60_000,
+    shutdownFlushAttempts: 2,
+    shutdownRetryDelayMs: 0,
+    writeJsonl: () => undefined,
+    writeBatch: async (records) => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("transient database failure");
+      written.push(...records);
+    }
+  });
+
+  writer.enqueue(record({ topic: "thing/product/RC-1/drc/down" }));
+  writer.enqueue(record({ topic: "thing/product/RC-2/drc/down" }));
+
+  await assert.rejects(writer.flush(), /transient database failure/);
+  assert.equal(writer.status.pending, 2);
+
+  writer.enqueue(record({ topic: "thing/product/RC-3/drc/down" }));
+  await writer.shutdown();
+
+  assert.equal(attempts, 2);
+  assert.deepEqual(
+    written.map((entry) => entry.topic),
+    [
+      "thing/product/RC-1/drc/down",
+      "thing/product/RC-2/drc/down",
+      "thing/product/RC-3/drc/down"
+    ]
+  );
+  assert.equal(writer.status.pending, 0);
+});
+
+test("shutdown never reports success when retained audit records cannot flush", async () => {
+  let attempts = 0;
+  const writer = new AuthzAuditWriter({
+    batchSize: 10,
+    flushIntervalMs: 60_000,
+    shutdownFlushAttempts: 2,
+    shutdownRetryDelayMs: 0,
+    writeJsonl: () => undefined,
+    writeBatch: async () => {
+      attempts += 1;
+      throw new Error("database unavailable");
+    }
+  });
+
+  writer.enqueue(record());
+
+  await assert.rejects(
+    writer.shutdown(),
+    /AuthZ audit shutdown flush failed after 2 attempt\(s\)/
+  );
+  assert.equal(attempts, 2);
+  assert.equal(writer.status.pending, 1);
 });

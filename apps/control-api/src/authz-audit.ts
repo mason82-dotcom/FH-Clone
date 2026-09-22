@@ -34,6 +34,8 @@ export interface AuthzAuditWriterOptions {
   capacity?: number;
   batchSize?: number;
   flushIntervalMs?: number;
+  shutdownFlushAttempts?: number;
+  shutdownRetryDelayMs?: number;
   writeJsonl?: (line: string) => void;
   writeBatch?: (records: AuthzAuditRecord[]) => Promise<void>;
 }
@@ -44,26 +46,108 @@ export interface AuthzAuditWriterStatus {
   databaseEnabled: boolean;
 }
 
+class AuthzAuditRingBuffer {
+  private readonly slots: Array<AuthzAuditRecord | undefined>;
+  private head = 0;
+  private length = 0;
+
+  constructor(readonly capacity: number) {
+    this.slots = new Array<AuthzAuditRecord | undefined>(capacity);
+  }
+
+  get size(): number {
+    return this.length;
+  }
+
+  /**
+   * Appends one record while respecting a temporary logical limit.
+   * Returns true when a record had to be dropped.
+   */
+  push(record: AuthzAuditRecord, logicalLimit = this.capacity): boolean {
+    const limit = Math.max(0, Math.min(this.capacity, logicalLimit));
+    if (limit === 0) return true;
+
+    let dropped = false;
+    if (this.length >= limit) {
+      this.shiftOne();
+      dropped = true;
+    }
+
+    const tail = (this.head + this.length) % this.capacity;
+    this.slots[tail] = { ...record };
+    this.length += 1;
+    return dropped;
+  }
+
+  shiftMany(limit: number): AuthzAuditRecord[] {
+    const count = Math.min(Math.max(0, limit), this.length);
+    const result: AuthzAuditRecord[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const value = this.shiftOne();
+      if (value) result.push(value);
+    }
+    return result;
+  }
+
+  prependMany(records: readonly AuthzAuditRecord[]): void {
+    if (records.length + this.length > this.capacity) {
+      throw new Error("AuthZ audit ringbuffer restore would exceed capacity");
+    }
+
+    for (let index = records.length - 1; index >= 0; index -= 1) {
+      this.head = (this.head - 1 + this.capacity) % this.capacity;
+      this.slots[this.head] = { ...records[index]! };
+      this.length += 1;
+    }
+  }
+
+  private shiftOne(): AuthzAuditRecord | undefined {
+    if (this.length === 0) return undefined;
+    const value = this.slots[this.head];
+    this.slots[this.head] = undefined;
+    this.head = (this.head + 1) % this.capacity;
+    this.length -= 1;
+    return value;
+  }
+}
+
 export class AuthzAuditWriter {
   private readonly pool: Pool | undefined;
   private readonly capacity: number;
   private readonly batchSize: number;
+  private readonly shutdownFlushAttempts: number;
+  private readonly shutdownRetryDelayMs: number;
   private readonly writeJsonl: (line: string) => void;
-  private readonly writeBatch: ((records: AuthzAuditRecord[]) => Promise<void>) | undefined;
-  private readonly buffer: AuthzAuditRecord[] = [];
+  private readonly writeBatch:
+    | ((records: AuthzAuditRecord[]) => Promise<void>)
+    | undefined;
+  private readonly buffer: AuthzAuditRingBuffer;
   private readonly timer: NodeJS.Timeout | undefined;
   private flushPromise: Promise<void> | undefined;
+  private shutdownPromise: Promise<void> | undefined;
+  private flushScheduled = false;
+  private inFlightCount = 0;
   private droppedFromDatabaseBuffer = 0;
   private closed = false;
 
   constructor(options: AuthzAuditWriterOptions = {}) {
     this.capacity = options.capacity ?? 10_000;
     this.batchSize = options.batchSize ?? 500;
+    this.shutdownFlushAttempts = options.shutdownFlushAttempts ?? 3;
+    this.shutdownRetryDelayMs = options.shutdownRetryDelayMs ?? 100;
     this.writeJsonl =
       options.writeJsonl ?? ((line) => process.stdout.write(line + "\n"));
 
     if (this.capacity <= 0) throw new RangeError("capacity must be > 0");
     if (this.batchSize <= 0) throw new RangeError("batchSize must be > 0");
+    if (this.shutdownFlushAttempts <= 0) {
+      throw new RangeError("shutdownFlushAttempts must be > 0");
+    }
+    if (this.shutdownRetryDelayMs < 0) {
+      throw new RangeError("shutdownRetryDelayMs must be >= 0");
+    }
+
+    this.buffer = new AuthzAuditRingBuffer(this.capacity);
 
     if (options.writeBatch) {
       this.writeBatch = options.writeBatch;
@@ -83,7 +167,10 @@ export class AuthzAuditWriter {
       }
       this.timer = setInterval(() => {
         void this.flush().catch((error) => {
-          console.error("[AuthZ Audit] Flush fehlgeschlagen:", errorMessage(error));
+          console.error(
+            "[AuthZ Audit] Flush fehlgeschlagen:",
+            errorMessage(error)
+          );
         });
       }, intervalMs);
       this.timer.unref();
@@ -92,7 +179,7 @@ export class AuthzAuditWriter {
 
   get status(): AuthzAuditWriterStatus {
     return {
-      pending: this.buffer.length,
+      pending: this.buffer.size + this.inFlightCount,
       droppedFromDatabaseBuffer: this.droppedFromDatabaseBuffer,
       databaseEnabled: Boolean(this.writeBatch)
     };
@@ -106,74 +193,147 @@ export class AuthzAuditWriter {
 
     if (!this.writeBatch || !shouldPersistAuthzRecord(record)) return;
 
-    if (this.buffer.length >= this.capacity) {
-      this.buffer.shift();
-      this.droppedFromDatabaseBuffer += 1;
-      if (
-        this.droppedFromDatabaseBuffer === 1 ||
-        this.droppedFromDatabaseBuffer % 100 === 0
-      ) {
-        console.error(
-          "[AuthZ Audit] DB-Ringbuffer voll; ältester Eintrag verworfen.",
-          { dropped: this.droppedFromDatabaseBuffer }
-        );
-      }
+    // Reserve capacity for the batch currently in flight. This keeps total
+    // buffered + in-flight records bounded by capacity and guarantees that a
+    // failed batch can be restored at the front without losing older records.
+    const pendingLimit = this.capacity - this.inFlightCount;
+    if (this.buffer.push(record, pendingLimit)) {
+      this.noteDroppedRecord();
     }
 
-    this.buffer.push({ ...record });
-    if (this.buffer.length >= this.batchSize) {
-      queueMicrotask(() => {
-        void this.flush().catch((error) => {
-          console.error("[AuthZ Audit] Batch-Flush fehlgeschlagen:", errorMessage(error));
-        });
-      });
+    if (this.buffer.size >= this.batchSize) {
+      this.scheduleFlush();
     }
   }
 
+  /**
+   * Flushes the records that were pending when this call started.
+   * New records may remain queued for the next batch.
+   */
   async flush(): Promise<void> {
-    if (!this.writeBatch || this.buffer.length === 0) return;
+    if (!this.writeBatch || this.buffer.size === 0) return;
     if (this.flushPromise) return this.flushPromise;
 
-    this.flushPromise = this.flushOneBatch().finally(() => {
+    const targetCount = this.buffer.size;
+    this.flushPromise = this.flushSnapshot(targetCount).finally(() => {
       this.flushPromise = undefined;
     });
     return this.flushPromise;
   }
 
-  async shutdown(): Promise<void> {
+  /**
+   * Stops accepting new audit records and drains every retained DB record.
+   * A DB outage is never silently treated as success: after the configured
+   * retry attempts shutdown rejects, allowing the process to exit non-zero.
+   */
+  shutdown(): Promise<void> {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    this.shutdownPromise = this.shutdownInternal();
+    return this.shutdownPromise;
+  }
+
+  private async shutdownInternal(): Promise<void> {
     this.closed = true;
     if (this.timer) clearInterval(this.timer);
 
-    if (this.flushPromise) {
-      await this.flushPromise;
-    }
+    let lastError: unknown;
+    let failedAttempts = 0;
 
-    while (this.writeBatch && this.buffer.length > 0) {
-      const before = this.buffer.length;
-      await this.flush();
-      if (this.buffer.length >= before) {
-        // Database remains unavailable. JSONL was already emitted for every
-        // record, so shutdown must not hang forever.
-        break;
+    try {
+      if (this.flushPromise) {
+        try {
+          await this.flushPromise;
+        } catch (error) {
+          lastError = error;
+        }
       }
-    }
 
-    await this.pool?.end();
+      while (this.writeBatch && this.buffer.size > 0) {
+        try {
+          await this.flush();
+          failedAttempts = 0;
+          lastError = undefined;
+        } catch (error) {
+          lastError = error;
+          failedAttempts += 1;
+          if (failedAttempts >= this.shutdownFlushAttempts) {
+            throw new Error(
+              `AuthZ audit shutdown flush failed after ${failedAttempts} attempt(s)`,
+              { cause: error }
+            );
+          }
+          if (this.shutdownRetryDelayMs > 0) {
+            await delay(this.shutdownRetryDelayMs);
+          }
+        }
+      }
+
+      if (lastError !== undefined && this.buffer.size > 0) {
+        throw lastError;
+      }
+    } finally {
+      await this.pool?.end();
+    }
   }
 
-  private async flushOneBatch(): Promise<void> {
-    if (!this.writeBatch || this.buffer.length === 0) return;
+  private scheduleFlush(): void {
+    if (this.flushScheduled || this.closed) return;
+    this.flushScheduled = true;
 
-    const batch = this.buffer.splice(0, this.batchSize);
-    try {
-      await this.writeBatch(batch);
-    } catch (error) {
-      const free = Math.max(0, this.capacity - this.buffer.length);
-      const restore = batch.slice(Math.max(0, batch.length - free));
-      this.buffer.unshift(...restore);
-      const lost = batch.length - restore.length;
-      if (lost > 0) this.droppedFromDatabaseBuffer += lost;
-      throw error;
+    queueMicrotask(() => {
+      this.flushScheduled = false;
+      void this.flush()
+        .then(() => {
+          if (!this.closed && this.buffer.size >= this.batchSize) {
+            this.scheduleFlush();
+          }
+        })
+        .catch((error) => {
+          // Keep the failed batch in the ringbuffer. The periodic flush or
+          // shutdown path retries; do not spin in a hot retry loop here.
+          console.error(
+            "[AuthZ Audit] Batch-Flush fehlgeschlagen:",
+            errorMessage(error)
+          );
+        });
+    });
+  }
+
+  private async flushSnapshot(targetCount: number): Promise<void> {
+    if (!this.writeBatch) return;
+
+    let remaining = targetCount;
+    while (remaining > 0 && this.buffer.size > 0) {
+      const batch = this.buffer.shiftMany(
+        Math.min(this.batchSize, remaining)
+      );
+      if (batch.length === 0) return;
+
+      this.inFlightCount = batch.length;
+      try {
+        await this.writeBatch(batch);
+        remaining -= batch.length;
+      } catch (error) {
+        // enqueue() reserved in-flight capacity, so restoring at the front is
+        // guaranteed to fit and preserves FIFO order for every retained record.
+        this.buffer.prependMany(batch);
+        throw error;
+      } finally {
+        this.inFlightCount = 0;
+      }
+    }
+  }
+
+  private noteDroppedRecord(): void {
+    this.droppedFromDatabaseBuffer += 1;
+    if (
+      this.droppedFromDatabaseBuffer === 1 ||
+      this.droppedFromDatabaseBuffer % 100 === 0
+    ) {
+      console.error(
+        "[AuthZ Audit] DB-Ringbuffer voll; Eintrag verworfen.",
+        { dropped: this.droppedFromDatabaseBuffer }
+      );
     }
   }
 
@@ -197,10 +357,13 @@ export class AuthzAuditWriter {
         clean(record.aircraftSn),
         clean(record.drcSessionId),
         clean(record.missionId),
-        false,
+        record.cacheHit,
         normalizeLatency(record.latencyUs)
       );
-      return `(${Array.from({ length: 15 }, (_, column) => `$${offset + column + 1}`).join(", ")})`;
+      return `(${Array.from(
+        { length: 15 },
+        (_, column) => `$${offset + column + 1}`
+      ).join(", ")})`;
     });
 
     await this.pool.query(
@@ -251,7 +414,7 @@ function toJsonRecord(record: AuthzAuditRecord): Record<string, unknown> {
       ? { drc_session_id: clean(record.drcSessionId) }
       : {}),
     ...(clean(record.missionId) ? { mission_id: clean(record.missionId) } : {}),
-    cache_hit: false,
+    cache_hit: record.cacheHit,
     ...(record.latencyUs !== undefined
       ? { latency_us: normalizeLatency(record.latencyUs) }
       : {})
@@ -277,6 +440,10 @@ function normalizePeerIp(value: string | undefined): string | null {
 function clean(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function errorMessage(error: unknown): string {

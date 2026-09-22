@@ -12,8 +12,11 @@ import {
   type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
 import {
+  AuthzDecisionReason,
   evaluateEmqxAuthorization,
-  isEmqxAuthorizationRequest
+  isEmqxAuthorizationRequest,
+  type EmqxAuthorizationDecision,
+  type EmqxAuthorizationRequest
 } from "./authz.js";
 import { AuthzAuditWriter } from "./authz-audit.js";
 import {
@@ -262,11 +265,17 @@ const internalServer = createServer(async (request, response) => {
 
     if (request.method === "POST" && request.url === "/internal/emqx/authz") {
       const startedAt = process.hrtime.bigint();
+      let auditRequest: EmqxAuthorizationRequest | undefined;
+
       try {
         const body = await readJson<unknown>(request, 16_384);
         if (!isEmqxAuthorizationRequest(body)) {
+          console.warn("[AuthZ] Ungültige Anfrage verworfen.", {
+            reason: AuthzDecisionReason.InternalError
+          });
           return json(response, 200, { result: "deny" });
         }
+        auditRequest = body;
 
         const dynamicRequest =
           body.username.startsWith("dji-gateway-") ||
@@ -276,9 +285,12 @@ const internalServer = createServer(async (request, response) => {
           );
 
         if (dynamicRequest && !hasValidBearerToken(request, emqxAuthzToken)) {
-          enqueueAuthzAudit(
+          enqueueAuthzAuditSafely(
             body,
-            { result: "deny", reason: "internal_error" },
+            {
+              result: "deny",
+              reason: AuthzDecisionReason.InternalTokenMismatch
+            },
             elapsedUs(startedAt)
           );
           return json(response, 200, { result: "deny" });
@@ -286,9 +298,12 @@ const internalServer = createServer(async (request, response) => {
 
         if (!dji) {
           const result = dynamicRequest ? "deny" : "ignore";
-          enqueueAuthzAudit(
+          enqueueAuthzAuditSafely(
             body,
-            { result, reason: "internal_error" },
+            {
+              result,
+              reason: AuthzDecisionReason.InternalError
+            },
             elapsedUs(startedAt)
           );
           return json(response, 200, { result });
@@ -307,10 +322,20 @@ const internalServer = createServer(async (request, response) => {
           }
         });
 
-        enqueueAuthzAudit(body, authzDecision, elapsedUs(startedAt));
+        enqueueAuthzAuditSafely(body, authzDecision, elapsedUs(startedAt));
         return json(response, 200, { result: authzDecision.result });
       } catch (error) {
         console.error("[AuthZ] Evaluierungsfehler:", errorMessage(error));
+        if (auditRequest) {
+          enqueueAuthzAuditSafely(
+            auditRequest,
+            {
+              result: "deny",
+              reason: AuthzDecisionReason.InternalError
+            },
+            elapsedUs(startedAt)
+          );
+        }
         return json(response, 200, { result: "deny" });
       }
     }
@@ -392,8 +417,20 @@ async function shutdown(): Promise<void> {
   await topologyStore?.close();
 }
 
-process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
-process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
+function handleShutdownSignal(signal: NodeJS.Signals): void {
+  void shutdown()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(
+        `[Shutdown] ${signal}: sauberer Shutdown fehlgeschlagen:`,
+        errorMessage(error)
+      );
+      process.exit(1);
+    });
+}
+
+process.once("SIGINT", () => handleShutdownSignal("SIGINT"));
+process.once("SIGTERM", () => handleShutdownSignal("SIGTERM"));
 
 function getDjiOptions(
   topologyPersistence: TopologyPersistenceQueue,
@@ -484,6 +521,21 @@ function hasValidBearerToken(
   );
 }
 
+function enqueueAuthzAuditSafely(
+  request: EmqxAuthorizationRequest,
+  decision: EmqxAuthorizationDecision,
+  latencyUs: number
+): void {
+  try {
+    enqueueAuthzAudit(request, decision, latencyUs);
+  } catch (error) {
+    console.error(
+      "[AuthZ Audit] Audit-Eintrag konnte nicht gepuffert werden:",
+      errorMessage(error)
+    );
+  }
+}
+
 function enqueueAuthzAudit(
   request: {
     username: string;
@@ -493,12 +545,7 @@ function enqueueAuthzAudit(
     qos?: string | number;
     peerhost?: string;
   },
-  decision: {
-    result: "allow" | "deny" | "ignore";
-    reason: import("./authz.js").AuthzDecisionReason;
-    gatewaySn?: string;
-    aircraftSn?: string;
-  },
+  decision: EmqxAuthorizationDecision,
   latencyUs: number
 ): void {
   const runtimeDrc = decision.gatewaySn

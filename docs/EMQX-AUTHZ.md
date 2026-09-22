@@ -297,21 +297,41 @@ unterscheidbar.
 
 ## Audit und Betrieb
 
-Bei Deny-Entscheidungen mindestens erfassen:
+Der HTTP-Authorizer schreibt strukturierte JSONL-Ereignisse unabhängig von der
+Datenbank und puffert persistenzpflichtige Datensätze zusätzlich in einem
+fest begrenzten Ringbuffer. Datenbank-Schreibvorgänge erfolgen seriell in
+Batches; bei einem fehlgeschlagenen Batch wird dieser in ursprünglicher
+FIFO-Reihenfolge wieder vor den noch wartenden Datensätzen einsortiert.
+
+Erfasst werden mindestens:
 
 - Principal/Username
 - Client-ID
 - vertrauenswürdige Gateway-SN
-- Aktion
-- Topic
+- Aircraft-SN, soweit bestimmbar
+- Aktion und Topic
 - Peer-IP
-- Grund
+- `AuthzDecisionReason`
+- `latency_us`
+- `cache_hit`
+- aktive Runtime-`drc_session_id`, soweit vorhanden
+- aktive Mission-ID, soweit vorhanden
+
+Für den HTTP-Hook gilt `cache_hit = false`: Ein echter EMQX-AuthZ-Cache-Hit
+erreicht den Hook nicht. Steuerungsrelevante Topics bleiben vom AuthZ-Cache
+ausgenommen.
+
+Beim Prozess-Shutdown wird der Audit-Puffer nach dem Stoppen neuer Requests
+vollständig geleert. Ein nicht persistierbarer Rest wird nach begrenzten
+Retry-Versuchen **nicht** als erfolgreicher Shutdown behandelt; der Fehler
+wird bis zum Prozess-Exit propagiert. Damit gibt es keinen stillen
+„Shutdown erfolgreich, Audit verloren“-Pfad.
 
 Secrets werden nicht geloggt.
 
 Vor einer produktiven FC3-Freigabe müssen Authorizer-Latenz,
-Fehlerverhalten, Cache-Verhalten und Fail-Closed-Verhalten unter Last getestet
-werden.
+Fehlerverhalten, Ringbuffer-Überlauf, Batch-Retry, Cache-Verhalten und
+Fail-Closed-Verhalten unter Last getestet werden.
 
 ## Weiterführend
 
