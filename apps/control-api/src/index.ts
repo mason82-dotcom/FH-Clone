@@ -155,11 +155,25 @@ const publicServer = createServer(async (request, response) => {
     }
 
     if (request.method === "GET" && url.pathname === "/ready") {
+      const [
+        topologyStoreReady,
+        gatewayCredentialStoreReady,
+        missionStoreReady
+      ] = await Promise.all([
+        topologyStore
+          ? topologyStore.assertReady().then(() => true).catch(() => false)
+          : Promise.resolve(false),
+        gatewayCredentials
+          ? gatewayCredentials.assertReady().then(() => true).catch(() => false)
+          : Promise.resolve(false),
+        missionStore.ping()
+      ]);
+
       const checks = {
         mqttBackendConnected: dji?.isConnected ?? false,
-        topologyStoreReady: Boolean(topologyStore),
-        gatewayCredentialStoreReady: Boolean(gatewayCredentials),
-        missionStoreConfigured: missionStore.enabled
+        topologyStoreReady,
+        gatewayCredentialStoreReady,
+        missionStoreReady
       };
       const ready = Object.values(checks).every(Boolean);
       return json(response, ready ? 200 : 503, {
