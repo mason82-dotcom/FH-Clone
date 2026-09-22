@@ -1,6 +1,17 @@
 name: Direktor V3 Validierung
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       r1_bootstrap:
@@ -283,7 +294,8 @@ jobs:
 
   hardware-evidence:
     name: DJI Hardware Evidence
-    if: ${{ !inputs.r1_bootstrap }}
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.r1_bootstrap }}
+    continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
@@ -307,7 +319,7 @@ jobs:
 
   draft-analysis:
     name: "Draft #${{ matrix.pr }} · ${{ matrix.label }}"
-    if: ${{ !inputs.r1_bootstrap && inputs.analyze_drafts }}
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.r1_bootstrap && inputs.analyze_drafts) }}
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
@@ -326,6 +338,12 @@ jobs:
           - pr: 46
             ref: agent/dji-jsbridge-v3
             label: Pilot2 JSBridge
+          - pr: 47
+            ref: agent/wpml-parser-importliste-v1
+            label: WPML Parservertrag
+          - pr: 49
+            ref: agent/wpml-template-reader-v1
+            label: WPML Template Reader
     steps:
       - name: Aktuellen main auschecken
         uses: actions/checkout@v4
