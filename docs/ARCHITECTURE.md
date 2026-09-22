@@ -50,10 +50,11 @@ Control API / Persistenz / Weboberfläche
 6. Mehrere Adapter dürfen dasselbe Gerät gleichzeitig lesen.
 7. Schreibende Steuerung benötigt eine eindeutige Control Authority.
 8. Flugkritische Funktionen unterliegen zusätzlich dem SafetyGate.
-9. Die Weboberfläche spricht ausschließlich mit der FH2-Control-API.
-10. Browser erhalten keine direkten MQTT- oder Flight-Control-Credentials.
-11. `gateway_sn` und `device_sn` werden nicht zusammengelegt.
-12. `main` ist die einzige Integrationslinie für V3.
+9. Die Weboberfläche spricht für FH-Clone-Domänen ausschließlich mit der FH2-Control-API.
+10. Ausnahme: offizielle FlightHub-2-On-Premises-Standalone-Komponenten dürfen direkt über `window.FH2` mit ihrer DJI-Runtime kommunizieren.
+11. Browser erhalten keine direkten MQTT- oder FH-Clone-DRC-Credentials.
+12. `gateway_sn` und `device_sn` werden nicht zusammengelegt.
+13. `main` ist die einzige Integrationslinie für V3.
 
 ## Rohdaten und Normalisierung
 
@@ -219,7 +220,30 @@ Die Persistenz ersetzt nicht die In-Memory-Registries, sondern ergänzt sie um N
 
 ## Weboberfläche
 
-Die React-Weboberfläche konsumiert ausschließlich die öffentliche
-FH2-Control-API. Vorhanden ist bereits die RTK-Liveansicht. Weitere V3-Ansichten
-dürfen nur Release-Gates schließen und keine parallelen Direktpfade zu MQTT
-oder DJI eröffnen.
+Die React-Weboberfläche besitzt zwei klar getrennte Integrationspfade:
+
+1. **FH-Clone-Domänen** konsumieren die öffentliche Control API. Dazu gehören
+   Telemetrie, RTK, Topologie, Safety, eigener DRC, Persistenz und UgCS.
+2. **Offizielle FlightHub-2-Standalone-Komponenten** verwenden direkt die vom
+   On-Premises-System gelieferte Browser-Runtime `window.FH2`.
+
+Der direkte DJI-Frontendpfad umfasst:
+
+- Project Map
+- Wayline Creation
+- Wayline Editor
+- Flight Path Viewer
+- Virtual Cockpit
+- Gateway + Aircraft Identity
+- einen gemeinsamen `initConfig`-Kontext
+- Eventbus
+- Cesium Viewer Bridge
+- CSS-Theme-Variablen
+- explizite `load*()/destroy*()`-Lifecycles
+- getrennte Bereiche für Routenplanung und Flugverlauf
+
+Dieser Pfad ist **keine** Freigabe für Browser-MQTT oder direkte
+FH-Clone-DRC-Publishes. Das native DJI Virtual Cockpit ist ein eigener
+FlightHub-Control-Pfad und standardmäßig deaktiviert.
+
+Details: [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md).
