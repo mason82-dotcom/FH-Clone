@@ -13,6 +13,7 @@ import { normalizeDjiPayload } from "./normalizer.js";
 import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
+import { DrcController, type DjiMqttPublisher, type MqttQos } from "./drc.js";
 import {
   DjiTopologyRegistry,
   describeDjiProduct,
@@ -84,8 +85,15 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   private readonly pendingServices = new Map<string, PendingServiceRequest>();
   readonly topology = new DjiTopologyRegistry();
   readonly cloudAuthority = new DjiCloudControlAuthorityRegistry();
+  readonly drc: DrcController;
 
-  constructor(private readonly options: DjiCloudAdapterOptions) {}
+  constructor(private readonly options: DjiCloudAdapterOptions) {
+    const publisher: DjiMqttPublisher = {
+      publish: (topic, payload, qos) => this.publishDrc(topic, payload, qos)
+    };
+    this.drc = new DrcController(this, publisher);
+  }
+
 
   get isConnected(): boolean {
     return this.connected;
@@ -258,6 +266,14 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
           reject(error);
         }
       );
+    });
+  }
+
+  private async publishDrc(topic: string, payload: unknown, qos: MqttQos): Promise<void> {
+    const client = this.client;
+    if (!client || !this.connected) throw new Error("DJI Cloud MQTT adapter is not connected");
+    await new Promise<void>((resolve, reject) => {
+      client.publish(topic, JSON.stringify(payload), { qos }, (error?: Error) => error ? reject(error) : resolve());
     });
   }
 
