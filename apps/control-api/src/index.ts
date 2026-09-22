@@ -22,7 +22,8 @@ const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 
 const topologyStore = await createTopologyStore();
-const djiOptions = getDjiOptions(topologyStore);
+const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
+const djiOptions = getDjiOptions(topologyPersistence);
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
@@ -274,13 +275,14 @@ async function shutdown(): Promise<void> {
   internalServer.close();
   await dji?.stop();
   await missionStore.close();
+  await topologyPersistence.flush();
   await topologyStore?.close();
 }
 
 process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
 process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
 
-function getDjiOptions(topologyStore: PostgresGatewayRegistryStore | undefined): DjiCloudAdapterOptions | undefined {
+function getDjiOptions(topologyPersistence: TopologyPersistenceQueue): DjiCloudAdapterOptions | undefined {
   const brokerUrl = process.env.DJI_MQTT_URL;
   if (!brokerUrl) return undefined;
 
@@ -290,7 +292,7 @@ function getDjiOptions(topologyStore: PostgresGatewayRegistryStore | undefined):
     ...(process.env.DJI_MQTT_PASSWORD ? { password: process.env.DJI_MQTT_PASSWORD } : {}),
     clientId: process.env.DJI_MQTT_CLIENT_ID ?? "fh-clone-backend",
     ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {}),
-    ...(topologyStore ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyStore.save(change) } : {})
+    ...(topologyPersistence.enabled ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyPersistence.enqueue(change) } : {})
   };
 }
 
@@ -413,4 +415,32 @@ async function createTopologyStore(): Promise<PostgresGatewayRegistryStore | und
     await store.close();
     return undefined;
   }
+}
+
+
+type TopologyChange = import("@fh-clone/adapter-dji-cloud").TopologyChange;
+type TopologyPersistenceQueue = {
+  enabled: boolean;
+  enqueue(change: TopologyChange): void;
+  flush(): Promise<void>;
+};
+
+function createTopologyPersistenceQueue(
+  store: PostgresGatewayRegistryStore | undefined
+): TopologyPersistenceQueue {
+  let tail = Promise.resolve();
+  return {
+    enabled: Boolean(store),
+    enqueue(change) {
+      if (!store) return;
+      tail = tail
+        .then(() => store.save(change))
+        .catch((error) => {
+          console.error("[Topology] Inventory persistence failed:", errorMessage(error));
+        });
+    },
+    async flush() {
+      await tail;
+    }
+  };
 }
