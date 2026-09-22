@@ -419,3 +419,4 @@ export * from "./service.js";
 export * from "./drc.js";
 export * from "./topology.js";
 export * from "./capabilities.js";
+export * from "./rtk.js";
