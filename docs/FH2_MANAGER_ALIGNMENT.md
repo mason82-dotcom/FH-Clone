@@ -49,6 +49,12 @@ Bei späterem Drift zwischen dem gespeicherten ZIP-Snapshot und dem offiziellen
 DJI-Repository wird vor einer Änderung der aktuelle DJI-Upstream erneut
 verifiziert.
 
+Zusätzlich gilt der vom Projektinhaber bereitgestellte Snapshot
+`OpenAPI_related_errorcodes.txt` als projektinterne Fehlerreferenz. Die Codes
+sind vollständig in `docs/FH2_OPENAPI_FEHLERCODES.md` hinterlegt. Sie dienen
+zur Diagnose und Log-Korrelation, erzeugen aber ohne bestätigten API-Kontext
+keine automatische Retry-, Safety- oder FC-Entscheidung.
+
 ## Verbindliche DJI-SDK-/Cloud-Referenzen
 
 Zusätzlich zur FlightHub-2-OpenAPI-V2-Demo gelten für FH2 folgende offizielle
