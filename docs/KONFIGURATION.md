@@ -114,21 +114,50 @@ weitergereicht:
 | `BRIDGE_BIND` | `0.0.0.0` | Bind-Adresse der HTTP-Bridge |
 | `BRIDGE_PORT` | `8092` | Port der HTTP-Bridge |
 
+## Root-Compose-Konfiguration
+
+Die Vorlage `.env.example` enthält zusätzlich:
+
+| Variable | Standard/Vorlage | Bedeutung |
+| --- | --- | --- |
+| `FH2_API_BIND` | `0.0.0.0` | Host-Bind für die öffentliche API |
+| `FH2_API_PORT` | `8080` | veröffentlichter API-Port |
+| `FH2_WEB_BIND` | `0.0.0.0` | Host-Bind der Weboberfläche |
+| `FH2_WEB_PORT` | `8088` | veröffentlichter Web-Port |
+| `MQTT_BIND` | `0.0.0.0` | Host-Bind des MQTT-Listeners |
+| `MQTT_PORT` | `1883` | veröffentlichter MQTT-Port |
+| `EMQX_IMAGE` | `emqx/emqx:5.7.2` | verbindliches EMQX-5.7-Laufzeitprofil |
+| `TIMESCALE_PASSWORD` | `change-me-...` | DB-Secret |
+| `MQTT_BACKEND_PASSWORD` | `change-me-...` | MQTT-Secret des Backend-Service |
+| `EMQX_AUTHN_TOKEN` | `change-me-...` | interner AuthN-Hook-Token |
+| `EMQX_AUTHZ_TOKEN` | `change-me-...` | interner AuthZ-Hook-Token |
+
+`scripts/verify.sh` verweigert die Abnahme, solange `change-me`-Platzhalter
+in `.env` stehen.
+
+Der Root-Compose setzt intern:
+
+```text
+DATABASE_URL
+TIMESCALE_URL
+DJI_MQTT_URL=mqtt://emqx:1883
+DJI_MQTT_USERNAME=backend-service
+DJI_MQTT_CLIENT_ID=fh-clone-backend
+```
+
+Die Gateway-Credentials selbst liegen nicht in `.env`, sondern in
+`gateway_credentials` und enthalten nur Passwort-Hashes.
+
 ## Noch nicht finalisierte V3-Konfiguration
 
-Für folgende Bereiche sind die endgültigen Variablennamen noch **nicht**
-verbindlich festgelegt und dürfen daher nicht vorab erfunden werden:
+Noch nicht als allgemeiner Vertrag finalisiert sind:
 
-- endgültige Root-Compose-Verdrahtung der bereits vorhandenen TimescaleDB-Konfiguration
-- Gateway-Credential-Store
-- EMQX HTTP AuthN
-- Audit-Persistenz
-- Redis/Shared Store für DRC-Sitzungen, falls für Mehrinstanzbetrieb nötig
 - Media-Storage
 - Multispektral-/Processing-Konfiguration
+- ein möglicher Shared Store für Mehrinstanz-DRC
 
-Diese Konfiguration wird erst dokumentiert, wenn die jeweilige
-V3-Implementierung auf `main` vorhanden ist.
+Aktive DRC-Sessions dürfen auch bei einem späteren Shared Store niemals aus
+historischer Persistenz als Autorisierungszustand rehydriert werden.
 
 ## Secret-Regeln
 
