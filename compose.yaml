@@ -1,0 +1,117 @@
+name: fh2-v3
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.30.1-pg16
+    environment:
+      POSTGRES_DB: fhclone
+      POSTGRES_USER: fhclone
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:?TIMESCALE_PASSWORD fehlt}
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./infra/timescale/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fhclone -d fhclone"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - backend
+
+  control-api:
+    build:
+      context: .
+      dockerfile: infra/docker/control-api.Dockerfile
+    environment:
+      BIND: 0.0.0.0
+      PORT: 8080
+      INTERNAL_BIND: 0.0.0.0
+      INTERNAL_PORT: 8081
+
+      DATABASE_URL: postgresql://fhclone:${TIMESCALE_PASSWORD}@timescaledb:5432/fhclone
+      TIMESCALE_URL: postgresql://fhclone:${TIMESCALE_PASSWORD}@timescaledb:5432/fhclone
+
+      DJI_MQTT_URL: mqtt://emqx:1883
+      DJI_MQTT_USERNAME: backend-service
+      DJI_MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:?MQTT_BACKEND_PASSWORD fehlt}
+      DJI_MQTT_CLIENT_ID: fh-clone-backend
+      DJI_CLOUD_API_VERSION: ${DJI_CLOUD_API_VERSION:-}
+
+      EMQX_AUTHN_TOKEN: ${EMQX_AUTHN_TOKEN:?EMQX_AUTHN_TOKEN fehlt}
+      EMQX_AUTHZ_TOKEN: ${EMQX_AUTHZ_TOKEN:?EMQX_AUTHZ_TOKEN fehlt}
+
+      RTK_SOURCE_LABEL: ${RTK_SOURCE_LABEL:-}
+      RTK_SOURCE_PROVIDER: ${RTK_SOURCE_PROVIDER:-}
+      LOG_RAW_DJI: ${LOG_RAW_DJI:-0}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    ports:
+      - "${FH2_API_BIND:-0.0.0.0}:${FH2_API_PORT:-8080}:8080"
+    expose:
+      - "8081"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:8080/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+
+  emqx:
+    image: ${EMQX_IMAGE:-emqx/emqx:5.7.2}
+    environment:
+      EMQX_AUTHENTICATION__1__HEADERS__AUTHORIZATION: "\"Bearer ${EMQX_AUTHN_TOKEN:?EMQX_AUTHN_TOKEN fehlt}\""
+      EMQX_AUTHORIZATION__SOURCES__1__HEADERS__AUTHORIZATION: "\"Bearer ${EMQX_AUTHZ_TOKEN:?EMQX_AUTHZ_TOKEN fehlt}\""
+    volumes:
+      - ./infra/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - ./infra/emqx/acl.conf:/opt/emqx/etc/fh-clone-acl.conf:ro
+      - emqx_data:/opt/emqx/data
+    ports:
+      - "${MQTT_BIND:-0.0.0.0}:${MQTT_PORT:-1883}:1883"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/emqx/bin/emqx ctl status >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    networks:
+      - backend
+      - mqtt_edge
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    depends_on:
+      control-api:
+        condition: service_healthy
+    ports:
+      - "${FH2_WEB_BIND:-0.0.0.0}:${FH2_WEB_PORT:-8088}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - frontend
+
+volumes:
+  timescale_data:
+  emqx_data:
+
+networks:
+  frontend:
+  backend:
+    internal: true
+  mqtt_edge:

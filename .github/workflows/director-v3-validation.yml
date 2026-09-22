@@ -1,0 +1,170 @@
+name: Direktor V3 Validierung
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: director-v3-validation
+  cancel-in-progress: false
+
+jobs:
+  release-struktur:
+    name: V3 Release-Struktur
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Verbindliche V3-Artefakte prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f package-lock.json || {
+            echo "::error::package-lock.json fehlt. Gate 1 ist nicht reproduzierbar."
+            exit 1
+          }
+
+          test -f .env.example || {
+            echo "::error::.env.example im Repository-Root fehlt."
+            exit 1
+          }
+
+          if [ -f compose.yaml ]; then
+            echo "COMPOSE_FILE=compose.yaml" >> "$GITHUB_ENV"
+          elif [ -f docker-compose.yml ]; then
+            echo "COMPOSE_FILE=docker-compose.yml" >> "$GITHUB_ENV"
+          else
+            echo "::error::Root-Compose fehlt."
+            exit 1
+          fi
+
+      - name: V3 Pflichtdienste im Compose prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          docker compose -f "$COMPOSE_FILE" --env-file .env config >/tmp/fh2-compose.yml
+          services="$(docker compose -f "$COMPOSE_FILE" --env-file .env config --services)"
+
+          for service in control-api emqx web; do
+            echo "$services" | grep -Fx "$service" >/dev/null || {
+              echo "::error::Pflichtdienst '$service' fehlt im Root-Compose."
+              exit 1
+            }
+          done
+
+          if ! echo "$services" | grep -Ex 'postgres|timescaledb' >/dev/null; then
+            echo "::error::Persistenzdienst 'postgres' oder 'timescaledb' fehlt im Root-Compose."
+            exit 1
+          fi
+
+  node:
+    name: Node / TypeScript / Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js 22 einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Abhängigkeiten reproduzierbar installieren
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+  ugcs:
+    name: UgCS-Bridge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Java 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: UgCS-Bridge bauen
+        working-directory: services/ugcs-bridge
+        run: mvn -B -DskipTests package
+
+  timescale:
+    name: TimescaleDB / Migrationen
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Compose-Konfiguration prüfen
+        working-directory: infra/timescale
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          docker compose --env-file .env config
+
+      - name: TimescaleDB starten und Migrationen anwenden
+        working-directory: infra/timescale
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          docker compose --env-file .env up -d
+
+          for attempt in $(seq 1 30); do
+            if docker compose --env-file .env exec -T timescaledb               pg_isready -U fhclone -d fhclone >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker compose --env-file .env logs
+              exit 1
+            fi
+            sleep 2
+          done
+
+          docker compose --env-file .env exec -T timescaledb             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1             -c "SELECT 1 FROM missions LIMIT 1;" >/dev/null
+
+          docker compose --env-file .env exec -T timescaledb             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1             -c "SELECT 1 FROM authz_audit LIMIT 1;" >/dev/null
+
+      - name: TimescaleDB-Logs bei Fehlern
+        if: failure()
+        working-directory: infra/timescale
+        run: docker compose --env-file .env logs || true
+
+      - name: TimescaleDB stoppen
+        if: always()
+        working-directory: infra/timescale
+        run: docker compose --env-file .env down -v || true
+
+  dokumentation:
+    name: Deutsche V3-Dokumentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Pflichtdokumente prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in             README.md             docs/README.md             docs/V3_ARCHITECTURE.md             docs/ARCHITECTURE.md             docs/DJI_MQTT_SECURITY.md             docs/EMQX-AUTHZ.md             docs/RC_PRO.md             docs/DRC.md             docs/RTK_NTRIP.md             docs/COMPATIBILITY.md             docs/BETRIEB.md             docs/KONFIGURATION.md             docs/FEHLERSUCHE.md             docs/GLOSSAR.md             docs/RELEASE_STATUS.md             CHANGELOG.md
+          do
+            test -s "$file" || {
+              echo "::error::Pflichtdokument '$file' fehlt oder ist leer."
+              exit 1
+            }
+          done

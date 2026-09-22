@@ -1,0 +1,20 @@
+{
+  "name": "fh-clone",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/adapters/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:authz": "npm run build && node --test apps/control-api/dist/authz.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@fh-clone/adapter-dji-cloud",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/*.test.js"
+  },
+  "dependencies": {
+    "@fh-clone/aircraft-core": "0.1.0",
+    "mqtt": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}
