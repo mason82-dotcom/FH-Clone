@@ -181,31 +181,24 @@ reproduzierbar starten.
 
 ## Dokumentation
 
-Der verbindliche Einstiegspunkt ist
-[docs/README.md](docs/README.md).
+Zentraler Einstieg:
 
-Kernunterlagen:
+- [vollständige Dokumentationsübersicht](docs/README.md)
+
+Wichtige Kernunterlagen:
 
 - [V3-Zielarchitektur](docs/V3_ARCHITECTURE.md)
 - [Gesamtarchitektur](docs/ARCHITECTURE.md)
-- [API-Referenz](docs/API.md)
-- [Konfiguration](docs/KONFIGURATION.md)
-- [Betrieb](docs/BETRIEB.md)
-- [Fehlersuche](docs/FEHLERSUCHE.md)
-- [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
 - [Sicherheitsmodell](docs/SICHERHEIT.md)
 - [DJI-MQTT-Sicherheit](docs/DJI_MQTT_SECURITY.md)
-- [EMQX-Authentifizierung und -Autorisierung](docs/EMQX-AUTHZ.md)
-- [RC Pro Enterprise](docs/RC_PRO.md)
-- [DRC](docs/DRC.md)
-- [RTK und NTRIP](docs/RTK_NTRIP.md)
-- [Missionen und Flugsitzungen](docs/MISSIONEN.md)
-- [Persistenz mit TimescaleDB](docs/PERSISTENZ.md)
 - [Datenmodell](docs/DATENMODELL.md)
-- [Medien und Multispektral](docs/MEDIEN_MULTISPEKTRAL.md)
-- [Kompatibilität](docs/COMPATIBILITY.md)
-- [FH2-/M4-Abgleich](docs/FH2_MANAGER_ALIGNMENT.md)
-- [Glossar](docs/GLOSSAR.md)
+- [Persistenz](docs/PERSISTENZ.md)
+- [API-Referenz](docs/API.md)
+- [Betrieb und Konfiguration](docs/BETRIEB.md)
+- [Tests und V3-Abnahme](docs/TESTS_UND_ABNAHME.md)
+
+Fachunterlagen zu RC Pro, DRC, RTK, Missionen, Medien/Multispektral, UgCS und
+Kompatibilität sind über den Dokumentationsindex verlinkt.
 
 ## Projektsteuerung
 
