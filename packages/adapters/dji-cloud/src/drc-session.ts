@@ -207,9 +207,9 @@ export function evaluateDrcGuards(guards: DrcSessionGuards): DrcGuardResult {
  * Backend-owned DRC session state machine.
  *
  * State flow:
- * idle/closed -> requesting -> active -> draining -> closed
+ * idle/closed -> requesting -> authorized -> authority_grabbed ->
+ * drc_mode_active -> controlling <-> degraded -> draining -> closed.
  *
- * A degraded input stream remains in state=active with health=degraded.
  * DJI authority loss force-closes immediately without attempting a neutral
  * publish, because command authority is no longer guaranteed.
  */
@@ -617,16 +617,6 @@ export class DrcSessionManager {
     const current = await this.store.get(gatewaySn);
     if (!current) {
       throw new Error(`No DRC session exists for gateway ${gatewaySn}`);
-    }
-    return current;
-  }
-
-  private async requireActive(gatewaySn: string): Promise<DrcSessionRecord> {
-    const current = await this.require(gatewaySn);
-    if (current.state !== "controlling" && current.state !== "degraded") {
-      throw new Error(
-        `DRC session for gateway ${gatewaySn} is not active (state=${current.state})`
-      );
     }
     return current;
   }
