@@ -8,7 +8,10 @@ function fixture(authorized = true) {
   const guards: DrcSessionGuards = { fc3: true, controlLease: true, capability: true, djiAuthority: authorized };
   const sessions = {
     async request() { calls.push("session.request"); return {} as never; },
-    async activate() { calls.push("session.activate"); return { state: "active" } as never; },
+    async markAuthorized() { calls.push("session.authorized"); return {} as never; },
+    async markAuthorityGrabbed() { calls.push("session.authorityGrabbed"); return {} as never; },
+    async markDrcModeActive() { calls.push("session.drcModeActive"); return {} as never; },
+    async activate() { calls.push("session.activate"); return { state: "drc_mode_active" } as never; },
     async closeGracefully() { calls.push("session.close"); return { state: "closed" } as never; },
     async forceClose() { calls.push("session.forceClose"); return { state: "closed" } as never; }
   };
@@ -16,6 +19,8 @@ function fixture(authorized = true) {
     resolveGatewaySn: () => "RC-PLUS2-001",
     supportsFlightControl: () => true,
     isCloudControlAuthorized: () => authorized,
+    async connectDrcTransport() { calls.push("transport.connect"); },
+    async disconnectDrcTransport() { calls.push("transport.disconnect"); },
     drc: {
       async requestCloudControlAuthority() { calls.push("authority.request"); },
       async releaseCloudControlAuthority() { calls.push("authority.release"); },
@@ -39,7 +44,11 @@ test("start orders authority before DRC activation", async () => {
     authority: { userId: "u1", userCallsign: "OP-A" },
     drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: 1, enable_tls: false } }
   });
-  assert.deepEqual(f.calls, ["session.request", "authority.request", "drc.enter", "session.activate"]);
+  assert.deepEqual(f.calls, [
+    "session.request", "authority.request", "session.authorized",
+    "session.authorityGrabbed", "drc.enter", "transport.connect",
+    "session.drcModeActive", "session.activate"
+  ]);
 });
 
 test("authority timeout force-closes and releases authority", async () => {
@@ -59,12 +68,12 @@ test("authority timeout force-closes and releases authority", async () => {
     }),
     /authority_timeout/
   );
-  assert.deepEqual(f.calls, ["session.request", "authority.request", "session.forceClose", "authority.release"]);
+  assert.deepEqual(f.calls, ["session.request", "authority.request", "session.forceClose", "transport.disconnect", "authority.release"]);
 });
 
 test("normal stop drains before authority release", async () => {
   const f = fixture(true);
   const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => f.guards);
   await coordinator.stop("M4T-001");
-  assert.deepEqual(f.calls, ["session.close", "authority.release"]);
+  assert.deepEqual(f.calls, ["session.close", "transport.disconnect", "authority.release"]);
 });
