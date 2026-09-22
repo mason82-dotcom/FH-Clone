@@ -7,6 +7,7 @@ export type Capability =
   | "telemetry.rtk"
   | "telemetry.camera"
   | "telemetry.gimbal"
+  | "telemetry.obstacle"
   | "control.flight"
   | "control.rth"
   | "control.pointing"
