@@ -149,6 +149,104 @@ test("parses DJI WPML template and execution documents without conflating height
   );
 });
 
+test("recognizes current Matrice 4 WPML identities and M4 reroute/payload parameters", () => {
+  const m4Template = templateXml
+    .replace("<wpml:droneEnumValue>77</wpml:droneEnumValue>", "<wpml:droneEnumValue>99</wpml:droneEnumValue>")
+    .replace("<wpml:droneSubEnumValue>2</wpml:droneSubEnumValue>", "<wpml:droneSubEnumValue>1</wpml:droneSubEnumValue>")
+    .replace("<wpml:payloadEnumValue>68</wpml:payloadEnumValue>", "<wpml:payloadEnumValue>89</wpml:payloadEnumValue>")
+    .replace(
+      "</wpml:missionConfig>",
+      `  <wpml:autoRerouteInfo>
+        <wpml:missionAutoRerouteMode>1</wpml:missionAutoRerouteMode>
+        <wpml:transitionalAutoRerouteMode>0</wpml:transitionalAutoRerouteMode>
+      </wpml:autoRerouteInfo>
+  </wpml:missionConfig>`
+    )
+    .replace(
+      "<wpml:autoFlightSpeed>7</wpml:autoFlightSpeed>",
+      `<wpml:autoFlightSpeed>7</wpml:autoFlightSpeed>
+    <wpml:payloadParam>
+      <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+      <wpml:imageFormat>wide,ir</wpml:imageFormat>
+    </wpml:payloadParam>`
+    );
+
+  const m4Waylines = waylinesXml
+    .replace("<wpml:droneEnumValue>77</wpml:droneEnumValue>", "<wpml:droneEnumValue>99</wpml:droneEnumValue>")
+    .replace("<wpml:droneSubEnumValue>2</wpml:droneSubEnumValue>", "<wpml:droneSubEnumValue>1</wpml:droneSubEnumValue>")
+    .replace("<wpml:payloadEnumValue>68</wpml:payloadEnumValue>", "<wpml:payloadEnumValue>89</wpml:payloadEnumValue>")
+    .replace(
+      "</wpml:missionConfig>",
+      `  <wpml:autoRerouteInfo>
+        <wpml:missionAutoRerouteMode>1</wpml:missionAutoRerouteMode>
+        <wpml:transitionalAutoRerouteMode>0</wpml:transitionalAutoRerouteMode>
+      </wpml:autoRerouteInfo>
+  </wpml:missionConfig>`
+    );
+
+  const bundle = parseWpmlBundle(m4Template, m4Waylines);
+  assert.deepEqual(bundle.issues.filter((issue) => issue.level === "error"), []);
+  assert.equal(bundle.template.missionConfig.drone?.model, "DJI Matrice 4T");
+  assert.equal(bundle.template.missionConfig.payload?.model, "DJI Matrice 4T Camera");
+  assert.deepEqual(bundle.template.missionConfig.autoReroute, {
+    missionAutoRerouteMode: true,
+    transitionalAutoRerouteMode: false
+  });
+  assert.equal(bundle.template.folders[0]?.payloadParam?.imageFormat, "wide,ir");
+  assert.deepEqual(bundle.template.folders[0]?.payloadParam?.imageFormats, ["wide", "ir"]);
+  assert.equal(
+    bundle.issues.some(
+      (issue) =>
+        issue.code === "mission.drone_unknown" ||
+        issue.code === "mission.payload_unknown"
+    ),
+    false
+  );
+});
+
+test("validates current DJI WPML RTH and takeoff height lower bounds", () => {
+  const invalidRth = waylinesXml.replace(
+    "<wpml:globalRTHHeight>120</wpml:globalRTHHeight>",
+    "<wpml:globalRTHHeight>1.5</wpml:globalRTHHeight>"
+  );
+  const invalidTakeoff = templateXml.replace(
+    "<wpml:takeOffSecurityHeight>20</wpml:takeOffSecurityHeight>",
+    "<wpml:takeOffSecurityHeight>1</wpml:takeOffSecurityHeight>"
+  );
+
+  assert.equal(
+    parseWpmlBundle(templateXml, invalidRth).waylines.issues.some(
+      (issue) => issue.code === "mission.global_rth_height_invalid"
+    ),
+    true
+  );
+  assert.equal(
+    parseWpmlBundle(invalidTakeoff, waylinesXml).template.issues.some(
+      (issue) => issue.code === "mission.takeoff_height_invalid"
+    ),
+    true
+  );
+});
+
+test("rejects duplicate template ids in template.kml", () => {
+  const duplicate = templateXml.replace(
+    "</Document>",
+    `<Folder>
+      <wpml:templateType>waypoint</wpml:templateType>
+      <wpml:templateId>0</wpml:templateId>
+      <wpml:autoFlightSpeed>7</wpml:autoFlightSpeed>
+    </Folder>
+</Document>`
+  );
+
+  assert.equal(
+    parseWpmlBundle(duplicate, waylinesXml).template.issues.some(
+      (issue) => issue.code === "template.id_duplicate"
+    ),
+    true
+  );
+});
+
 test("flags non-contiguous waypoint indexes and missing execution RTH height", () => {
   const nonContiguous = waylinesXml
     .replace("<wpml:index>0</wpml:index>", "<wpml:index>2</wpml:index>")
