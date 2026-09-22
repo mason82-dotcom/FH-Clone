@@ -17,6 +17,7 @@ import {
   describeDjiProduct,
   parseDjiTopologyUpdate
 } from "./topology.js";
+import { getDjiCloudControlProfile } from "./capabilities.js";
 
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
@@ -153,6 +154,24 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
   resolveGatewaySn(deviceOrGatewaySn: string): string | undefined {
     return this.topology.resolveGatewaySn(deviceOrGatewaySn);
+  }
+
+  supportsFlightControl(deviceSn: string): boolean {
+    const gatewaySn = this.resolveGatewaySn(deviceSn);
+    if (!gatewaySn) return false;
+    const topology = this.topology.getGateway(gatewaySn);
+    const subDevice = topology?.subDevices.find((device) => device.sn === deviceSn);
+    if (!topology || !subDevice) return false;
+    return getDjiCloudControlProfile(subDevice.product, topology.product).flightControl;
+  }
+
+  supportsFlyTo(deviceSn: string): boolean {
+    const gatewaySn = this.resolveGatewaySn(deviceSn);
+    if (!gatewaySn) return false;
+    const topology = this.topology.getGateway(gatewaySn);
+    const subDevice = topology?.subDevices.find((device) => device.sn === deviceSn);
+    if (!topology || !subDevice) return false;
+    return getDjiCloudControlProfile(subDevice.product, topology.product).flyTo;
   }
 
   async requestServiceForDevice(
@@ -315,7 +334,10 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
           productType: `${subDevice.product.domain ?? "?"}-${subDevice.product.type}-${subDevice.product.subType}`
         },
         adapterId: this.id,
-        capabilities: existing?.capabilities ?? [],
+        capabilities: [
+          ...(existing?.capabilities ?? []),
+          ...getDjiCloudControlProfile(subDevice.product, topology.product).capabilities
+        ].filter((value, index, values) => values.indexOf(value) === index),
         connected: true,
         lastSeenAt: topology.updatedAt
       };
@@ -396,3 +418,4 @@ export * from "./version.js";
 export * from "./service.js";
 export * from "./drc.js";
 export * from "./topology.js";
+export * from "./capabilities.js";
