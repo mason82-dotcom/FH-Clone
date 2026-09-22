@@ -30,6 +30,8 @@ bereits bestandene Hardware- oder Laufzeitabnahme missverstanden werden.
 | [RC_PRO.md](RC_PRO.md) | Gateway-/Aircraft-Modell und reale RC-Pro-Prüfpunkte | teilweise real zu verifizieren |
 | [DRC.md](DRC.md) | DRC-Protokoll, Authority, Dead-Man und Safety | Implementiert, standardmäßig gesperrt |
 | [RTK_NTRIP.md](RTK_NTRIP.md) | RTK-/GNSS-Telemetrie und NTRIP-Zuständigkeitsgrenze | Implementiert |
+| [MULTISPEKTRAL.md](MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | V3-Ziel |
+| [BETRIEB.md](BETRIEB.md) | lokaler Betrieb, Netzwerkgrenzen und Fehlersuche | Implementiert/V3-Ziel |
 | [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK-/Produktstände | verifizierte Referenz |
 | [FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) | Abgrenzung zum stabilen M4-/FH2-Manager-Pfad | Referenz |
 
