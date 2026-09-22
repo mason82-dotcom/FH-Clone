@@ -45,7 +45,7 @@ Geräteidentität entsteht serverseitig.
 
 ### Real zu verifizieren
 
-Mit RC Pro Enterprise beziehungsweise RC Plus 2:
+Mit RC Pro Enterprise, RC Plus 2 beziehungsweise DJI Dock 3:
 
 - tatsächliche MQTT-Client-ID
 - Username-/Credential-Verhalten
@@ -211,6 +211,23 @@ sys/product/{gateway_sn}/status_reply
 
 Die genaue Produktzuordnung wird mit realer Hardware bestätigt.
 
+## M4D/M4TD Property-Sanitization
+
+Der Dock-3/M4D-Vertrag enthält Werte, die nicht wie normale Telemetrie
+behandelt werden dürfen.
+
+`wireless_link_topo.secret_code` ist ein Link-Verschlüsselungscode. FH2
+redigiert diesen Wert bereits im DJI-Adapter, bevor der Payload als
+`RawMessage` ausgegeben, normalisiert, geloggt oder später persistiert werden
+kann.
+
+`dongle_infos[]` kann außerdem IMEI, EID und ICCID enthalten. Diese Werte
+sind keine Broker-Credentials, aber sensible Geräte-/SIM-Identifikatoren und
+dürfen nicht ungefiltert in öffentlichen APIs, WebUI oder Logs erscheinen.
+
+Die Sanitization hebt keine Topic-Rechte an und ändert die bestehende
+Default-Deny-/Gateway-Topologie-Logik nicht.
+
 ## DRC ist eine separate Sicherheitsdomäne
 
 DRC gehört nicht in die permanente Basic-Link-ACL.
@@ -312,6 +329,7 @@ Issue #5 muss vor V3-RC mindestens bestätigen:
 - Gateway-/Aircraft-Topic-Matrix
 - Credential-Fehler
 - Pair/Unpair
+- bei Dock 3 zusätzlich reale M4D/M4TD-OSD-/State- und Funklink-Payloads
 
 Diese Ergebnisse präzisieren die Sitzungslogik. Sie ändern nicht den
 Grundsatz, dass `clientid` keine Sicherheitsidentität ist.

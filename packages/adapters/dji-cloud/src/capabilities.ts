@@ -43,6 +43,14 @@ function isMatrice4Enterprise(product: DjiProductRef): boolean {
   );
 }
 
+function isMatrice4Dock(product: DjiProductRef): boolean {
+  return (
+    hasDomain(product, 0) &&
+    product.type === 100 &&
+    [0, 1].includes(product.subType)
+  );
+}
+
 function isRcProEnterprise(product?: DjiProductRef): boolean {
   return (
     hasDomain(product, 2) &&
@@ -55,6 +63,14 @@ function isRcPlus2(product?: DjiProductRef): boolean {
   return (
     hasDomain(product, 2) &&
     product?.type === 174 &&
+    product.subType === 0
+  );
+}
+
+function isDock3(product?: DjiProductRef): boolean {
+  return (
+    hasDomain(product, 3) &&
+    product?.type === 3 &&
     product.subType === 0
   );
 }
@@ -104,6 +120,23 @@ export function getDjiCloudControlProfile(
     };
   }
 
+  if (isMatrice4Dock(aircraft)) {
+    const supportedGateway = isDock3(gateway);
+    return {
+      flightControl: false,
+      flyTo: false,
+      pointingFlight: false,
+      orbitFlight: false,
+      payloadControl: false,
+      requiresCloudControlAuthority: false,
+      drcProfile: "none",
+      capabilities: [],
+      reason: supportedGateway
+        ? "FH2 recognizes the DJI Matrice 4D/4TD Dock-to-Cloud property contract behind DJI Dock 3. This integration is telemetry/property-read only; Dock 3 flight, payload and property-write controls remain disabled until separately implemented and safety-gated."
+        : "Matrice 4D/4TD Dock-to-Cloud runtime support remains read-only until a DJI Dock 3 gateway is identified."
+    };
+  }
+
   return {
     flightControl: false,
     flyTo: false,
@@ -114,8 +147,8 @@ export function getDjiCloudControlProfile(
     drcProfile: "none",
     capabilities: [],
     reason: gateway
-      ? `No explicit Pilot Cloud control profile is registered for aircraft type ${aircraft.type}/${aircraft.subType} behind gateway type ${gateway.type}/${gateway.subType}.`
-      : `No explicit Pilot Cloud control profile is registered for aircraft type ${aircraft.type}/${aircraft.subType}.`
+      ? `No explicit Pilot/Dock Cloud control profile is registered for aircraft type ${aircraft.type}/${aircraft.subType} behind gateway type ${gateway.type}/${gateway.subType}.`
+      : `No explicit Pilot/Dock Cloud control profile is registered for aircraft type ${aircraft.type}/${aircraft.subType}.`
   };
 }
 

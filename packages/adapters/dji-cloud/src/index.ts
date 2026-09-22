@@ -10,6 +10,7 @@ import type {
   RawMessage
 } from "@fh-clone/aircraft-core";
 import { normalizeDjiPayload } from "./normalizer.js";
+import { sanitizeDjiRawPayload } from "./sanitize.js";
 import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
 import { DjiPilotCloudAuthorityCoordinator } from "./pilot-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
@@ -306,6 +307,8 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       payload = { raw: bytes.toString("utf8"), parseError: true };
     }
 
+    const safePayload = sanitizeDjiRawPayload(payload);
+
     if (topic.endsWith("/services_reply")) {
       this.resolveServiceReply(payload);
     }
@@ -340,7 +343,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       ...(deviceId ? { deviceId } : {}),
       receivedAt,
       channel: topic,
-      payload: topology ? toPublicDjiTopologyPayload(topology) : payload
+      payload: topology ? toPublicDjiTopologyPayload(topology) : safePayload
     };
     await this.events?.onRawMessage?.(raw);
 
@@ -348,7 +351,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     if (!topic.endsWith("/osd") && !topic.endsWith("/state")) return;
 
-    const normalized = normalizeDjiPayload(deviceId, payload, receivedAt);
+    const normalized = normalizeDjiPayload(deviceId, safePayload, receivedAt);
     const knownCapabilities = this.capabilities.get(deviceId) ?? new Set<Capability>();
     for (const capability of normalized.capabilities) knownCapabilities.add(capability);
     this.capabilities.set(deviceId, knownCapabilities);
@@ -504,6 +507,8 @@ export * from "./capabilities.js";
 export * from "./rtk.js";
 
 export * from "./payloads.js";
+export * from "./m4d-properties.js";
+export * from "./sanitize.js";
 
 export * from "./cloud-authority.js";
 export * from "./pilot-authority.js";

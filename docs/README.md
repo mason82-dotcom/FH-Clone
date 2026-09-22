@@ -36,6 +36,7 @@ Hardwareabnahme missverstanden werden.
 | [DJI_MQTT_SECURITY.md](DJI_MQTT_SECURITY.md) | MQTT-Identität, AuthN/AuthZ und Basic-Link-/DRC-Trennung | V3-Ziel |
 | [EMQX-AUTHZ.md](EMQX-AUTHZ.md) | EMQX-Vertrag und interne Auth-Endpunkte | Implementiert/V3-Ziel |
 | [RC_PRO.md](RC_PRO.md) | Gateway-/Aircraft-Modell und reale RC-Pro-Prüfpunkte | Real zu verifizieren |
+| [M4D_DOCK3.md](M4D_DOCK3.md) | Matrice 4D/4TD Dock-to-Cloud-Properties und Dock-3-Vertrag | Implementiert/Real zu verifizieren |
 | [DRC.md](DRC.md) | DRC, DJI Authority, Dead-Man und Sitzungszustände | Implementiert, standardmäßig gesperrt |
 | [RTK_NTRIP.md](RTK_NTRIP.md) | RTK-/GNSS-Telemetrie und NTRIP-Zuständigkeitsgrenze | Implementiert |
 | [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK- und Produktstände | Referenz |

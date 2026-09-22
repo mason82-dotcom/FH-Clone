@@ -15,9 +15,9 @@ automatisch.
 
 | Version | Veröffentlichung | Relevanz |
 | --- | --- | --- |
-| 1.15 | 2025-06-10 | unter anderem Matrice 400 und MOP im Pilot-Cloud-Pfad |
-| 1.16 | 2025-11-26 | weitere Dock-3-Funktionen |
-| 1.16.1 | 2025-12-17 | aktuellste in der offiziellen Release-History verifizierte Freigabe |
+| 1.15 | 2025-06-10 | Dock 3: unter anderem PSDK-Firmware-Upgrade; Pilot-Cloud: Matrice 400 und MOP |
+| 1.16 | 2025-11-26 | Dock 3: AI-Zielerkennung/-verfolgung |
+| 1.16.1 | 2025-12-17 | Dock 3: unter anderem `remaining_power_for_return_home` und DLT-664-Thermalformat |
 
 Wichtig: Die allgemeine DJI-Developer-Startseite kann einen älteren
 Cloud-API-Stand anzeigen. Für FH-Clone ist die konkrete Cloud-API-Release-
@@ -89,6 +89,20 @@ M3E/M3T/M3M übertragen.
 - erhält daher **kein** automatisch abgeleitetes M3E/M3T-Live-Control-Profil
 - eine spätere Cloud-Capability benötigt eindeutige DJI-Enumeration oder
   reale, bestätigte `update_topo`-Identität
+
+### Matrice 4D/4TD + DJI Dock 3
+
+- Dock-to-Cloud über DJI Dock 3
+- Dock 3: `domain=3,type=3,sub_type=0`
+- M4D: `domain=0,type=100,sub_type=0`
+- M4TD: `domain=0,type=100,sub_type=1`
+- Kamera-Payloads: M4D `98-0-0`, M4TD `99-0-0`
+- FH2 integriert den aktuellen Property-Vertrag read-only
+- Cloud API 1.16.1 nennt für ihre neuen Dock-3-Funktionen mindestens
+  Firmware `14.03.00.03` für M4D/4TD und Dock 3
+- keine automatische Freigabe von Property-Write oder Dock-DRC
+
+Details: [M4D_DOCK3.md](M4D_DOCK3.md)
 
 ### Matrice 4E/4T
 

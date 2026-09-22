@@ -142,6 +142,9 @@ export function describeDjiProduct(product: DjiProductRef): string {
   if (domain === "2" && product.type === 174 && product.subType === 0) {
     return "DJI RC Plus 2";
   }
+  if (domain === "3" && product.type === 3 && product.subType === 0) {
+    return "DJI Dock 3";
+  }
 
   if (domain === "0" && product.type === 77) {
     if (product.subType === 0) return "DJI Mavic 3 Enterprise";
@@ -152,6 +155,11 @@ export function describeDjiProduct(product: DjiProductRef): string {
   if (domain === "0" && product.type === 99) {
     if (product.subType === 0) return "DJI Matrice 4E";
     if (product.subType === 1) return "DJI Matrice 4T";
+  }
+
+  if (domain === "0" && product.type === 100) {
+    if (product.subType === 0) return "DJI Matrice 4D";
+    if (product.subType === 1) return "DJI Matrice 4TD";
   }
 
   return `DJI product ${product.domain ?? "?"}/${product.type}/${product.subType}`;

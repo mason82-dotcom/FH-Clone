@@ -200,3 +200,97 @@ test("wayline flight mode is observation, not mission.wayline capability", () =>
     5
   );
 });
+
+test("M4D/M4TD property arrays are flattened without leaking wireless link secrets", () => {
+  const result = normalizeDjiPayload(
+    "M4TD-001",
+    {
+      data: {
+        attitude_pitch: 3.5,
+        attitude_roll: -1.2,
+        cameras: [
+          {
+            payload_index: "99-0-0",
+            camera_mode: 0,
+            ir_metering_area: {
+              x: 0.1,
+              y: 0.2,
+              width: 0.3,
+              height: 0.4,
+              temperature: 42.5
+            }
+          }
+        ],
+        "99-0-0": {
+          gimbal_pitch: -30,
+          gimbal_roll: 0.5,
+          gimbal_yaw: 92,
+          thermal_gain_mode: 2,
+          measure_target_distance: 17.3
+        },
+        battery: {
+          capacity_percent: 76,
+          batteries: [
+            {
+              index: 0,
+              sn: "BATTERY-001",
+              temperature: 31.4
+            }
+          ]
+        },
+        position_state: {
+          is_fixed: 2,
+          quality: 10,
+          gps_number: 22,
+          rtk_number: 28
+        },
+        wireless_link_topo: {
+          secret_code: Array.from({ length: 28 }, (_, index) => index),
+          leaf_nodes: [
+            {
+              sn: "DOCK3-001",
+              sdr_id: 123,
+              control_source_index: 1
+            }
+          ]
+        }
+      }
+    },
+    2_000
+  );
+
+  assert.equal(result.capabilities.includes("telemetry.camera"), true);
+  assert.equal(result.capabilities.includes("telemetry.gimbal"), true);
+  assert.equal(result.capabilities.includes("telemetry.battery"), true);
+  assert.equal(result.capabilities.includes("telemetry.rtk"), true);
+
+  assert.equal(
+    result.samples.find((sample) => sample.key === "flight.attitude.pitch_deg")?.value,
+    3.5
+  );
+  assert.equal(
+    result.samples.find((sample) => sample.key === "flight.attitude.roll_deg")?.value,
+    -1.2
+  );
+  assert.equal(
+    result.samples.find((sample) => sample.key === "payload.gimbal.pitch_deg")?.value,
+    -30
+  );
+  assert.equal(
+    result.samples.find(
+      (sample) => sample.rawKey === "cameras.0.payload_index"
+    )?.value,
+    "99-0-0"
+  );
+  assert.equal(
+    result.samples.find(
+      (sample) => sample.rawKey === "battery.batteries.0.temperature"
+    )?.value,
+    31.4
+  );
+  assert.equal(
+    result.samples.some((sample) => sample.rawKey.includes("secret_code")),
+    false
+  );
+});
+
