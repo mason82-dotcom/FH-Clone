@@ -153,15 +153,24 @@ export interface DrcGuardSuccess {
 
 export type DrcGuardResult = DrcGuardSuccess | DrcGuardFailure;
 
-export function evaluateDrcGuards(guards: DrcSessionGuards): DrcGuardResult {
+export function evaluateDrcRequestGuards(
+  guards: DrcSessionGuards
+): DrcGuardResult {
   const missing: Array<keyof DrcSessionGuards> = [];
 
   if (!guards.fc3) missing.push("fc3");
   if (!guards.controlLease) missing.push("controlLease");
   if (!guards.capability) missing.push("capability");
-  if (!guards.djiAuthority) missing.push("djiAuthority");
 
   return missing.length === 0 ? { ok: true } : { ok: false, missing };
+}
+
+export function evaluateDrcGuards(guards: DrcSessionGuards): DrcGuardResult {
+  const request = evaluateDrcRequestGuards(guards);
+  if (!request.ok) return request;
+  return guards.djiAuthority
+    ? { ok: true }
+    : { ok: false, missing: ["djiAuthority"] };
 }
 
 /**
@@ -221,7 +230,7 @@ export class DrcSessionManager {
   }
 
   async request(input: RequestDrcSession): Promise<DrcSessionRecord> {
-    this.assertGuards(input.guards, "request DRC session");
+    this.assertRequestGuards(input.guards, "request DRC session");
 
     const existing = await this.store.get(input.gatewaySn);
     if (
@@ -306,6 +315,35 @@ export class DrcSessionManager {
     guards: DrcSessionGuards
   ): Promise<number> {
     return this.sendStick(gatewaySn, toDjiStickChannels(input), guards);
+  }
+
+  /**
+   * Re-evaluates runtime safety guards.
+   * DJI authority loss closes immediately without a neutral publish.
+   * Loss of FH-Clone stage/lease/capability drains while DJI authority still exists.
+   */
+  async reevaluateGuards(
+    gatewaySn: string,
+    guards: DrcSessionGuards
+  ): Promise<DrcSessionRecord | undefined> {
+    const current = await this.store.get(gatewaySn);
+    if (!current || current.state === "closed" || current.state === "idle") {
+      return current;
+    }
+
+    if (!guards.djiAuthority) {
+      return this.forceClose(gatewaySn, "dji_authority_lost");
+    }
+
+    const requestGuards = evaluateDrcRequestGuards(guards);
+    if (!requestGuards.ok) {
+      return this.closeGracefully(
+        gatewaySn,
+        `guard_lost:${requestGuards.missing.join(",")}`
+      );
+    }
+
+    return current;
   }
 
   /**
@@ -475,6 +513,18 @@ export class DrcSessionManager {
       );
     }
     return current;
+  }
+
+  private assertRequestGuards(
+    guards: DrcSessionGuards,
+    operation: string
+  ): void {
+    const result = evaluateDrcRequestGuards(guards);
+    if (!result.ok) {
+      throw new Error(
+        `Cannot ${operation}; missing guards: ${result.missing.join(", ")}`
+      );
+    }
   }
 
   private assertGuards(guards: DrcSessionGuards, operation: string): void {
