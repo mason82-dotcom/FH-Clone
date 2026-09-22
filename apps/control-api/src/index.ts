@@ -632,7 +632,7 @@ function getWaylineObservation(deviceId: string) {
   return {
     deviceId,
     source: "dji_mode_code",
-    currentlyFlyingWayline: activeMission?.lastActivity === "wayline",
+    currentlyFlyingWayline: activeMission?.lastModeCode === 5,
     observedInActiveMission: activeMission?.waylineObserved ?? false,
     ...(activeMission ? { activeMissionId: activeMission.missionId } : {}),
     ...(lastCompletedMission?.waylineObserved
