@@ -142,27 +142,17 @@ verify_gateway="VERIFY-GW-$(date +%s)"
 verify_user="dji-gateway-verify-$(date +%s)"
 verify_password="Verify-Only-$verify_gateway-A9!"
 verify_credential_created=0
+verify_id=""
+verify_marker_created=0
 
 cleanup_verify_credential() {
   if [ "$verify_credential_created" -ne 1 ]; then
     return 0
   fi
 
-  if docker compose --env-file .env exec -T \
-    -e VERIFY_USER="$verify_user" \
-    control-api \
-    node --input-type=module -e '
-      import { Pool } from "pg";
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
-      try {
-        await pool.query(
-          "DELETE FROM gateway_credentials WHERE username = $1",
-          [process.env.VERIFY_USER]
-        );
-      } finally {
-        await pool.end();
-      }
-    '
+  if docker compose --env-file .env exec -T timescaledb \
+    psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+    -c "DELETE FROM gateway_credentials WHERE username = '$verify_user';" >/dev/null
   then
     verify_credential_created=0
     return 0
@@ -172,7 +162,29 @@ cleanup_verify_credential() {
   return 1
 }
 
-trap 'status=$?; trap - 0; cleanup_verify_credential || true; exit "$status"' 0
+cleanup_verify_marker() {
+  if [ "$verify_marker_created" -ne 1 ] || [ -z "$verify_id" ]; then
+    return 0
+  fi
+
+  if docker compose --env-file .env exec -T timescaledb \
+    psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+    -c "DELETE FROM fh2_runtime_verify WHERE id = '$verify_id';" >/dev/null
+  then
+    verify_marker_created=0
+    return 0
+  fi
+
+  echo "WARNUNG: temporärer Persistenzmarker konnte nicht entfernt werden: $verify_id" >&2
+  return 1
+}
+
+cleanup_verify_artifacts() {
+  cleanup_verify_credential || true
+  cleanup_verify_marker || true
+}
+
+trap 'status=$?; trap - 0; cleanup_verify_artifacts; exit "$status"' 0
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
@@ -333,6 +345,7 @@ docker compose --env-file .env exec -T timescaledb \
   psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
   -c "CREATE TABLE IF NOT EXISTS fh2_runtime_verify (id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());" \
   -c "INSERT INTO fh2_runtime_verify (id) VALUES ('$verify_id');" >/dev/null
+verify_marker_created=1
 
 docker compose --env-file .env restart timescaledb >/dev/null
 wait_http "http://127.0.0.1:$API_PORT/ready" "Readiness nach DB-Restart"
@@ -347,9 +360,10 @@ if [ "$(printf '%s' "$persisted" | tr -d '[:space:]')" != "1" ]; then
   exit 1
 fi
 
-docker compose --env-file .env exec -T timescaledb \
-  psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
-  -c "DELETE FROM fh2_runtime_verify WHERE id = '$verify_id';" >/dev/null
+if ! cleanup_verify_marker; then
+  echo "FEHLER: temporärer Persistenzmarker blieb in der Datenbank: $verify_id" >&2
+  exit 1
+fi
 
 echo "FH2 V3 lokale Runtime-Prüfung erfolgreich."
 echo "Stack bleibt gestartet."
