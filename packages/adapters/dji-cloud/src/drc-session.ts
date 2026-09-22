@@ -43,6 +43,8 @@ export interface DrcSessionGuards {
 export interface DrcSessionRecord {
   aircraftSn: string;
   gatewaySn: string;
+  /** Runtime lease holder. Never restored as authorization state after restart. */
+  holder: string;
   state: DrcSessionState;
   health: DrcSessionHealth;
   createdAt: number;
@@ -161,6 +163,7 @@ export interface DrcSessionAuditEvent {
 export interface RequestDrcSession {
   aircraftSn: string;
   gatewaySn: string;
+  holder: string;
   guards: DrcSessionGuards;
 }
 
@@ -279,6 +282,7 @@ export class DrcSessionManager {
     const record: DrcSessionRecord = {
       aircraftSn: input.aircraftSn,
       gatewaySn: input.gatewaySn,
+      holder: input.holder,
       state: "requesting",
       health: "healthy",
       createdAt: now,
