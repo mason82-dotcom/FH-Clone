@@ -389,7 +389,7 @@ export class DrcController {
     assertFiniteRange("longitude", request.point.longitude, -180, 180);
     assertFiniteRange("height", request.point.height, 2, 10_000);
     if (request.maxSpeedMps !== undefined) {
-      assertFiniteRange("maxSpeedMps", request.maxSpeedMps, 1, 15);
+      assertFiniteRange("maxSpeedMps", request.maxSpeedMps, 0, 15);
     }
 
     const flyToId = randomUUID();
