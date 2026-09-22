@@ -40,7 +40,7 @@ FH2-Control-API
         +-- Dead-Man
         |
         v
-Aircraft Core <----> PostgreSQL
+Aircraft Core <----> TimescaleDB/PostgreSQL
    |
    +-- DJI Cloud API / MQTT
    +-- MSDK-V5-Bridge
@@ -76,7 +76,7 @@ Der V3-Gesamtstack muss reproduzierbar gemeinsam startbar sein mit:
 control-api
 emqx
 web
-postgres
+timescaledb
 ```
 
 UgCS bleibt ein optionaler Adapterdienst.
@@ -90,14 +90,14 @@ PostgreSQL soll mindestens persistieren:
 
 - Rohmeldungen
 - normalisierte Parameter
+- automatische Missionssitzungen
 - Geräte
 - Topologie
 - AuthN-/AuthZ-Audit
 - Medienmetadaten
 - Missions-/RTK-Kontext
 
-**Aktueller Status:** V3-Ziel; vollständige Persistenz ist noch nicht
-abgenommen.
+**Aktueller Status:** SQL-Schema und automatische Missionspersistenz sind implementiert; Telemetrie-, Raw-, Audit-, Topologie- und Medienpersistenz sind noch nicht vollständig abgenommen.
 
 ## DJI MQTT
 
