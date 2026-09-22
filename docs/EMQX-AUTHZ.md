@@ -36,10 +36,84 @@ HTTP AuthZ
 ### V3-Ziel
 
 - `POST /internal/emqx/authn`
-- Credential Store
+- Gateway-Credential-Store
+- Passwortprüfung mit starkem Hashverfahren
 - trusted `client_attrs.gateway_sn`
 - AuthZ ohne Identitätsableitung aus `clientid`
 - persistentes Audit
+
+
+## Interner Authentifizierungsendpunkt
+
+V3 verwendet:
+
+```http
+POST http://control-api:8081/internal/emqx/authn
+```
+
+EMQX 5.7 unterstützt `client_attrs` in erfolgreichen HTTP-AuthN-Antworten.
+`expire_at` wird bewusst **nicht** verwendet, weil dieses Feld erst ab EMQX
+5.8 verfügbar ist.
+
+Vorgesehene Anfrage:
+
+```json
+{
+  "username": "dji-gateway-...",
+  "password": "<mqtt-passwort>",
+  "clientid": "MQTT-SESSION-ID",
+  "peerhost": "10.0.0.20"
+}
+```
+
+Das Passwort darf ausschließlich für die Verifikation verwendet und niemals
+geloggt, auditiert oder persistiert werden.
+
+Erfolgreiche Antwort:
+
+```json
+{
+  "result": "allow",
+  "is_superuser": false,
+  "client_attrs": {
+    "role": "dji_gateway",
+    "gateway_sn": "GATEWAY_SN"
+  }
+}
+```
+
+Fehlerpfade einschließlich unbekanntem Principal, falschem Passwort,
+deaktiviertem Credential, ungültiger Bindung oder internem Fehler liefern
+**HTTP 200** mit:
+
+```json
+{
+  "result": "deny",
+  "is_superuser": false
+}
+```
+
+Damit kann ein HTTP-Fehler nicht als `ignore` in eine nachgelagerte
+Authenticator-Kette durchfallen.
+
+Für EMQX -> Control API wird ein separater interner Service-Token für AuthN
+verwendet:
+
+```env
+EMQX_AUTHN_TOKEN=<zufälliges-internes-secret>
+```
+
+Der Credential Store darf PostgreSQL verwenden. Das betrifft ausschließlich
+Principal-/Credential-Authentisierung.
+
+Weiterhin verboten ist die Nutzung persistierter Daten als Quelle für:
+
+- aktive Gateway↔Aircraft-Autorisierung
+- aktuelle `update_topo`-Zuordnung
+- aktive DRC-Sitzungen
+- FC3-/Lease-/DJI-Authority-Zustand
+
+Diese Zustände bleiben Runtime-only.
 
 ## Interner Autorisierungsendpunkt
 
