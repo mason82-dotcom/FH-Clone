@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+
 import { App } from "./App.js";
+import { Fh2Provider } from "./fh2/Fh2Provider.js";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -11,6 +13,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <Fh2Provider>
+      <App />
+    </Fh2Provider>
   </StrictMode>
 );
