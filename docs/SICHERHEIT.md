@@ -30,6 +30,10 @@ die übergreifenden Schutzschichten.
 | FC2 | Missions-/Task-Steuerung | Wayline/Mission |
 | FC3 | Flugsteuerung | RTH, DRC, Pointing, Orbit |
 
+Die Beispiele in dieser Tabelle sind Risikoklassen für mögliche Commands.
+Sie sind keine Aussage, dass der aktuelle DJI-Adapter diese Funktionen bereits
+ausführen oder als Capability melden kann.
+
 Der aktuelle Core startet auf FC0.
 
 ## Command-Pipeline
