@@ -154,6 +154,21 @@ const publicServer = createServer(async (request, response) => {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/ready") {
+      const checks = {
+        mqttBackendConnected: dji?.isConnected ?? false,
+        topologyStoreReady: Boolean(topologyStore),
+        gatewayCredentialStoreReady: Boolean(gatewayCredentials),
+        missionStoreConfigured: missionStore.enabled
+      };
+      const ready = Object.values(checks).every(Boolean);
+      return json(response, ready ? 200 : 503, {
+        status: ready ? "ready" : "not_ready",
+        service: "control-api",
+        checks
+      });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/devices") {
       return json(response, 200, devices.list());
     }
