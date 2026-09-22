@@ -1,29 +1,55 @@
 # DJI Direct Remote Control (DRC)
 
-FH-Clone verwendet für DRC ausschließlich die Topic-Richtung der DJI Cloud API:
+## Sicherheitsstatus
 
-- Cloud → Gerät/Pilot: `thing/product/{gateway_sn}/drc/down`
-- Gerät/Pilot → Cloud: `thing/product/{gateway_sn}/drc/up`
-- Service-Aufrufe: `thing/product/{gateway_sn}/services`
-- Service-Antworten: `thing/product/{gateway_sn}/services_reply`
-- Fortschrittsereignisse: `thing/product/{gateway_sn}/events`
+DRC-Code ist auf `main` vorhanden, aber V3 aktiviert ihn nicht automatisch.
 
-Aircraft-OSD/State bleiben davon getrennt und werden über `device_sn` verarbeitet.
+Standard:
 
-## Zwei MQTT-Pfade
+```text
+Safety Stage = FC0
+DRC = gesperrt
+```
 
-`drc_mode_enter` läuft über den normalen Cloud-Servicekanal. Sein Payload übermittelt dem Gerät die Zugangsdaten des DRC-MQTT-Relays.
+DRC ist **kein Bestandteil des permanenten Basic Link**.
 
-Deshalb trennt FH-Clone:
+## Zwei getrennte MQTT-Pfade
 
-1. **ServiceRequester** – normaler Cloud-Broker; `services` / `services_reply`, TID/BID-Korrelation.
-2. **DRC Publisher** – DRC-Relay; `drc/down` für Control und Heartbeat.
+`drc_mode_enter` läuft über den normalen Servicekanal und liefert die Daten
+für die DRC-Sitzung.
 
-Beide können technisch auf demselben EMQX laufen, werden im Code aber nicht als identisch vorausgesetzt.
+FH-Clone trennt deshalb:
 
-## Produktspezifische DRC-Profile
+1. **Basic-Link-Servicekanal**
+   - `services`
+   - `services_reply`
+   - Status/Telemetrie/Events
+2. **DRC-Relay**
+   - `drc/down`
+   - `drc/up`
+   - Heartbeat
+   - Steuerframes
 
-DRC wird nicht mehr als ein einziges universelles Steuerprotokoll behandelt.
+Beide können technisch auf derselben Brokerinstanz laufen, gelten
+sicherheitstechnisch aber als getrennte Sitzungen.
+
+## Topic-Richtung
+
+Während einer aktiven DRC-Sitzung:
+
+```text
+Cloud -> Gateway:
+thing/product/{gateway_sn}/drc/down
+
+Gateway -> Cloud:
+thing/product/{gateway_sn}/drc/up
+```
+
+DRC-Topics stehen nicht in der permanenten Basic-Link-ACL.
+
+## Produktprofile
+
+Der Adapter führt produktspezifische Profile, zum Beispiel:
 
 ```ts
 type DjiDrcProfile =
@@ -33,37 +59,63 @@ type DjiDrcProfile =
   | "dock-velocity";
 ```
 
-Die Auswahl erfolgt aus der zur Laufzeit erkannten Gateway↔Aircraft-Topologie.
+Das Profil stammt aus der erkannten Gateway-/Aircraft-Topologie und den
+verifizierten Produktfähigkeiten.
 
-### Mavic 3 Enterprise Series + RC Pro Enterprise
+### Mavic 3 Enterprise + RC Pro Enterprise
 
-- Aircraft type: `77`
-- Gateway type: `144`
-- Pilot-Cloud: Payload-Control
-- keine automatische `control.flight`-Capability
-- physische RC-Sticks bleiben der Flugsteuerung zugeordnet
+Für die Mavic-3-Enterprise-Familie wird keine automatische
+`control.flight`-Capability vergeben.
 
-### Matrice 4 Series + RC Plus 2
+Payload-, Kamera- und Gimbal-Funktionen sind davon getrennt zu bewerten.
 
-- Aircraft type: `99`
-- Gateway type: `174`
-- Pilot-Cloud: Flight + Payload Control
-- Pointing Flight und Orbit/POI Flight werden als eigene Capabilities geführt
-- Flight Control verlangt DJI-Control-Authority **und** FH-Clone Safety Stage FC3
+### Matrice 4 + RC Plus 2
 
-Die Capability-Erkennung schaltet FC3 niemals selbst frei.
+Für Matrice 4 existiert ein Pilot-Cloud-Control-Profil mit Stick-Control-Code.
 
-## Aktuelles Stick-Control-Protokoll
+Auch hier gilt: Produktunterstützung bedeutet nicht Safety-Freigabe.
 
-Für aktuelle Pilot-/DRC-Pfade verwendet DJI:
+## Cloud-Control-Authority
 
-- Topic: `thing/product/{gateway_sn}/drc/down`
-- Method: `stick_control`
-- Sendefrequenz: 5–10 Hz
-- kein ACK
-- `seq` auf Envelope-Ebene
+Aktuelle Pilot-Cloud-Pfade verwenden eine eigene DJI-Control-Authority.
 
-Kanäle:
+Der Adapter unterstützt dafür unter anderem:
+
+```text
+cloud_control_auth_request
+cloud_control_release
+```
+
+Authority-Status wird separat verfolgt.
+
+DJI-Authority ersetzt **nicht** FH2-Control-Lease oder SafetyGate.
+
+## Aktivierungskette
+
+Eine aktive DRC-Steuerung benötigt vollständig:
+
+```text
+Produkt unterstützt Cloud Flight Control
++ FC3
++ gültiger FH2 Control Lease
++ gültige DJI Control Authority
++ drc_mode_enter erfolgreich
++ DRC Relay verbunden
++ Dead-Man aktiv
+```
+
+Fehlt ein Glied, darf kein Steuerframe gesendet werden.
+
+## Stick-Control
+
+Der aktuelle Stick-Pfad verwendet:
+
+```text
+Topic: thing/product/{gateway_sn}/drc/down
+Methode: stick_control
+```
+
+Im Adapter vorhandene Kanalwerte:
 
 | Feld | Bereich | Neutral |
 | --- | ---: | ---: |
@@ -72,91 +124,79 @@ Kanäle:
 | `throttle` | 364..1684 | 1024 |
 | `yaw` | 364..1684 | 1024 |
 
-FH-Clone stellt dafür `sendStickControl()`, `sendNeutralStickControl()` sowie die Konvertierung aus normierten `-1..1`-Werten bereit.
+Normierte UI-Werte werden vor dem Versand in diese Kanalwerte umgerechnet.
 
-Die UI publiziert diese Werte **nicht direkt**. Browser-Input muss über Control Authority und Safety Gateway laufen.
+Der Browser publiziert niemals selbst MQTT-Steuerframes.
 
-## Legacy Velocity Control
+## Legacy-Pfad
 
-`drone_control` mit `x/y/h/w` bleibt im Adapter nur als expliziter Legacy-/Kompatibilitätspfad erhalten.
+`drone_control` mit `x/y/h/w` bleibt nur als expliziter
+Kompatibilitätspfad im Adapter.
 
-DJI markiert diesen DRC-Flight-Control-Pfad in aktueller Dokumentation als nicht mehr gepflegt und empfiehlt `stick_control`.
+Er darf nicht automatisch für neuere Pilot-/Matrice-4-Profile verwendet
+werden.
 
-Die alte Sequenzlogik bleibt deshalb isoliert:
+## Sequenzen und Taktung
 
-- `seq` liegt in `data`
-- bei Änderung von `x/y/h/w` beginnt die Legacy-Sequenz erneut bei 0
+Der Stick-Pfad führt eine eigene Sequenz. Bei neuer DRC-Sitzung wird der
+Sitzungszustand zurückgesetzt.
 
-Sie darf nicht automatisch für RC Plus 2/Matrice 4 verwendet werden.
-
-## Service ACK
-
-`DjiCloudAdapter.requestService()` erzeugt `tid`, `bid`, Timestamp und wartet auf das korrelierte `services_reply`.
-
-DRC-Mode-Enter, Authority-Grab, Exit und FlyTo sind damit keine Fire-and-Forget-Operationen.
-
-Stick-Control ist davon ausdrücklich ausgenommen: DJI definiert dafür keinen ACK.
-
-## Rate Limiting
-
-FH-Clone limitiert DRC-Control standardmäßig auf maximal 10 Hz.
-
-Der Aufrufer muss während aktiver Stick-Steuerung einen stabilen 5–10-Hz-Datenstrom sicherstellen. Ein einzelnes gesendetes Stick-Paket stellt keine dauerhafte Steuerung dar.
+Steuerdaten müssen während aktiver Steuerung in der vom Produktvertrag
+vorgesehenen Frequenz gesendet werden. Ein einzelnes Stick-Paket ist keine
+dauerhafte Steuerung.
 
 ## Heartbeat
 
-Der Controller sendet standardmäßig alle 10 Sekunden einen Heartbeat. DJI dokumentiert, dass ein länger inaktiver DRC-Link nach ausbleibenden Heartbeats beendet werden kann.
+FH-Clone kann während einer aktiven DRC-Sitzung Heartbeats senden.
 
-Lokale Safety-Watchdogs dürfen strenger reagieren als der DJI-Protokolltimeout.
+Der Dead-Man der Anwendung darf strenger reagieren als ein DJI-seitiger
+Verbindungs-Timeout.
+
+## Dead-Man
+
+Der V3-Code enthält einen DRC-Sitzungsmanager mit Dead-Man-Logik.
+
+Der Dead-Man ist ein zusätzlicher FH2-Sicherheitsmechanismus und ersetzt weder
+DJI Authority noch Broker-AuthZ.
+
+Bei ausbleibender Bedienaktivität muss die lokale Sitzung in einen sicheren
+Zustand wechseln.
 
 ## Emergency Stop
 
-`drone_emergency_stop` wird über `drc/down` gesendet.
+`drone_emergency_stop` ist ein FC3-Vorgang.
 
-FH-Clone aktiviert danach zusätzlich eine lokale Control-Sperre von standardmäßig 2200 ms. Diese Sperre ist eine defensive FH-Clone-Sicherheitsrichtlinie und **keine DJI-Protokollkonstante**.
+Der Adapter besitzt nach einem Emergency Stop zusätzlich eine lokale
+Sperrzeit. Diese Sperrzeit ist eine FH2-Sicherheitsrichtlinie und keine
+allgemeine DJI-Protokollkonstante.
 
-Emergency-Kommandos bleiben FC3 und müssen separat auditiert werden.
+Emergency-Kommandos müssen separat auditiert werden.
 
-## FlyTo
+## FlyTo und weitere Flugfunktionen
 
-`fly_to_point` wird über das `services`-Topic gesendet.
+`fly_to_point` läuft über den Servicekanal, nicht über dauerhaftes
+Basic-Link-DRC.
 
-Der Zielpunkt steht im Feld `points` als Liste mit genau einem Element. `height` ist die Zielpunkt-Ellipsoidhöhe und darf nicht mit relativer Höhe über dem Startpunkt verwechselt werden.
+Flugfunktionen wie FlyTo, Pointing oder Orbit dürfen nur über das passende
+Produktprofil, SafetyGate und Control Authority freigegeben werden.
 
-Der Fortschritt kommt über `events` mit `method = fly_to_point_progress`.
+## Freigabe vor V3
 
-## Control Authority
+Vor einer produktiven FC3-Freigabe müssen mindestens getestet sein:
 
-Empfohlener M4-Pfad:
-
-1. Gateway/Aircraft über `update_topo` identifizieren
-2. Capability-Profil prüfen
-3. FH-Clone Control Lease erwerben
-4. Safety Stage FC3 prüfen
-5. DJI Flight-Control-Authority erwerben/bestätigen
-6. `drc_mode_enter` mit DRC-Broker-Zugangsdaten
-7. Heartbeat starten
-8. `stick_control` mit 5–10 Hz
-9. bei Ende neutralisieren und `drc_mode_exit`
-
-Die DJI-Control-Authority und die FH-Clone-Control-Authority sind zwei getrennte Ebenen. Keine der beiden ersetzt die andere.
-
-## Payload-Identitäten
-
-Stabile Kamera-IDs werden zentral im DJI-Adapter registriert, aber Lens-/Video-Pfade weiterhin dynamisch gelernt.
-
-Aktuell relevante Hauptkameras:
-
-- M3E: `66-0-0`
-- M3T: `67-0-0`
-- M3TA: `129-0-0`
-- M4E: `88-0-0`
-- M4T: `89-0-0`
-
-Damit bleiben Thermal-, Multispektral- und Videoquellen getrennt modellierbar.
+- reale Produktunterstützung
+- Authority-Anforderung und -Freigabe
+- DRC-Mode-Enter
+- Relay-Verbindung
+- Heartbeat
+- Stick-Taktung
+- Dead-Man
+- neutraler Zustand bei Sitzungsende
+- Broker-Deny außerhalb der Sitzung
+- Kill Switch
+- Audit
 
 ## Referenzen
 
-- DJI Product Support: https://developer.dji.com/doc/cloud-api-tutorial/en/overview/product-support.html
-- DJI Pilot DRC: https://developer.dji.com/doc/cloud-api-tutorial/en/feature-set/pilot-feature-set/drc.html
-- RC Plus 2 Remote Control: https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/pilot-to-cloud/mqtt/dji-rc-plus-2/remote-control.html
+Die Herstellerlinks und verifizierten Versionsstände werden zentral in
+[COMPATIBILITY.md](COMPATIBILITY.md) gepflegt.
