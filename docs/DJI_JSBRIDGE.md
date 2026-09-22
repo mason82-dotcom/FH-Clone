@@ -155,9 +155,11 @@ Benötigt:
 
 ### map / tsa
 
-DJI dokumentiert vor diesen Modulen den geladenen Cloud-/Thing- und
-WebSocket-Kontext. Der FH2-Client prüft deshalb vor `loadMap()` und
-`loadTsa()` explizit `thing` + `ws` und bricht andernfalls ab.
+DJI dokumentiert für diese Funktionen den geladenen Cloud-/Thing-,
+WebSocket- **und API-Kontext**. Der FH2-Client prüft deshalb vor
+`loadMap()` und `loadTsa()` explizit `thing` + `ws` + `api` und
+bricht andernfalls ab. Wird das API-Modul neu geladen, müssen die davon
+abhängigen HTTPS-Funktionen ebenfalls neu initialisiert werden.
 
 ### media
 
