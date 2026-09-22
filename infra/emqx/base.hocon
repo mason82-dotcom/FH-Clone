@@ -12,7 +12,9 @@ authorization {
     # Low-rate, command-like writes are always evaluated in real time.
     excludes = [
       "thing/product/+/services",
-      "thing/product/+/property/set"
+      "thing/product/+/property/set",
+      "thing/product/+/drc/down",
+      "thing/product/+/drc/up"
     ]
   }
 
