@@ -36,6 +36,7 @@ export function authorizeDjiGateway(
   if (!request.username.startsWith("dji-gateway-")) return "ignore";
   if (!SAFE_GATEWAY_USERNAME.test(request.username)) return "deny";
   if (!SAFE_ID.test(request.clientid)) return "deny";
+  if (request.username !== `dji-gateway-${request.clientid}`) return "deny";
 
   const parsed = splitProductTopic(request.topic);
   if (!parsed) return "deny";
