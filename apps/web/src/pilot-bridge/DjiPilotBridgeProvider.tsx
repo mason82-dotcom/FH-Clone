@@ -73,7 +73,7 @@ async function initialize(
 
     if (!verified && config.verifyLicense) {
       client.verifyLicense(config.appId, config.appKey, config.license);
-      verified = true;
+      verified = client.isVerified();
     }
 
     if (!verified) {
