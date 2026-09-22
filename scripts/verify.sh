@@ -4,6 +4,11 @@ set -eu
 ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+if [ ! -f package-lock.json ]; then
+  echo "FEHLER: package-lock.json fehlt. V3 verlangt reproduzierbares npm ci."
+  exit 1
+fi
+
 if [ ! -f .env ]; then
   echo "FEHLER: .env fehlt. Zuerst: cp .env.example .env"
   exit 1
