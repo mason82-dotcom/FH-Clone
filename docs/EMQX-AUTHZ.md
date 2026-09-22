@@ -1,196 +1,214 @@
-# EMQX HTTP Authorization
+# EMQX – Authentifizierung und Autorisierung
 
 ## Zweck
 
-`POST /internal/emqx/authz` ist eine interne FH-Clone-Schnittstelle für den
-EMQX HTTP Authorizer. Sie ist **kein DJI Cloud API Endpunkt**.
+EMQX ist der MQTT-Broker für den DJI-Basic-Link und interne FH2-Dienste.
 
-Der Hook ergänzt die statische File-ACL um dynamische Entscheidungen, die von
-Runtime-Zustand abhängen:
-
-- Gateway ↔ Sub-Device-Topologie aus `update_topo`
-- DRC-Freigaben
-- spätere Mandanten-/Projektzuordnung
-- Auditierbare Allow/Deny-Entscheidungen
-
-## EMQX 5.7
-
-FH-Clone bleibt aktuell auf EMQX 5.7.
-
-Wichtig: Authorizer-`precondition` ist in dieser Zielversion nicht verfügbar.
-Darum wird der HTTP-Authorizer für alle Publish-/Subscribe-Prüfungen aufgerufen.
-Für Identitäten, die ausschließlich durch die File-ACL behandelt werden, liefert
-das Backend `ignore`.
-
-Reihenfolge:
+Die Sicherheitsarchitektur verwendet mehrere Schutzschichten:
 
 ```text
-HTTP Authorizer
+MQTT Client
    |
-   | allow/deny -> Entscheidung beendet
+   v
+EMQX AuthN
    |
-   +-- ignore --> File ACL
+   v
+HTTP AuthZ
+   |
+   +-- allow / deny
+   |
+   +-- ignore -> Datei-ACL
                     |
-                    +-- no match --> DENY
+                    +-- kein Treffer -> DENY
 ```
 
-`authorization.no_match = deny` bleibt verbindlich.
+## Status
 
-## Endpoint
+### Implementiert
 
-```text
+- `POST /internal/emqx/authz`
+- Datei-ACL
+- Default-Deny
+- interner AuthZ-Service-Token
+- Topologie-basierte Sub-Device-Prüfung
+- Basic Link ohne permanente DRC-Rechte
+
+### V3-Ziel
+
+- `POST /internal/emqx/authn`
+- Credential Store
+- trusted `client_attrs.gateway_sn`
+- AuthZ ohne Identitätsableitung aus `clientid`
+- persistentes Audit
+
+## Interner Autorisierungsendpunkt
+
+```http
 POST http://control-api:8081/internal/emqx/authz
 ```
 
-Port 8081 ist ein interner Service-Port und darf nicht öffentlich exponiert
-werden.
+Port `8081` ist ein interner Infrastruktur-Port und darf nicht über den
+öffentlichen Reverse Proxy erreichbar sein.
 
-## Request
+Der Endpunkt ist **kein DJI-Cloud-API-Endpunkt**.
+
+## AuthZ-Anfrage
+
+Der aktuelle Code verarbeitet unter anderem:
 
 ```json
 {
-  "clientid": "RC-PLUS2-001",
-  "username": "dji-gateway-RC-PLUS2-001",
+  "clientid": "MQTT-SESSION-ID",
+  "username": "dji-gateway-...",
   "peerhost": "10.0.0.20",
-  "topic": "thing/product/M4T-001/osd",
+  "topic": "thing/product/AIRCRAFT_SN/osd",
   "action": "publish",
   "qos": "0"
 }
 ```
 
-## Response
+Für V3 wird die Anfrage zusätzlich um vertrauenswürdige Client-Attribute aus
+der vorgelagerten AuthN erweitert, insbesondere:
 
-FH-Clone antwortet für ausgewertete Authz-Anfragen mit HTTP 200:
+```text
+client_attrs.role
+client_attrs.gateway_sn
+```
+
+## Antworten
+
+Ausgewertete Entscheidungen werden mit HTTP 200 zurückgegeben:
 
 ```json
 {"result":"allow"}
 ```
 
-oder
-
 ```json
 {"result":"deny"}
 ```
 
-oder für eine bewusst nachgelagerte File-ACL:
+Für bewusst nachgelagerte statische Rollen:
 
 ```json
 {"result":"ignore"}
 ```
 
-EMQX behandelt HTTP 204 ebenfalls als Allow. Andere HTTP-Statuscodes werden
-als `ignore` gewertet. Deshalb verwendet der interne Hook bei eigenen
-Evaluierungsfehlern für dynamische Regeln absichtlich HTTP 200 + `deny`.
+Dynamische DJI-Fehler müssen fail-closed behandelt werden. Ein Backendfehler
+darf keine breitere Datei-Regel aktivieren.
 
-## Interner Bearer-Token
+## Interne Service-Authentisierung
 
-Dynamische DJI-/DRC-Entscheidungen sind zusätzlich durch einen internen Token
-geschützt:
+Der aktuelle AuthZ-Endpunkt kann mit:
 
 ```env
-EMQX_AUTHZ_TOKEN=<random-secret>
+EMQX_AUTHZ_TOKEN=<zufälliges-internes-secret>
 ```
 
-Die EMQX-Konfiguration enthält im Repository nur:
+abgesichert werden.
+
+Der Token authentifiziert **EMQX gegenüber der Control API**. Er ersetzt nicht
+die MQTT-Client-Authentifizierung.
+
+Ohne korrektes internes Secret bleiben dynamische Rechte gesperrt.
+
+## Gateway-Prinzip
+
+Die alte Annahme:
 
 ```text
-Bearer __FH_CLONE_AUTHZ_DISABLED__
+clientid == gateway_sn
 ```
 
-Ohne Runtime-Secret bleiben dynamische Gateway-/DRC-Rechte gesperrt.
+ist **nicht** mehr Teil der V3-Sicherheitsarchitektur.
 
-Der Token authentifiziert **EMQX gegenüber control-api**. Er ersetzt nicht die
-MQTT-Client-Authentifizierung.
-
-## Gateway-Regeln
-
-Für provisionierte DJI-Gateways gilt:
+V3 verwendet:
 
 ```text
-username = dji-gateway-<clientid>
-clientid = echte gateway_sn
+Gateway-Credential
+ -> HTTP AuthN
+ -> trusted gateway_sn
+ -> HTTP AuthZ
+ -> TopologyRegistry
 ```
 
-Erlaubt werden dynamisch:
+Die reale Client-ID wird weiterhin für Diagnose und Reconnect-Analyse
+aufgezeichnet.
 
-- eigenes Topology-Status-Publish
-- eigene Gateway-Upstream-Topics
-- Aircraft `osd/state` nur für Sub-Devices aus der aktuellen Topology-Registry
+## Topologie-Regeln
+
+Nach erfolgreicher Gateway-Authentifizierung darf ein Gateway nur Topics
+verwenden, die zu seiner vertrauenswürdigen `gateway_sn` oder zu aktuell
+zugeordneten Sub-Devices gehören.
+
+Beispiele:
+
+- eigenes `sys/product/{gateway_sn}/status`
+- eigene Gateway-Uplinks
+- Aircraft-`osd/state` nur für Geräte aus der aktuellen Topologie
 - eigene Downstream-Subscriptions
 
-Fremde Gateway-/Aircraft-Topics werden verweigert.
+Fremde Gateway- oder Aircraft-Topics werden verweigert.
 
 ## DRC
 
-DRC ist **nicht** an eine bloße aktive Mission gekoppelt.
+DRC gehört nicht zum dauerhaften Basic-Link-Authorizer.
 
-Eine dynamische DRC-Freigabe muss später mindestens repräsentieren:
+V3 verlangt für DRC zusätzlich:
 
-1. Safety Stage FC3
-2. aktiven FH-Clone Control Lease
-3. gültige DJI Cloud-Control-Authority
-4. aktive DRC-Session
-5. passenden Geräte-/DRC-Capability-Pfad
+1. FC3
+2. Control Lease
+3. DJI Control Authority
+4. aktive DRC-Sitzung
+5. passende Produkt-Capability
+6. Dead-Man
 
-Erst dann darf die Policy `isDrcGatewayActive(gatewaySn)` wahr liefern.
+Der aktuelle Default bleibt broker- und anwendungsseitig gesperrt.
 
-Aktuell ist dieser Callback im Control API absichtlich auf `false` verdrahtet.
-Damit bleibt DRC brokerseitig fail-closed.
+## Datei-ACL
 
-### Topic-Richtung
+Statische Rollen wie Backend und Diagnose dürfen weiterhin über die
+Datei-ACL abgebildet werden.
 
-```text
-backend/cloud -> thing/product/{gateway_sn}/drc/down
-gateway/pilot -> thing/product/{gateway_sn}/drc/up
+Die Datei muss mit einem abschließenden Deny enden:
+
+```erlang
+{deny, all}.
 ```
 
-Die WebUI bekommt keine direkten MQTT-Schreibrechte.
-
-## File-ACL
-
-Rollen wie `webui-operator`, `backend-service` und `dashboard` werden für
-ihre statischen Rechte weiterhin durch `acl.conf` behandelt.
-
-`webui-operator` ist read-only und darf niemals direkt DRC oder Services
-publizieren.
+Produktiv soll die Weboberfläche keine MQTT-Credentials besitzen.
 
 ## Cache
 
-FH-Clone nutzt aktuell:
+Dynamische Gateway-Rechte dürfen nur sehr kurz gecacht werden, weil
+`update_topo`, Unpairing und Credential-Deaktivierung schnell wirksam werden
+müssen.
 
-```hocon
-cache {
-  enable = true
-  max_size = 1024
-  ttl = 1s
-  excludes = [
-    "thing/product/+/services",
-    "thing/product/+/property/set"
-  ]
-}
-```
+Schreibende Services und Property-Set sollten nicht über lang laufende
+Autorisierungs-Caches freigegeben werden.
 
-Die kurze TTL reduziert HTTP-Last, ohne dynamische Rechte zehn Sekunden lang
-weiterwirken zu lassen. Services/Property-Set werden in Echtzeit autorisiert.
+## Audit und Betrieb
 
-DRC bleibt zusätzlich durch den serverseitigen Session-/Dead-man-Pfad
-geschützt. Broker-Authz ist Defense-in-Depth und **nicht** der einzige
-Flugsicherheitsmechanismus.
+Bei Deny-Entscheidungen mindestens erfassen:
 
-## Betrieb
+- Principal/Username
+- Client-ID
+- vertrauenswürdige Gateway-SN
+- Aktion
+- Topic
+- Peer-IP
+- Grund
 
-- Deny-Entscheidungen werden mit Username, Client-ID, Action, Topic und
-  optional Peer-IP protokolliert.
-- Secrets werden nicht geloggt.
-- Bei Überschreiten einer Trust Boundary ist HTTP durch HTTPS/mTLS zu ersetzen.
-- Authorizer-Latenz und Cache-Hit-Rate müssen vor produktiver FC3-Freigabe
-  gemessen werden.
+Secrets werden nicht geloggt.
 
-## Quellen
+Vor einer produktiven FC3-Freigabe müssen Authorizer-Latenz,
+Fehlerverhalten, Cache-Verhalten und Fail-Closed-Verhalten unter Last getestet
+werden.
 
-- EMQX HTTP Authorization:
-  https://docs.emqx.com/en/emqx/latest/access-control/authz/http.html
-- EMQX Authorization:
-  https://docs.emqx.com/en/emqx/latest/access-control/authz/authz.html
-- EMQX File Authorization:
-  https://docs.emqx.com/en/emqx/latest/access-control/authz/file.html
+## Weiterführend
+
+Siehe:
+
+- [DJI-MQTT-Sicherheitsvertrag](DJI_MQTT_SECURITY.md)
+- [DRC](DRC.md)
+- [RC Pro Enterprise](RC_PRO.md)
+- [V3-Zielarchitektur](V3_ARCHITECTURE.md)
