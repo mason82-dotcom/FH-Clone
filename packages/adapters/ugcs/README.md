@@ -1,27 +1,41 @@
-# UgCS Adapter
+# UgCS-Groundstation-Adapter
 
-UgCS ist die primäre Groundstation-Integration von FH-Clone.
+## Aufgabe
 
-## Ziel
+Der TypeScript-Adapter kapselt UgCS als eigenständige Groundstation-
+Integration.
 
-Der Adapter kapselt Groundstation-Funktionen wie:
+UgCS ist kein DJI-Untermodul und ersetzt weder DJI Cloud API noch FlightHub 2.
 
-- verbundene Fahrzeuge lesen,
-- Groundstation-Telemetrie anbinden,
-- Missionen/Routen importieren und exportieren,
-- Missionen an ein Fahrzeug übertragen,
-- später Groundstation-spezifische Missionsausführung.
+## Domänengrenze
+
+Der Adapter kann Groundstation-Funktionen in das gemeinsame FH2-Domainmodell
+übersetzen, zum Beispiel:
+
+- Fahrzeuge lesen
+- Groundstation-Telemetrie einbinden
+- Routen/Missionen importieren
+- Routen/Missionen exportieren
+- später kontrollierte Missionsübertragung
 
 ## Transport
 
-FH-Clone nimmt **keinen nicht dokumentierten UgCS-Endpunkt an**.
+FH-Clone erfindet keine nicht dokumentierten UgCS-Endpunkte.
 
-Die TypeScript-Schicht definiert deshalb nur `UgcsBridgeTransport`. Eine konkrete Bridge kann separat implementiert werden, sobald die eingesetzte UgCS-Version und ihr unterstützter Integrationsweg feststehen.
+Die TypeScript-Seite verwendet deshalb eine abstrahierte Transportgrenze.
+Eine konkrete Transportimplementierung wird nur gegen eine verifizierte
+UgCS-/UCS-Version aktiviert.
 
-Verifizierter Integrationspfad:
+## Safety
 
-- UgCS Client / UCS als Groundsoftware
-- UgCS SkyHub SDK 1.4.0 für SkyHub v3
-- ROS 2 Galactic / C++ auf der SkyHub-Seite
+Unter FC0 sind ausschließlich lesende und planerische Funktionen vorgesehen.
 
-Der native SkyHub-Agent bleibt damit von der Web-/Backend-Anwendung getrennt.
+Schreibende Missionsfunktionen benötigen mindestens FC2 und den zentralen
+Command-/Authority-Pfad.
+
+Direkte Groundstation-Kommandos aus der Weboberfläche sind nicht vorgesehen.
+
+## V3
+
+Für V3 bleibt UgCS ein optionaler Adapterdienst. Der Hauptstack muss auch ohne
+laufende UgCS-Bridge gesund starten können.
