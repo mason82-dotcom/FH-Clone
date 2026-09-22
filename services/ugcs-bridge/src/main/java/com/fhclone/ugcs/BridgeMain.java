@@ -135,8 +135,48 @@ public final class BridgeMain {
 
             json.append('{')
                     .append("\"id\":").append(quote(Integer.toString(route.getId()))).append(',')
-                    .append("\"name\":").append(quote(route.getName()))
-                    .append('}');
+                    .append("\"name\":").append(quote(route.getName())).append(',')
+                    .append("\"segments\":[");
+
+            boolean firstSegment = true;
+            for (var segment : route.getSegmentsList()) {
+                if (!segment.hasFigure()) continue;
+                var figure = segment.getFigure();
+                if (figure.getPointsCount() == 0) continue;
+
+                if (!firstSegment) json.append(',');
+                firstSegment = false;
+
+                json.append('{')
+                        .append("\"id\":").append(quote(Integer.toString(segment.getId()))).append(',')
+                        .append("\"figureType\":").append(quote(figure.getType().name())).append(',')
+                        .append("\"points\":[");
+
+                boolean firstPoint = true;
+                for (var point : figure.getPointsList()) {
+                    if (!firstPoint) json.append(',');
+                    firstPoint = false;
+
+                    json.append('{')
+                            .append("\"latitudeDeg\":")
+                            .append(Math.toDegrees(point.getLatitude())).append(',')
+                            .append("\"longitudeDeg\":")
+                            .append(Math.toDegrees(point.getLongitude()));
+
+                    if (point.hasWgs84Altitude()) {
+                        json.append(",\"altitudeM\":").append(point.getWgs84Altitude());
+                    }
+                    if (point.hasAglAltitude()) {
+                        json.append(",\"aglAltitudeM\":").append(point.getAglAltitude());
+                    }
+
+                    json.append('}');
+                }
+
+                json.append("]}");
+            }
+
+            json.append("]}");
         }
         return json.append(']').toString();
     }
