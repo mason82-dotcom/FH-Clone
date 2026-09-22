@@ -246,6 +246,34 @@ Solange der vollständige FH2-Media-Ingest nicht implementiert und abgenommen
 ist, wird `media.read` nicht aus Foto-/Recording-Feldern oder Modellnamen
 abgeleitet.
 
+## Wayline-/Missions-Capability
+
+DJI Pilot Wayline Management ist eine eigene Plattformfunktion. Sie verwendet
+den Pilot-Mission-/JSBridge-Pfad sowie HTTPS-/Object-Storage-Operationen für
+Wayline-Dateien und ist nicht identisch mit einem Aircraft-Telemetriezustand.
+
+Insbesondere gilt:
+
+```text
+mode_code == 5
+  -> Aircraft befindet sich im Wayline-Flug
+  -> telemetry.flight / Missionsbeobachtung
+
+mode_code == 5
+  !=
+mission.wayline
+```
+
+FH2 V3 erkennt und persistiert aktuell Flugsitzungen einschließlich
+Wayline-Flugzuständen, implementiert aber keinen vollständigen Pilot-Wayline-
+Management-/Execution-Pfad.
+
+Daher wird `mission.wayline` vom DJI-Cloud-Adapter aktuell **nicht** als
+routbare `AdapterDevice.capabilities[]`-Capability gemeldet.
+
+UgCS-/WPML-/MSDK-Wayline-Funktionen bleiben davon getrennte Adapter- bzw.
+Dateiverträge.
+
 ## Kamera-Identitäten
 
 Die im Adapter hinterlegten festen Payload-Identitäten stimmen mit der
@@ -276,6 +304,10 @@ FH2 V3:
 | `control.rth` | FC3 |
 | `control.pointing` | FC3 |
 | `control.orbit` | FC3 |
+
+Die Tabelle klassifiziert das Safety-Niveau **falls** eine solche Capability
+durch einen tatsächlich implementierten Adapterpfad bereitgestellt wird.
+Sie bedeutet nicht, dass FH2 V3 alle genannten Capabilities bereits meldet.
 
 Produktunterstützung hebt die Safety-Stufe niemals automatisch an.
 
