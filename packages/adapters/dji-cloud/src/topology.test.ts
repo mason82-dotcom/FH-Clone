@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  describeDjiProduct,
   parseDjiTopologyUpdate,
   toPublicDjiTopologyPayload
 } from "./topology.js";
@@ -67,4 +68,28 @@ test("topology parser keeps gateway and sub-device identity", () => {
   assert.equal(parsed.gatewaySn, "RC-PLUS2-001");
   assert.equal(parsed.subDevices[0]?.sn, "M4T-001");
   assert.equal(parsed.updatedAt, 5678);
+});
+
+
+test("product description requires the full DJI identity", () => {
+  assert.equal(
+    describeDjiProduct({ domain: 0, type: 77, subType: 0 }),
+    "DJI Mavic 3 Enterprise"
+  );
+  assert.equal(
+    describeDjiProduct({ domain: 2, type: 144, subType: 0 }),
+    "DJI RC Pro Enterprise"
+  );
+  assert.equal(
+    describeDjiProduct({ domain: 1, type: 77, subType: 0 }),
+    "DJI product 1/77/0"
+  );
+  assert.equal(
+    describeDjiProduct({ domain: 0, type: 77, subType: 2 }),
+    "DJI product 0/77/2"
+  );
+  assert.equal(
+    describeDjiProduct({ type: 99, subType: 0 }),
+    "DJI product ?/99/0"
+  );
 });
