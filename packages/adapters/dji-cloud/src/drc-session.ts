@@ -155,6 +155,8 @@ export interface DrcSessionAuditEvent {
     | "input"
     | "draining"
     | "neutral_sent"
+    | "transport_lost"
+    | "transport_recovered"
     | "closed"
     | "force_closed";
   reason?: string;
@@ -309,8 +311,16 @@ export class DrcSessionManager {
 
   async setTransportConnected(gatewaySn: string, connected: boolean): Promise<DrcSessionRecord> {
     const current = await this.require(gatewaySn);
-    const record = { ...current, transportConnected: connected, updatedAt: this.now() };
+    const wasDisconnected = !current.transportConnected;
+    const record = connected
+      ? withoutReason({ ...current, transportConnected: true, updatedAt: this.now() })
+      : { ...current, transportConnected: false, updatedAt: this.now() };
     await this.persist(record);
+    if (connected && wasDisconnected && (record.state === "controlling" || record.state === "degraded")) {
+      this.controller.startHeartbeat(gatewaySn);
+      this.startTimer(gatewaySn);
+      await this.audit(record, "transport_recovered");
+    }
     return { ...record };
   }
 
