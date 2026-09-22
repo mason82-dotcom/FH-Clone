@@ -1,0 +1,51 @@
+export type GroundStationCapability =
+  | "groundstation.vehicle.read"
+  | "groundstation.telemetry.read"
+  | "groundstation.route.plan"
+  | "groundstation.route.import"
+  | "groundstation.route.export"
+  | "groundstation.mission.upload"
+  | "groundstation.mission.execute"
+  | (string & {});
+
+export interface GroundStationVehicle {
+  id: string;
+  name?: string;
+  vendor?: string;
+  model?: string;
+  serialNumber?: string;
+  connected: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GroundStationMission {
+  id: string;
+  name: string;
+  format: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GroundStationHealth {
+  connected: boolean;
+  version?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface MissionBinary {
+  format: string;
+  bytes: Uint8Array;
+}
+
+export interface GroundStationAdapter {
+  readonly id: string;
+  readonly capabilities: readonly GroundStationCapability[];
+
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  health(): Promise<GroundStationHealth>;
+  listVehicles(): Promise<GroundStationVehicle[]>;
+
+  importMission?(input: MissionBinary): Promise<GroundStationMission>;
+  exportMission?(missionId: string, format: string): Promise<MissionBinary>;
+  uploadMission?(vehicleId: string, missionId: string): Promise<void>;
+}

@@ -11,6 +11,10 @@ DJI PSDK ──────────┤
 DJI OSDK ──────────┤
 DJI Edge SDK ──────┤
 weitere Adapter ───┘
+
+UgCS ───────────────────────────────┐
+                                   ▼
+                         GroundStation Adapter
         │
         ▼
  Adapter Layer
@@ -115,6 +119,19 @@ Läuft als Android-/RC-Bridge. Die Bridge übersetzt SDK-KeyManager- und Geräte
 ### DJI Payload SDK / Onboard SDK / Edge SDK
 
 Laufen als native Agenten. Sie kommunizieren über eine versionierte interne Bridge mit dem Core und werden nicht in den Node.js-Prozess eingebettet.
+
+## Groundstation: UgCS
+
+UgCS ist ein fester Bestandteil der Zielarchitektur, aber als eigenständiger Groundstation-Adapter und nicht als DJI-Untermodul.
+
+Die Trennung ist bewusst:
+
+- DJI-Adapter liefern Geräte-/Payload-Telemetrie und DJI-spezifische Steuerpfade.
+- UgCS liefert Groundstation-, Missions- und Routenfunktionen.
+- Der Mission-Service übersetzt zwischen FH-Clone-Domänenmodellen und dem jeweiligen Groundstation-Transport.
+- Eine konkrete UgCS-Transportimplementierung darf erst aktiviert werden, wenn deren API/Bridge für die eingesetzte UgCS-Version verifiziert ist.
+
+Der öffentliche UgCS SkyHub SDK 1.4.0 ist ROS-2-/C++-basiert und wird bei Bedarf als nativer Bridge-Agent angebunden. Der TypeScript-Core importiert keine nativen UgCS-Typen.
 
 ## WebUI
 
