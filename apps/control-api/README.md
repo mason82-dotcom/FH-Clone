@@ -136,7 +136,7 @@ Liefert den aktuellen normalisierten Parametersnapshot.
 
 ```http
 GET /api/dji/pilot/waylines/status
-GET /api/dji/pilot/waylines?page=1&page_size=100
+GET /api/dji/pilot/waylines?page=1&page_size=10
 ```
 
 Serverseitige Konfiguration:
