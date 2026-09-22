@@ -16,6 +16,9 @@ export function RtkStatusCard({ snapshot }: RtkStatusCardProps) {
           <p className="muted">
             Gateway: {snapshot.gatewaySn ?? "noch nicht zugeordnet"}
           </p>
+          <p className="muted">
+            Mission: {snapshot.missionId ?? "keine aktive Flugsession"}
+          </p>
         </div>
         <span className={"status-pill status-pill--" + state.tone}>
           <span className="status-dot" aria-hidden="true" />
