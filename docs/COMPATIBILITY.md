@@ -40,9 +40,11 @@ FH2 integriert WPML read-only auf Basis der aktuellen DJI-Spezifikation:
 - optionale `res/`-Ressourcen,
 - Common Elements für MissionConfig, Produkt-/Payload-Identität und Actions.
 
-Die aktuell verifizierte Common-Element-Tabelle enumeriert unter anderem
-M300/M350/M30/M3E/M3T/M3M/M3D/M3TD. Neuere, dort nicht eindeutig
-enumerierte Produktwerte werden von FH2 nicht geraten.
+Die aktuell verifizierte DJI-WPML-Dokumentation unterstützt unter anderem
+M300/M350/M30/M3E/M3T/M3M/M3D/M3TD sowie M4E/M4T und M4D/M4TD.
+FH2 übernimmt deren offiziell dokumentierte WPML-Aircraft- und Payload-Werte.
+Zukünftige, nicht eindeutig dokumentierte Produktwerte werden weiterhin
+nicht geraten.
 
 WPML-Produktschlüssel, Pilot-`*_model_key` und MQTT-`payload_index` bleiben
 getrennte Identitätsverträge.
