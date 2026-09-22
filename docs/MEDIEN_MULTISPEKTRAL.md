@@ -165,7 +165,8 @@ zuzuordnen.
 
 ### Cloud-API-Kameraeigenschaften
 
-Die M3-Series-Cloud-API liefert im `cameras`-Array unter anderem:
+Für die in der Pilot-to-Cloud-Produktmatrix unterstützten M3-Enterprise-
+Geräte liefert die Cloud API im `cameras`-Array unter anderem:
 
 - `payload_index`
 - `camera_mode`
@@ -182,6 +183,9 @@ Die M3-Series-Cloud-API liefert im `cameras`-Array unter anderem:
 ```text
 {type-subtype-gimbalindex}
 ```
+
+Diese Kameraeigenschaften sind **kein Nachweis**, dass M3M am aktuellen
+Pilot-to-Cloud-Live-Runtime-Pfad teilnimmt.
 
 Für V3 wird **kein exakter M3M-`payload_index` in den statischen
 FH2-Payload-Registry-Code aufgenommen**, solange dieser Wert nicht aus einer
