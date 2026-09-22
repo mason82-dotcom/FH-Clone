@@ -6,6 +6,8 @@ import {
 } from "@fh-clone/aircraft-core";
 import {
   DjiCloudAdapter,
+  DrcSessionManager,
+  InMemoryDrcSessionStore,
   type DjiCloudAdapterOptions,
   type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
@@ -25,6 +27,11 @@ const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
 const djiOptions = getDjiOptions(topologyPersistence);
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
+const drcSessions = dji
+  ? new DrcSessionManager(dji.drc, new InMemoryDrcSessionStore(), {
+      onAudit: (event) => console.info("[DRC]", event)
+    })
+  : undefined;
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
 });
@@ -240,9 +247,9 @@ const internalServer = createServer(async (request, response) => {
         }
 
         const result = await authorizeEmqx(dji.topology, body, {
-          // DRC remains fail-closed until the backend DRC session manager is
-          // explicitly wired to this policy after FC3/lease/authority checks.
-          isDrcGatewayActive: () => false
+          // Runtime-only session state. It is intentionally never rehydrated
+          // from PostgreSQL after a process restart.
+          isDrcGatewayActive: (gatewaySn) => drcSessions?.isActive(gatewaySn) ?? false
         });
 
         if (result === "deny") {
@@ -273,6 +280,7 @@ async function shutdown(): Promise<void> {
   clearInterval(missionSweepTimer);
   publicServer.close();
   internalServer.close();
+  await drcSessions?.shutdown();
   await dji?.stop();
   await missionStore.close();
   await topologyPersistence.flush();
