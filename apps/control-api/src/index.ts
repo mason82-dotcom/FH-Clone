@@ -6,7 +6,8 @@ import {
 } from "@fh-clone/aircraft-core";
 import {
   DjiCloudAdapter,
-  type DjiCloudAdapterOptions
+  type DjiCloudAdapterOptions,
+  type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
 import {
   authorizeEmqx,
@@ -14,6 +15,7 @@ import {
 } from "./authz.js";
 import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
+import { MissionStore } from "./mission-store.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -22,6 +24,17 @@ const djiOptions = getDjiOptions();
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
+});
+const missionStore = new MissionStore({
+  ...(process.env.TIMESCALE_URL
+    ? { connectionString: process.env.TIMESCALE_URL }
+    : {}),
+  ...(process.env.RTK_SOURCE_LABEL
+    ? { rtkSourceLabel: process.env.RTK_SOURCE_LABEL }
+    : {}),
+  ...(process.env.RTK_SOURCE_PROVIDER
+    ? { rtkProvider: process.env.RTK_SOURCE_PROVIDER }
+    : {})
 });
 const rtk = new RtkTelemetryService({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId),
@@ -36,8 +49,25 @@ if (dji) {
     onParameter(sample) {
       parameters.update(sample);
     },
-    onRawMessage(message) {
-      missions.observe(message);
+    async onRawMessage(message) {
+      const previousMissionId = message.deviceId
+        ? missions.getActive(message.deviceId)?.missionId
+        : undefined;
+      const session = missions.observe(message);
+
+      if (session && session.endedAt !== undefined) {
+        await missionStore.closeSession(session);
+      } else if (
+        session &&
+        session.missionId !== previousMissionId
+      ) {
+        await missionStore.open(session, {
+          ...(message.deviceId
+            ? getMissionProduct(message.deviceId)
+            : {})
+        });
+      }
+
       rtk.observe(message);
       if (process.env.LOG_RAW_DJI === "1") {
         console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
@@ -52,7 +82,7 @@ const bind = process.env.BIND ?? "0.0.0.0";
 const internalBind = process.env.INTERNAL_BIND ?? "0.0.0.0";
 const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
 const missionSweepTimer = setInterval(() => {
-  missions.sweep();
+  void persistSweptMissionEnds();
 }, 5_000);
 missionSweepTimer.unref();
 
@@ -76,7 +106,8 @@ const publicServer = createServer(async (request, response) => {
           apiVersion: dji?.apiVersion
         },
         missions: {
-          active: missions.listActive().length
+          active: missions.listActive().length,
+          persistenceEnabled: missionStore.enabled
         }
       });
     }
@@ -203,6 +234,7 @@ async function shutdown(): Promise<void> {
   publicServer.close();
   internalServer.close();
   await dji?.stop();
+  await missionStore.close();
 }
 
 process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
@@ -295,4 +327,34 @@ function auditAuthz(
     topic: request.topic,
     ...(request.peerhost ? { peerhost: request.peerhost } : {})
   });
+}
+
+
+async function persistSweptMissionEnds(): Promise<void> {
+  const ended = missions.sweep();
+  for (const session of ended) {
+    try {
+      await missionStore.closeSession(session);
+    } catch (error) {
+      console.error(
+        "[Mission] Failed to persist automatic mission end:",
+        session.missionId,
+        errorMessage(error)
+      );
+    }
+  }
+}
+
+function getMissionProduct(
+  deviceId: string
+): { product: DjiProductRef } | Record<string, never> {
+  const gatewaySn = dji?.resolveGatewaySn(deviceId);
+  if (!gatewaySn) return {};
+
+  const topology = dji?.topology.getGateway(gatewaySn);
+  const product = topology?.subDevices.find(
+    (device) => device.sn === deviceId
+  )?.product;
+
+  return product ? { product } : {};
 }
