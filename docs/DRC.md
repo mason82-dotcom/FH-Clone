@@ -78,30 +78,108 @@ Auch hier aktiviert Produktunterstützung niemals automatisch FC3.
 
 ## DJI-Control-Authority
 
-Der Adapter unterstützt unter anderem:
+### Pilot Cloud / RC Plus 2
+
+Der aktuelle Pilot-Cloud-Pfad verwendet den expliziten Pilot-Consent-Flow:
 
 ```text
 cloud_control_auth_request
-cloud_control_release
+        |
+        | services_reply bestätigt nur die Annahme des Requests
+        v
+Popup auf RC Plus 2
+        |
+        v
+cloud_control_auth_notify
+  status = ok | failed | canceled
 ```
+
+Erst `cloud_control_auth_notify.data.output.status = "ok"` gilt für FH-Clone
+als positive Pilot-Freigabe.
+
+Die RC-Eigenschaft `cloud_control_auth` wird zusätzlich als Liste der
+erteilten Rechte ausgewertet. Für Flugsteuerung muss sie `"flight"`
+enthalten.
+
+Der Adapter kapselt diesen Ablauf in
+`DjiPilotCloudAuthorityCoordinator.requestFlightAuthority()` inklusive:
+
+- genau einer parallelen Anfrage pro Gateway
+- Popup-Wartezustand
+- Timeout
+- denied/canceled
+- `cloud_control_release`
+- fail-closed Verhalten
+
+`flight_authority_grab` bleibt ein Legacy-/Dock-Pfad und ist **nicht** der
+primäre Pilot-Cloud-Authority-Flow für Matrice 4 + RC Plus 2.
 
 DJI-Authority und FH2-Steuerhoheit sind getrennte Ebenen.
 
-Für eine aktive DRC-Sitzung werden benötigt:
+Für eine aktive M4-Flug-DRC-Sitzung werden benötigt:
 
 ```text
 Produkt-Capability
 + FC3
 + FH2 Control Lease
-+ DJI Control Authority
++ Pilot Consent / DJI Control Authority
 + drc_mode_enter
 + DRC-Relay
 + Dead-Man
 ```
 
+DJI dokumentiert, dass DRC-Kommandos nicht pauschal an Flugsteuerungsrecht
+gebunden sind. Das aktuelle `stick_control` benötigt dieses Recht jedoch
+zwingend. FH-Clone bleibt für M4-Flugsteuerung deshalb strikt
+authority-gated.
+
+M3E/M3T/M3M bleiben im Pilot-Cloud-Profil auf Payload-Control begrenzt.
+
+## DRC-Kommandoklassen und Sequenzen
+
+DJI verwendet je nach Protokoll unterschiedliche Sequenzpositionen.
+
+### Aktuelles Pilot-`stick_control`
+
+`seq` liegt auf Envelope-Ebene, also auf derselben Ebene wie `method` und
+`data`.
+
+```json
+{
+  "seq": 1,
+  "method": "stick_control",
+  "data": {
+    "roll": 1024,
+    "pitch": 1024,
+    "throttle": 1024,
+    "yaw": 1024
+  }
+}
+```
+
+### Legacy-`drone_control`
+
+Beim Velocity-Protokoll mit `x/y/h/w` liegt `seq` **innerhalb von
+`data`**.
+
+```json
+{
+  "method": "drone_control",
+  "data": {
+    "seq": 1,
+    "x": 0,
+    "y": 0,
+    "h": 0,
+    "w": 0
+  }
+}
+```
+
+Diese beiden Formate dürfen nicht vereinheitlicht werden.
+
 ## Stick-Control
 
-Der aktuelle Stick-Pfad verwendet:
+Der aktuelle Pilot-Stick-Pfad verwendet:
 
 ```text
 Topic: thing/product/{gateway_sn}/drc/down
@@ -247,6 +325,19 @@ Diese Ereignisse sind interne FH2-Auditdaten.
 Es wird kein erfundenes `drc_session_closed`-Kommando an DJI gesendet.
 
 ## Heartbeat
+
+Beim aktuellen Pilot-Remote-Control-Protokoll liegt die Heartbeat-`seq`
+ebenfalls auf Envelope-Ebene:
+
+```json
+{
+  "seq": 1,
+  "method": "heart_beat",
+  "data": {
+    "timestamp": 1670415891013
+  }
+}
+```
 
 Der DRC-Controller kann während einer aktiven Sitzung Heartbeats senden.
 
