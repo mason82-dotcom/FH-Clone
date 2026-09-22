@@ -7,25 +7,27 @@ const ENTITY_MAP: Record<string, string> = {
 };
 
 export function assertSafeXml(xml: string): void {
-  if (/<!DOCTYPE\b/i.test(xml) || /<!ENTITY\b/i.test(xml)) {
+  const structuralXml = stripXmlComments(xml);
+  if (/<!DOCTYPE\b/i.test(structuralXml) || /<!ENTITY\b/i.test(structuralXml)) {
     throw new Error("WPML XML DTD/entities are not supported");
   }
-  if (!/<(?:[A-Za-z_][\w.-]*:)?kml\b/i.test(xml)) {
+  if (!/<(?:[A-Za-z_][\w.-]*:)?kml\b/i.test(structuralXml)) {
     throw new Error("WPML document is not a KML document");
   }
 }
 
 export function xmlNamespace(xml: string): string | undefined {
-  return /\bxmlns:wpml\s*=\s*["']([^"']+)["']/i.exec(xml)?.[1];
+  return /\bxmlns:wpml\s*=\s*["']([^"']+)["']/i.exec(stripXmlComments(xml))?.[1];
 }
 
 export function xmlBlocks(xml: string, localName: string): string[] {
   const name = escapeRegex(localName);
+  const structuralXml = stripXmlComments(xml);
   const re = new RegExp(
     `<(?:[A-Za-z_][\\w.-]*:)?${name}\\b[^>]*>([\\s\\S]*?)<\\/(?:[A-Za-z_][\\w.-]*:)?${name}\\s*>`,
     "gi"
   );
-  return [...xml.matchAll(re)].map((match) => match[1] ?? "");
+  return [...structuralXml.matchAll(re)].map((match) => match[1] ?? "");
 }
 
 export function xmlText(xml: string, localName: string): string | undefined {
@@ -42,8 +44,9 @@ export function xmlNumber(xml: string, localName: string): number | undefined {
 
 export function simpleChildMap(xml: string): Record<string, string> {
   const output: Record<string, string> = {};
+  const structuralXml = stripXmlComments(xml);
   const re = /<(?:[A-Za-z_][\w.-]*:)?([A-Za-z_][\w.-]*)\b[^>]*>([^<>]*)<\/(?:[A-Za-z_][\w.-]*:)?\1\s*>/gi;
-  for (const match of xml.matchAll(re)) {
+  for (const match of structuralXml.matchAll(re)) {
     const key = match[1];
     if (!key) continue;
     output[key] = decodeXml((match[2] ?? "").trim());
@@ -64,6 +67,10 @@ export function parseCoordinates(value: string | undefined): {
     return undefined;
   }
   return { longitude, latitude };
+}
+
+function stripXmlComments(value: string): string {
+  return value.replace(/<!--[\s\S]*?-->/g, "");
 }
 
 function stripTags(value: string): string {
