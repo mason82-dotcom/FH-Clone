@@ -95,7 +95,7 @@ export class ControlCoordinator {
     this.runtime.delete(gatewaySn);
     const closed = await this.sessions.closeGracefully(gatewaySn, reason);
     await this.dji.disconnectDrcTransport();
-    await this.dji.drc.releaseCloudControlAuthority(gatewaySn);
+    await this.dji.pilotAuthority.releaseFlightAuthority(gatewaySn);
     return closed;
   }
 
@@ -114,12 +114,4 @@ export class ControlCoordinator {
     return true;
   }
 
-  private async waitForAuthority(gatewaySn: string): Promise<void> {
-    const deadline = Date.now() + this.authorityTimeoutMs;
-    while (Date.now() < deadline) {
-      if (this.dji.isCloudControlAuthorized(gatewaySn)) return;
-      await new Promise<void>((resolve) => setTimeout(resolve, this.authorityPollMs));
-    }
-    throw new Error("dji_cloud_authority_timeout");
-  }
 }
