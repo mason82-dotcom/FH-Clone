@@ -216,6 +216,22 @@ if (realEvidence(m4t)) {
     /^thing\/product\/[^/]+\/drc\/up$/.test(m4t.hsi?.topic ?? ""));
 }
 
+const m4tMediaPath = "docs/fixtures/m4t/media-evidence.json";
+const m4tMedia = readJson(m4tMediaPath);
+const m4tMediaSamples = arr(m4tMedia?.samples);
+add("M4T_MEDIA", "REQUIRED_MAIN", "realer M4T-Thermal-Medienbeleg",
+  realEvidence(m4tMedia) &&
+  m4tMediaSamples.some((s) =>
+    ["thermal-rjpeg", "rjpeg", "thermal"].includes(String(s?.role).toLowerCase()) &&
+    sha256(s?.sourceSha256)
+  ),
+  m4tMediaPath);
+if (realEvidence(m4tMedia)) {
+  add("M4T_MEDIA", "REQUIRED_MAIN", "keine Secrets im M4T-Medienbeleg", !sensitiveValueLeaked(m4tMedia));
+  add("M4T_MEDIA", "REQUIRED_MAIN", "M4T-Modellzuordnung real dokumentiert",
+    m4tMediaSamples.some((s) => String(s?.deviceModel).toUpperCase() === "M4T"));
+}
+
 // ---------------------------------------------------------------------------
 // M3M multispectral capture
 // ---------------------------------------------------------------------------
