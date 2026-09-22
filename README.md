@@ -191,6 +191,8 @@ Der Einstiegspunkt für alle Dokumente ist:
 - [RC Pro Enterprise](docs/RC_PRO.md)
 - [DRC](docs/DRC.md)
 - [RTK und NTRIP](docs/RTK_NTRIP.md)
+- [Medien und Multispektral](docs/MULTISPEKTRAL.md)
+- [Betrieb und Fehlersuche](docs/BETRIEB.md)
 - [Kompatibilität](docs/COMPATIBILITY.md)
 - [FH2-Manager-Abgleich](docs/FH2_MANAGER_ALIGNMENT.md)
 
