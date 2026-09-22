@@ -40,6 +40,7 @@ Hardwareabnahme missverstanden werden.
 | [RTK_NTRIP.md](RTK_NTRIP.md) | RTK-/GNSS-Telemetrie und NTRIP-Zuständigkeitsgrenze | Implementiert |
 | [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK- und Produktstände | Referenz |
 | [DJI_CAPABILITY_MATRIX.md](DJI_CAPABILITY_MATRIX.md) | DJI-Produkt-/Funktionsmatrix und FH2-Freigaben | Implementiert/Referenz |
+| [LIVESTREAM.md](LIVESTREAM.md) | Self-Hosted DJI-Livestream über MediaMTX/RTMP/WebRTC | V3-Ziel |
 
 ## Missionen, Medien und Verarbeitung
 
