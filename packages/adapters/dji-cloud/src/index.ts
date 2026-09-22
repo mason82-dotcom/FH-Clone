@@ -36,6 +36,8 @@ export interface DjiCloudAdapterOptions {
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
    */
   apiVersion?: string;
+  /** Optional inventory sink. Never used to hydrate runtime authorization state. */
+  onTopologyChange?: (change: import("./topology.js").TopologyChange) => void | Promise<void>;
 }
 
 interface PendingServiceRequest {
@@ -340,6 +342,13 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     payload: unknown
   ): Promise<void> {
     const change = this.topology.apply(topology);
+    if (this.options.onTopologyChange) {
+      try {
+        void this.options.onTopologyChange(change);
+      } catch (error) {
+        console.error("DJI topology inventory hook failed", error);
+      }
+    }
 
     const gateway: AdapterDevice = {
       identity: {

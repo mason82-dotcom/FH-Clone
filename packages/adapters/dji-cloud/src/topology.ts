@@ -150,3 +150,27 @@ export function describeDjiProduct(product: DjiProductRef): string {
 
   return `DJI product ${product.type}/${product.subType}`;
 }
+
+
+/** Sanitized representation suitable for diagnostics/persistence hooks. */
+export function toPublicDjiTopologyPayload(
+  topology: DjiGatewayTopology
+): Record<string, unknown> {
+  return {
+    method: "update_topo",
+    data: {
+      ...(topology.product.domain !== undefined ? { domain: topology.product.domain } : {}),
+      type: topology.product.type,
+      sub_type: topology.product.subType,
+      ...(topology.product.thingVersion ? { thing_version: topology.product.thingVersion } : {}),
+      sub_devices: topology.subDevices.map((device) => ({
+        sn: device.sn,
+        ...(device.index ? { index: device.index } : {}),
+        ...(device.product.domain !== undefined ? { domain: device.product.domain } : {}),
+        type: device.product.type,
+        sub_type: device.product.subType,
+        ...(device.product.thingVersion ? { thing_version: device.product.thingVersion } : {})
+      }))
+    }
+  };
+}
