@@ -43,7 +43,10 @@ export interface RtkStatusEvent {
   deviceId: string;
   gatewaySn?: string;
   missionId?: string;
-  status: Omit<RtkDeviceSnapshot, "deviceId" | "gatewaySn" | "stale" | "ageMs">;
+  status: Omit<
+    RtkDeviceSnapshot,
+    "deviceId" | "gatewaySn" | "missionId" | "stale" | "ageMs"
+  >;
 }
 
 export interface RtkTransitionEvent {
