@@ -404,10 +404,25 @@ if (dji) {
 }
 
 
-async function shutdown(): Promise<void> {
+let shutdownPromise: Promise<void> | undefined;
+
+function shutdown(): Promise<void> {
+  if (shutdownPromise) return shutdownPromise;
+  shutdownPromise = performShutdown();
+  return shutdownPromise;
+}
+
+async function performShutdown(): Promise<void> {
   clearInterval(missionSweepTimer);
-  publicServer.close();
-  internalServer.close();
+
+  // Stop accepting new HTTP work and wait for all in-flight AuthN/AuthZ
+  // requests before closing the audit writer. Otherwise a request could finish
+  // after the audit writer has entered its closed state.
+  await Promise.all([
+    closeServer(publicServer),
+    closeServer(internalServer)
+  ]);
+
   await drcSessions?.shutdown();
   await dji?.stop();
   await authzAudit.shutdown();
@@ -450,6 +465,17 @@ function getDjiOptions(
     ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {}),
     ...(topologyPersistence.enabled ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyPersistence.enqueue(change) } : {})
   };
+}
+
+function closeServer(server: Server): Promise<void> {
+  if (!server.listening) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
 }
 
 function listenServer(

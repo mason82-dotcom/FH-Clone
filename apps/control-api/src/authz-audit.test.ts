@@ -85,6 +85,29 @@ test("JSONL receives normal allows while DB batching filters them", async () => 
   assert.equal(batches[0]?.[0]?.decision, "deny");
 });
 
+test("JSONL exposes latency, cache state and runtime DRC session id", async () => {
+  const lines: string[] = [];
+  const writer = new AuthzAuditWriter({
+    writeJsonl: (line) => lines.push(line)
+  });
+
+  writer.enqueue(
+    record({
+      drcSessionId: "9bb317e5-cf5c-4a95-8dc9-c919221e0310",
+      latencyUs: 1234
+    })
+  );
+  await writer.shutdown();
+
+  const payload = JSON.parse(lines[0] ?? "{}") as Record<string, unknown>;
+  assert.equal(payload.cache_hit, false);
+  assert.equal(payload.latency_us, 1234);
+  assert.equal(
+    payload.drc_session_id,
+    "9bb317e5-cf5c-4a95-8dc9-c919221e0310"
+  );
+});
+
 test("bounded buffer drops the oldest DB record without blocking enqueue", async () => {
   const batches: AuthzAuditRecord[][] = [];
   const writer = new AuthzAuditWriter({

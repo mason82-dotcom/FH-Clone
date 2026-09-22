@@ -33,6 +33,9 @@ Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. De
 - Rohdaten-Retention nach 24 Monaten
 - Continuous Aggregate `telemetry_1m`
 - `002_rtk_fix_enum.sql` erzwingt für `is_fixed` ausschließlich `0/1/2/3` oder `NULL`
+- `003_authz_audit.sql` legt das AuthZ-Audit an
+- `004_gateway_credentials.sql` legt den Gateway-Credential-Store an
+- `005_authz_reason_internal_token_mismatch.sql` erweitert bestehende Audit-Tabellen auf den aktuellen Reason-Vertrag
 
 ## Produktkennung
 
@@ -95,6 +98,24 @@ Optional können sichere Metadaten gesetzt werden:
 RTK_SOURCE_LABEL=SAPOS BW
 RTK_SOURCE_PROVIDER=Landesdienst
 ```
+
+## Schema-Updates bei bestehendem Volume
+
+Dateien unter `/docker-entrypoint-initdb.d` werden von PostgreSQL nur beim
+erstmaligen Initialisieren eines leeren Datenverzeichnisses ausgeführt.
+Bei einem bereits vorhandenen `timescale_data`-Volume müssen neue
+Folgemigrationen daher explizit angewendet werden.
+
+Für die AuthZ-Reason-Erweiterung:
+
+```bash
+docker compose exec -T timescaledb \
+  psql -U fhclone -d fhclone \
+  -f /docker-entrypoint-initdb.d/005_authz_reason_internal_token_mismatch.sql
+```
+
+Die Migration ändert ausschließlich den CHECK-Constraint der Audit-Senke.
+Sie rehydriert weder Topologie- noch DRC-Autorisierungszustand.
 
 ## Control API
 
