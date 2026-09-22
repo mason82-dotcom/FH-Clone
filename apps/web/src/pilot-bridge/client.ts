@@ -176,6 +176,26 @@ export class DjiPilotBridgeClient {
     );
   }
 
+  configureWorkspace(input: {
+    workspaceId: string;
+    platformName: string;
+    workspaceName: string;
+    description: string;
+  }): void {
+    this.requireLoaded("configureWorkspace", ["api", "thing"]);
+    if (!this.getThingConnectState()) {
+      throw new Error(
+        "DJI JSBridge configureWorkspace benötigt eine aktive Thing-Verbindung"
+      );
+    }
+    this.setWorkspaceId(input.workspaceId);
+    this.setInformation(
+      input.platformName,
+      input.workspaceName,
+      input.description
+    );
+  }
+
   getIdentity(): DjiPilotIdentity {
     return {
       remoteControllerSn: asString(
