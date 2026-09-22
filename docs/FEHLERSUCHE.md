@@ -157,7 +157,7 @@ Prüfen:
 
 `position_state.is_fixed` ist kein Boolean.
 
-FH2 interpretiert:
+DJI definiert `is_fixed` als allgemeinen Satelliten-Fixstatus:
 
 ```text
 0 = nicht gestartet
@@ -166,7 +166,17 @@ FH2 interpretiert:
 3 = Fix fehlgeschlagen
 ```
 
-Nur `2` ist ein erfolgreicher RTK-Fix.
+Das ist **nicht gleichbedeutend mit RTK fixed**.
+
+Zusätzlich prüfen:
+
+- `gps_number` = GPS-Satelliten, kein RTK-Nachweis
+- `rtk_number` = RTK-Satelliten
+- `position_state.quality == 10` = DJI meldet RTK fixed
+- `mode_code == 18` = Airborne RTK fixing, nicht automatisch fixed
+
+FH2 setzt `navigation.rtk.fixed=true` daher nicht mehr allein wegen
+`is_fixed == 2`.
 
 ## Weboberfläche zeigt keine Daten
 
