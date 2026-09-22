@@ -47,6 +47,7 @@ Hardwareabnahme missverstanden werden.
 | Dokument | Inhalt | Status |
 | --- | --- | --- |
 | [MISSIONEN.md](MISSIONEN.md) | automatische Flugsitzungen und Missionskorrelation | Implementiert/V3-Ziel |
+| [WPML_PARSER_IMPORTLISTE.md](WPML_PARSER_IMPORTLISTE.md) | verbindlicher DJI-WPML-`template.kml`-Importvertrag | V3-Ziel |
 | [MEDIEN_MULTISPEKTRAL.md](MEDIEN_MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | V3-Ziel |
 | [FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) | Abgrenzung zum stabilen M4-/FH2-Manager-Pfad | Referenz |
 | [FH2_OPENAPI_FEHLERCODES.md](FH2_OPENAPI_FEHLERCODES.md) | FlightHub-2-/OpenAPI-nahe DJI-Fehlercodes | Referenz |
