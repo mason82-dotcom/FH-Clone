@@ -36,13 +36,21 @@ set +a
 API_PORT="${FH2_API_PORT:-8080}"
 WEB_PORT="${FH2_WEB_PORT:-8088}"
 
-echo "[1/10] Compose validieren"
+echo "[1/13] Compose validieren"
 docker compose --env-file .env config >/dev/null
 
-echo "[2/10] Images bauen"
+compose_services="$(docker compose --env-file .env config --services)"
+for required_service in control-api emqx web timescaledb; do
+  if ! printf '%s\n' "$compose_services" | grep -qx "$required_service"; then
+    echo "FEHLER: Pflichtdienst fehlt im Root-Compose: $required_service"
+    exit 1
+  fi
+done
+
+echo "[2/13] Images bauen"
 docker compose --env-file .env build
 
-echo "[3/10] Stack starten"
+echo "[3/13] Stack starten"
 docker compose --env-file .env up -d
 
 wait_http() {
@@ -61,20 +69,53 @@ wait_http() {
   return 1
 }
 
-echo "[4/10] Control API Health/Readiness"
+echo "[4/13] Control API Health/Readiness"
 wait_http "http://127.0.0.1:$API_PORT/health" "Control API Health"
 wait_http "http://127.0.0.1:$API_PORT/ready" "Control API Readiness"
 
-echo "[5/10] Web prüfen"
+echo "[5/13] Interne Control API im Container prüfen"
+internal_health="$(
+  docker compose --env-file .env exec -T control-api \
+    node -e "
+      fetch('http://127.0.0.1:8081/health')
+        .then(async r => {
+          const body = await r.json();
+          process.stdout.write(String(r.status) + ':' + String(body.status));
+        })
+        .catch(() => process.exit(2));
+    "
+)"
+if [ "$internal_health" != "200:ok" ]; then
+  echo "FEHLER: interne Control API ist nicht healthy: $internal_health"
+  exit 1
+fi
+
+echo "[6/13] EMQX Health prüfen"
+if ! docker compose --env-file .env exec -T emqx \
+  /opt/emqx/bin/emqx ctl status >/dev/null
+then
+  echo "FEHLER: EMQX meldet keinen gesunden Status."
+  exit 1
+fi
+
+echo "[7/13] TimescaleDB Health prüfen"
+if ! docker compose --env-file .env exec -T timescaledb \
+  pg_isready -U fhclone -d fhclone >/dev/null
+then
+  echo "FEHLER: TimescaleDB ist nicht bereit."
+  exit 1
+fi
+
+echo "[8/13] Web prüfen"
 wait_http "http://127.0.0.1:$WEB_PORT/health" "Web/Proxy"
 
-echo "[6/10] Interne API darf nicht veröffentlicht sein"
+echo "[9/13] Interne API darf nicht veröffentlicht sein"
 if docker compose --env-file .env port control-api 8081 2>/dev/null | grep -q .; then
   echo "FEHLER: interner Control-API-Port 8081 ist als Host-Port veröffentlicht."
   exit 1
 fi
 
-echo "[7/10] AuthN Fail-Closed lokal prüfen"
+echo "[10/13] AuthN Fail-Closed lokal prüfen"
 authn_result="$(
   docker compose --env-file .env exec -T control-api     node -e "
       fetch('http://127.0.0.1:8081/internal/emqx/authn', {
@@ -96,7 +137,7 @@ if [ "$authn_result" != "200:deny" ]; then
   exit 1
 fi
 
-echo "[8/10] AuthN/AuthZ Credential-Bindung und Revocation prüfen"
+echo "[11/13] AuthN/AuthZ Credential-Bindung und Revocation prüfen"
 verify_gateway="VERIFY-GW-$(date +%s)"
 verify_user="dji-gateway-verify-$(date +%s)"
 verify_password="Verify-Only-$verify_gateway-A9!"
@@ -280,13 +321,13 @@ if ! cleanup_verify_credential; then
   exit 1
 fi
 
-echo "[9/10] Statische ACL darf keine permanenten DRC-Rechte enthalten"
+echo "[12/13] Statische ACL darf keine permanenten DRC-Rechte enthalten"
 if grep -Eq 'drc/(up|down)' infra/emqx/acl.conf; then
   echo "FEHLER: statische Basic-Link-ACL enthält DRC-Rechte."
   exit 1
 fi
 
-echo "[10/10] Persistenz-Restart prüfen"
+echo "[13/13] Persistenz-Restart prüfen"
 verify_id="fh2-verify-$(date +%s)"
 docker compose --env-file .env exec -T timescaledb \
   psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
