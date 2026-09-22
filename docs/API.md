@@ -250,6 +250,40 @@ Die interne API darf nicht öffentlich exponiert werden.
 
 Gesundheitsstatus des internen Control-API-Servers.
 
+### POST /internal/media/dji-m3m
+
+Interner, token-geschützter M3M-Metadaten-Normalizer.
+
+Er erwartet **bereits extrahierte** EXIF/XMP-Felder und liest keine Bilddatei
+selbst:
+
+```json
+{
+  "assetId": "capture-red-001",
+  "deviceId": "M3M-001",
+  "sensorId": "m3m-camera",
+  "fileName": "DJI_0001.TIF",
+  "metadata": {
+    "drone-dji:BandName": "Red",
+    "drone-dji:CaptureUUID": "capture-set-id",
+    "drone-dji:GpsLatitude": 49.0,
+    "drone-dji:GpsLongitude": 8.0
+  }
+}
+```
+
+Authentisierung erfolgt mit demselben `MEDIA_INGEST_TOKEN` wie beim direkten
+MediaAsset-Ingest.
+
+Der Mapper:
+
+- klassifiziert M3M-Bänder nur über dokumentiertes `BandName`,
+- rät kein Band aus Dateiname oder `SensorIndex`,
+- übernimmt reale GPS-/Höhen-/Pose-/RTK-Metadaten in `CaptureContext`,
+- erhält `CaptureUUID` zur Capture-Set-Korrelation,
+- meldet widersprüchliche Herstellerfelder in `conflicts`,
+- speist das normalisierte `MediaAsset` unmittelbar in den Overlay-Registry.
+
 ### POST /internal/media/assets
 
 Interner Batch-/Single-Ingest für `MediaAsset`-Objekte.
