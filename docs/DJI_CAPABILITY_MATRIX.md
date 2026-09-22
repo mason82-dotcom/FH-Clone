@@ -57,19 +57,19 @@ Unbekannte Domains oder Subtypen werden **fail-closed** behandelt.
 
 ## Live-Control-Matrix
 
-| Funktion | M3E/M3T/M3TA + RC Pro Enterprise | M4E/M4T + RC Plus 2 | FH2 V3 |
+| Funktion | M3E/M3T/M3TA + RC Pro Enterprise | M4E/M4T + RC Plus 2 | FH2 V3 Runtime |
 | --- | --- | --- | --- |
-| Kamera-Steuerung | DJI dokumentiert | DJI dokumentiert | `control.camera` |
-| Gimbal-Steuerung | DJI dokumentiert | DJI dokumentiert | `control.gimbal` |
-| Payload-Steuerung | DJI dokumentiert | DJI dokumentiert | `payload.control` |
-| Flugsteuerung / Stick | nicht für M3-Pilot-Cloud | DJI dokumentiert | M4: `control.flight` |
-| Return-to-Home | nicht freigegeben | DJI dokumentiert `return_home` / `return_home_cancel` | M4: `control.rth` |
-| FlyTo | nicht freigegeben | DJI dokumentiert | M4: internes `flyTo=true` |
-| Pointing Flight | nicht freigegeben | DJI dokumentiert | M4: `control.pointing` |
-| Orbit / POI | nicht freigegeben | DJI dokumentiert | M4: `control.orbit` |
-| One-key Takeoff | nicht freigegeben | DJI dokumentiert | **nicht als V3-Capability exponiert** |
-| Forced/Emergency Landing | nicht freigegeben | DJI dokumentiert | **nicht als V3-Capability exponiert** |
-| Emergency Stop | nicht für M3-Flugsteuerung | DJI dokumentiert | nur interner Safety-/DRC-Pfad |
+| Kamera-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.camera`-Werbung |
+| Gimbal-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.gimbal`-Werbung |
+| Payload-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `payload.control`-Werbung |
+| Flugsteuerung / Stick | nicht für M3-Pilot-Cloud | DJI dokumentiert | M4: spezialisierter ControlCoordinator/DRC-Pfad implementiert; keine generische Adapter-Capability |
+| Return-to-Home | nicht freigegeben | DJI dokumentiert `return_home` / `return_home_cancel` | nicht implementiert |
+| FlyTo | nicht freigegeben | DJI dokumentiert | M4: `DrcController.flyToPoint()` implementiert |
+| Pointing Flight | nicht freigegeben | DJI dokumentiert | nicht implementiert |
+| Orbit / POI | nicht freigegeben | DJI dokumentiert | nicht implementiert |
+| One-key Takeoff | nicht freigegeben | DJI dokumentiert | nicht implementiert / V3-Freeze |
+| Forced/Emergency Landing | nicht freigegeben | DJI dokumentiert | nicht implementiert / V3-Freeze |
+| Emergency Stop | nicht für M3-Flugsteuerung | DJI dokumentiert | M4: interner FC3-/DRC-Pfad implementiert |
 
 Die letzten drei Funktionen werden trotz DJI-Unterstützung im V3-Freeze nicht
 als neue öffentliche Produktfunktion aufgenommen.
@@ -87,22 +87,13 @@ DJI beschreibt **keine Cloud-Flugsteuerung** für die Mavic-3-Enterprise-Serie
 in diesem Pfad. Die physische RC kann während der Cloud-Payload-Steuerung
 weiterhin das Aircraft fliegen.
 
-FH2 bildet daher ab:
+DJI-seitig ist dieser Payload-Support bestätigt. FH2 V3 implementiert jedoch
+noch keinen routbaren Kamera-/Gimbal-/Payload-Command-Pfad. Deshalb werden
+diese Schreib-Capabilities **nicht** in `AdapterDevice.capabilities[]`
+gemeldet.
 
-```text
-control.camera
-control.gimbal
-payload.control
-```
-
-Nicht vergeben:
-
-```text
-control.flight
-control.rth
-control.pointing
-control.orbit
-```
+Der Produktvertrag bleibt dokumentiert, ohne eine ausführbare Funktion
+vorzutäuschen.
 
 ## Matrice 4 Series
 
@@ -117,19 +108,29 @@ DJI beschreibt hinter RC Plus 2:
 - Return-to-Home
 - weitere Live-Flight-Control-Kommandos
 
-FH2 V3 vergibt für M4E/M4T:
+FH2 V3 implementiert für M4E/M4T aktuell:
 
 ```text
-control.flight
-control.rth
-control.pointing
-control.orbit
-control.camera
-control.gimbal
-payload.control
+ControlCoordinator / DRC-Sitzungsaufbau
+Stick-Control
+Neutral-Control
+Heartbeat
+Emergency Stop
+FlyTo
 ```
 
-Das aktiviert **nicht** automatisch FC3.
+Nicht implementiert sind in V3:
+
+```text
+RTH
+Pointing/POI
+Orbit
+Kamera-/Gimbal-/Payload-Kommandos
+```
+
+Diese Funktionen werden daher trotz DJI-Produktsupport nicht als routbare
+`AdapterDevice.capabilities[]` gemeldet. Der spezialisierte M4-DRC-Pfad
+bleibt zusätzlich FC3/Lease/DJI-Authority/Session/Dead-Man-gated.
 
 ## M3M
 
@@ -162,6 +163,27 @@ automatische Pilot-Cloud-Live-Control-Capability
 
 Ohne eindeutige offizielle Cloud-Enumeration beziehungsweise real verifizierte
 `update_topo`-Identität erhält M3M **kein** M3E/M3T-Live-Control-Profil.
+
+## Produktsupport versus routbare Capability
+
+FH2 unterscheidet verbindlich:
+
+```text
+DJI dokumentiert Produktfunktion
+  -> Produkt-Supportprofil
+
+FH2-Adapter kann AircraftCommand tatsächlich ausführen
+  -> AdapterDevice.capabilities[]
+```
+
+`CapabilityRouter` verwendet `AdapterDevice.capabilities[]`, um einen
+Adapter für `AircraftAdapter.execute()` auszuwählen. Deshalb darf dort keine
+schreibende DJI-Funktion stehen, solange `DjiCloudAdapter.execute()` sie
+nicht tatsächlich erfüllt.
+
+Der M4-ControlCoordinator/DRC-Pfad ist eine spezialisierte Runtime und nutzt
+eigene Produkt-/Safety-Guards. Er wird nicht durch eine falsche generische
+Adapter-Capability simuliert.
 
 ## Telemetrie- und Plattform-Capabilities
 
