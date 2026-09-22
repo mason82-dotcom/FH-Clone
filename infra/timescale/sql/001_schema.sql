@@ -63,7 +63,9 @@ CREATE TABLE IF NOT EXISTS telemetry (
   attitude_roll       REAL,
 
   -- RTK / GNSS
-  is_fixed            SMALLINT,
+  is_fixed            SMALLINT
+                      CONSTRAINT telemetry_is_fixed_enum_chk
+                      CHECK (is_fixed IS NULL OR is_fixed BETWEEN 0 AND 3),
   quality             SMALLINT,
   gps_number          SMALLINT,
   rtk_number          SMALLINT,
