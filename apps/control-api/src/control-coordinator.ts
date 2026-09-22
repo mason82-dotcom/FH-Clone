@@ -53,7 +53,7 @@ export class ControlCoordinator {
 
     const initial = this.guards(input.aircraftSn, input.holder);
     if (initial.djiAuthority) throw new Error("dji_cloud_authority_already_held");
-    await this.sessions.request({ aircraftSn: input.aircraftSn, gatewaySn, guards: initial });
+    await this.sessions.request({ aircraftSn: input.aircraftSn, gatewaySn, holder: input.holder, guards: initial });
 
     let authorityRequested = false;
     let drcEntered = false;
