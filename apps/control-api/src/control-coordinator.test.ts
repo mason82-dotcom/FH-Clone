@@ -7,6 +7,7 @@ function fixture(authorized = true) {
   const calls: string[] = [];
   const guards: DrcSessionGuards = { fc3: true, controlLease: true, capability: true, djiAuthority: authorized };
   const sessions = {
+    async listOpenSessions() { return []; },
     async request() { calls.push("session.request"); return {} as never; },
     async markAuthorized() { calls.push("session.authorized"); return {} as never; },
     async markAuthorityGrabbed() { calls.push("session.authorityGrabbed"); return {} as never; },
@@ -149,4 +150,21 @@ test("branch A rejects credentials inside the expiry safety window", async () =>
   f.calls.length = 0;
   assert.equal(await coordinator.recoverTransport("M4T-001"), false);
   assert.deepEqual(f.calls, ["session.drcStatus"]);
+});
+
+
+test("rejects a second gateway while the singleton DRC transport is in use", async () => {
+  const f = fixture(true);
+  f.sessions.listOpenSessions = async () => [{ gatewaySn: "RC-PLUS2-OTHER" }] as never;
+  const coordinator = new ControlCoordinator(f.dji, f.sessions as never, () => f.guards);
+  await assert.rejects(
+    coordinator.start({
+      aircraftSn: "M4T-001",
+      holder: "operator-a",
+      authority: { userId: "u1", userCallsign: "OP-A" },
+      drc: { mqttBroker: { address: "mqtt://broker", client_id: "drc", username: "u", password: "p", expire_time: Math.floor(Date.now() / 1000) + 120, enable_tls: false } }
+    }),
+    /drc_session_already_active/
+  );
+  assert.deepEqual(f.calls, []);
 });
