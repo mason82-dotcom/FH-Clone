@@ -75,6 +75,15 @@ declare global {
           height?: number
         ): unknown;
       };
+      Color?: {
+        BLACK?: {
+          withAlpha?(alpha: number): unknown;
+        };
+        fromCssColorString?(value: string): {
+          withAlpha?(alpha: number): unknown;
+        };
+      };
+      PolygonHierarchy?: new (positions: unknown[]) => unknown;
       [key: string]: unknown;
     };
   }
