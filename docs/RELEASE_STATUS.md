@@ -7,7 +7,7 @@ Dieses Dokument ist die aktuelle Direktor-Sicht auf den V3-Abschluss.
 Kanonischer Stand:
 
 ```text
-main = f5065a8eebd71570196c6ff5c07d429bd96b5a4f
+main = 0851d5f4de0a1a5b734bb7500c1c722a82ee182a
 ```
 
 ## Versionsstatus
@@ -174,11 +174,17 @@ Auf `main` vorhanden:
 - NDVI_READY / NDVI_PARTIAL / NOT_NDVI_CAPABLE
 - automatisierte NDVI-Regeln/Tests
 
+Der offizielle DJI-M3M-EXIF/XMP-Vertrag ist inzwischen dokumentiert, darunter
+`BandName`, `BandFreq`, `SensorIndex`, `CaptureUUID`, RTK-/Pose-,
+Sonnenlichtsensor- und Kalibrierungsfelder. `CaptureUUID` ist der bevorzugte
+authoritative Capture-Set-Schlüssel.
+
 Noch final abzunehmen:
 
-- reale M3M-Mediendateien/Fixtures
-- konkrete EXIF/XMP-/Media-Feldnamen
-- sichere Datei->Band-Zuordnung
+- reale M3M-Mediendateien/Fixtures gegen diesen offiziellen Feldvertrag
+- Parser-Verifikation der konkreten XMP-/EXIF-Tagdarstellung
+- Widerspruchsfreiheit von `BandName` / `BandFreq` / `SensorIndex`
+- reale Radiometrie-/Sonnenlichtsensorwerte
 - ggf. exakter Cloud-`payload_index`, falls im Runtime-Pfad benötigt
 - reale Ausführung der Tests nach R1
 
@@ -287,8 +293,10 @@ RC Pro:
 Multispektral:
 
 1. reale M3M-Fixtures liefern
-2. konkrete EXIF/XMP-/Media-Felder bestätigen
-3. Datei->Band-Korrelation gegen den Core-Vertrag verifizieren
+2. offiziellen EXIF/XMP-Vertrag an echten Dateien/Parser bestätigen
+3. `CaptureUUID`-Gruppierung sowie `BandName`/`BandFreq`/`SensorIndex`
+   verifizieren
+4. Radiometrie-/Sonnenlichtsensorwerte gegen den Verarbeitungsvertrag prüfen
 
 Direktor:
 
