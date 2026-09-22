@@ -121,6 +121,35 @@ weitergereicht:
 /health  -> http://127.0.0.1:8080
 ```
 
+### FlightHub 2 Frontend Standalone
+
+Die offizielle DJI-On-Premises-Frontend-Runtime ist optional.
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `VITE_FH2_STANDALONE_ENABLED` | `false` | lädt `paas.js` und aktiviert die offiziellen Standalone-Komponenten |
+| `VITE_FH2_NATIVE_COCKPIT_ENABLED` | `false` | erlaubt das native DJI Virtual Cockpit |
+| `VITE_FH2_HOST_URL` | leer | Host, von dem DJI-Frontend-Ressourcen geladen werden |
+| `VITE_FH2_SERVER_URL` | leer | HTTP-Backend-URL des On-Premises-Systems |
+| `VITE_FH2_WSS_URL` | leer | Duplex-WebSocket-URL des On-Premises-Systems |
+| `VITE_FH2_PROJECT_ID` | leer | `prjId` für `window.FH2.initConfig()` |
+| `VITE_FH2_PROJECT_TOKEN` | leer | browserseitiger `projectToken` für `paas.js` |
+| `VITE_FH2_PAAS_URL` | `<HOST>/paas.js` | optionaler expliziter Pfad zur DJI-Runtime |
+| `VITE_FH2_COCKPIT_PROP_STYLE` | `camel` | `camel` für aktuelle API, `snake` für v1.5-Demo-Kompatibilität |
+| `VITE_FH2_GATEWAY_SN` | leer | optionale Standard-Gateway-SN |
+| `VITE_FH2_DRONE_SN` | leer | optionale Standard-Aircraft-SN |
+| `VITE_FH2_WAYLINE_ID` | leer | optionale Standard-Wayline-ID |
+| `VITE_FH2_FLIGHT_PATH_ID` | leer | optionale Standard-Flight-Path-ID |
+
+`VITE_*` wird von Vite beim **Build** in das Browser-Bundle übernommen.
+Änderungen erfordern deshalb einen Neubau des Web-Images.
+
+`VITE_FH2_PROJECT_TOKEN` ist für die DJI-Browser-Runtime sichtbar. Er darf
+nicht mit dem serverseitigen `FH2_USER_TOKEN` der OpenAPI-Integration
+verwechselt oder wiederverwendet werden.
+
+Details: [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md).
+
 ## UgCS-UCS-Bridge
 
 | Variable | Standard | Bedeutung |
