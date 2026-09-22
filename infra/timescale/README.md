@@ -1,4 +1,4 @@
-# TimescaleDB – FH-Clone Telemetrie
+# TimescaleDB – FH2-Telemetrie
 
 FH-Clone verwendet TimescaleDB für persistente Flugtelemetrie und relationale Missionszuordnung.
 
@@ -45,17 +45,17 @@ device_sub_type
 
 Für die Mavic-3-Enterprise-Serie ist `device_type = 77`; M3E/M3T werden über `device_sub_type` unterschieden.
 
-## Missions-Sessions
+## Missionssitzungen
 
 Automatische Sessions entstehen erst bei flugaktiven `mode_code`-Werten.
 
 Nicht startend:
 
 - 0 Standby
-- 1 Takeoff preparation
-- 2 Takeoff preparation completed
-- 13 Upgrading
-- 14 Not connected
+- 1 Startvorbereitung
+- 2 Startvorbereitung abgeschlossen
+- 13 Aktualisierung
+- 14 Nicht verbunden
 
 Beendigung:
 
@@ -63,7 +63,7 @@ Beendigung:
 - oder 30 s ohne Telemetrie
 - oder explizites späteres manuelles Ende
 
-`mode_code = 0` wird bewusst als **Standby** behandelt, nicht pauschal als semantisches "Landed"-Event.
+`mode_code = 0` wird bewusst als **Standby** behandelt, nicht pauschal als semantisches „Gelandet“-Ereignis.
 
 ## RTK
 
@@ -93,3 +93,12 @@ TIMESCALE_URL=postgres://fhclone:<passwort>@timescaledb:5432/fhclone
 ```
 
 Ohne `TIMESCALE_URL` arbeitet die Live-Telemetrie vollständig ohne Datenbank weiter.
+
+
+## Weiterführende Dokumentation
+
+- [Persistenz](../../docs/PERSISTENZ.md)
+- [Datenmodell](../../docs/DATENMODELL.md)
+- [Missionen](../../docs/MISSIONEN.md)
+- [RTK und NTRIP](../../docs/RTK_NTRIP.md)
+- [Betrieb](../../docs/BETRIEB.md)
