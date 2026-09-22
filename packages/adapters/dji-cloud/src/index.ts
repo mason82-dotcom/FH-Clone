@@ -13,7 +13,8 @@ import { normalizeDjiPayload } from "./normalizer.js";
 import { DjiCloudControlAuthorityRegistry } from "./cloud-authority.js";
 import { DJI_CLOUD_API_BASELINE } from "./version.js";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
-import { DrcController, type DjiMqttPublisher, type MqttQos } from "./drc.js";
+import { DrcController, type DrcBrokerCredentials } from "./drc.js";
+import { DrcBrokerTransport, type DrcTransportLossReason } from "./drc-transport.js";
 import {
   DjiTopologyRegistry,
   describeDjiProduct,
@@ -38,6 +39,9 @@ export interface DjiCloudAdapterOptions {
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
    */
   apiVersion?: string;
+  /** Runtime-only DRC transport sink. Never persisted as an authorization source. */
+  onDrcTransportConnected?: () => void | Promise<void>;
+  onDrcTransportLost?: (reason: DrcTransportLossReason) => void | Promise<void>;
   /** Runtime-only DRC status sink. Never persisted as an authorization source. */
   onDrcStatus?: (gatewaySn: string, drcState: 0 | 1 | 2, receivedAt: number) => void | Promise<void>;
   /** Optional inventory sink. Never used to hydrate runtime authorization state. */
@@ -87,13 +91,15 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   private readonly pendingServices = new Map<string, PendingServiceRequest>();
   readonly topology = new DjiTopologyRegistry();
   readonly cloudAuthority = new DjiCloudControlAuthorityRegistry();
+  readonly drcTransport: DrcBrokerTransport;
   readonly drc: DrcController;
 
   constructor(private readonly options: DjiCloudAdapterOptions) {
-    const publisher: DjiMqttPublisher = {
-      publish: (topic, payload, qos) => this.publishDrc(topic, payload, qos)
-    };
-    this.drc = new DrcController(this, publisher);
+    this.drcTransport = new DrcBrokerTransport({
+      onConnected: () => this.options.onDrcTransportConnected?.(),
+      onLost: (reason) => this.options.onDrcTransportLost?.(reason)
+    });
+    this.drc = new DrcController(this, this.drcTransport);
   }
 
 
@@ -162,6 +168,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     }
     this.pendingServices.clear();
 
+    await this.drcTransport.disconnect();
     if (!client) return;
     await new Promise<void>((resolve) => {
       client.end(false, {}, resolve);
@@ -271,12 +278,12 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     });
   }
 
-  private async publishDrc(topic: string, payload: unknown, qos: MqttQos): Promise<void> {
-    const client = this.client;
-    if (!client || !this.connected) throw new Error("DJI Cloud MQTT adapter is not connected");
-    await new Promise<void>((resolve, reject) => {
-      client.publish(topic, JSON.stringify(payload), { qos }, (error?: Error) => error ? reject(error) : resolve());
-    });
+  async connectDrcTransport(credentials: DrcBrokerCredentials): Promise<void> {
+    await this.drcTransport.connect(credentials);
+  }
+
+  async disconnectDrcTransport(): Promise<void> {
+    await this.drcTransport.disconnect();
   }
 
   async execute(_command: AircraftCommand): Promise<CommandResult> {
