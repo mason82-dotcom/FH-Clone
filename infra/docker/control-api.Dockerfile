@@ -9,7 +9,7 @@ COPY packages/aircraft-core/package.json packages/aircraft-core/package.json
 COPY packages/adapters/dji-cloud/package.json packages/adapters/dji-cloud/package.json
 COPY packages/adapters/ugcs/package.json packages/adapters/ugcs/package.json
 
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN npm ci
 
 COPY tsconfig.base.json ./
 COPY apps/control-api apps/control-api
