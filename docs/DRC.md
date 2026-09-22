@@ -216,9 +216,21 @@ idle / closed
       v
 requesting
       |
-      | DJI Authority bestätigt
+      | Pilot-Consent bestätigt
       v
-active
+authorized
+      |
+      | DJI Control Authority übernommen
+      v
+authority_grabbed
+      |
+      | drc_mode_enter bestätigt
+      v
+drc_mode_active
+      |
+      | DRC-Transport verbunden + activate()
+      v
+controlling
       |
       | Bedienende beendet / Dead-Man / Guard-Verlust
       v
@@ -229,16 +241,25 @@ draining
 closed
 ```
 
-Es gibt fünf Zustände:
+Der Lifecycle besitzt acht Zustände:
 
 - `idle`
 - `requesting`
-- `active`
+- `authorized`
+- `authority_grabbed`
+- `drc_mode_active`
+- `controlling`
 - `draining`
 - `closed`
 
-`degraded` ist kein sechster Zustand, sondern ein Gesundheitsstatus einer
-weiterhin aktiven Sitzung.
+`degraded` ist **kein Lifecycle-Zustand**, sondern ausschließlich
+`health = degraded` bei weiterhin `state = controlling`.
+
+Für die Broker-Autorisierung gilt eine Sitzung erst dann als aktiv, wenn
+`state = controlling` **und** der Runtime-DRC-Transport verbunden ist.
+Ein Transportverlust lässt den Lifecycle-Zustand bestehen, entzieht aber
+sofort die DRC-Autorisierung; erst die Runtime-Wiederverbindung kann sie
+wieder aktivieren.
 
 ## Guards
 
@@ -259,7 +280,7 @@ Standardwerte der lokalen FH2-Sicherheitsrichtlinie:
 
 ```text
 nach 500 ms ohne neuen Stick-Input:
-  state = active
+  state = controlling
   health = degraded
 
 nach 2000 ms ohne neuen Stick-Input:

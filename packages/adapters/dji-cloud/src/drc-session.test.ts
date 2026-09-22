@@ -63,12 +63,6 @@ async function advanceToControlling(manager: DrcSessionManager, gatewaySn: strin
   await manager.markDrcModeActive(gatewaySn);
   await manager.setTransportConnected(gatewaySn, true);
   await manager.activate({ gatewaySn, guards: activeGuards });
-  await manager.sendStick(gatewaySn, {
-    roll: DJI_STICK_CENTER,
-    pitch: DJI_STICK_CENTER,
-    throttle: DJI_STICK_CENTER,
-    yaw: DJI_STICK_CENTER
-  }, activeGuards);
 }
 
 
@@ -114,6 +108,8 @@ test("session follows explicit setup -> controlling -> draining -> closed", asyn
   assert.equal(active?.state, "controlling");
   assert.equal(transport.heartbeatsStarted, 1);
   assert.equal(transport.sequenceResets, 1);
+  assert.equal(transport.stickCommands, 0);
+  assert.equal(await manager.isActive("RC-PLUS2-001"), true);
 
   now += 100;
   await manager.sendStick(
@@ -126,7 +122,7 @@ test("session follows explicit setup -> controlling -> draining -> closed", asyn
     },
     activeGuards
   );
-  assert.equal(transport.stickCommands, 2);
+  assert.equal(transport.stickCommands, 1);
 
   const closed = await manager.closeGracefully(
     "RC-PLUS2-001",
@@ -162,7 +158,7 @@ test("dead-man degrades at 500ms and closes at 2s", async () => {
   now += 600;
   await manager.checkDeadman("RC-PLUS2-002");
   const degraded = await manager.get("RC-PLUS2-002");
-  assert.equal(degraded?.state, "degraded");
+  assert.equal(degraded?.state, "controlling");
   assert.equal(degraded?.health, "degraded");
   assert.equal(transport.neutralCommands, 0);
 

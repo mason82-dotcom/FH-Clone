@@ -13,7 +13,6 @@ export type DrcSessionState =
   | "authority_grabbed"
   | "drc_mode_active"
   | "controlling"
-  | "degraded"
   | "draining"
   | "closed";
 
@@ -25,8 +24,7 @@ const DRC_TRANSITIONS: Readonly<Record<DrcSessionState, readonly DrcSessionState
   authorized: ["authority_grabbed", "closed"],
   authority_grabbed: ["drc_mode_active", "draining", "closed"],
   drc_mode_active: ["controlling", "draining", "closed"],
-  controlling: ["degraded", "draining", "closed"],
-  degraded: ["controlling", "draining", "closed"],
+  controlling: ["draining", "closed"],
   draining: ["closed"],
   closed: ["requesting"]
 };
@@ -215,9 +213,10 @@ export function evaluateDrcGuards(guards: DrcSessionGuards): DrcGuardResult {
  *
  * State flow:
  * idle/closed -> requesting -> authorized -> authority_grabbed ->
- * drc_mode_active -> controlling <-> degraded -> draining -> closed.
+ * drc_mode_active -> controlling -> draining -> closed.
  *
- * DJI authority loss force-closes immediately without attempting a neutral
+ * Degradation is represented exclusively by DrcSessionHealth and never by a
+ * second lifecycle state. DJI authority loss force-closes immediately without attempting a neutral
  * publish, because command authority is no longer guaranteed.
  */
 export class DrcSessionManager {
@@ -322,7 +321,7 @@ export class DrcSessionManager {
       ? withoutReason({ ...current, transportConnected: true, updatedAt: this.now() })
       : { ...current, transportConnected: false, updatedAt: this.now() };
     await this.persist(record);
-    if (connected && wasDisconnected && (record.state === "controlling" || record.state === "degraded")) {
+    if (connected && wasDisconnected && record.state === "controlling") {
       this.controller.startHeartbeat(gatewaySn);
       this.startTimer(gatewaySn);
       await this.audit(record, "transport_recovered");
@@ -376,10 +375,25 @@ export class DrcSessionManager {
       throw new Error("Cannot activate DRC session while DRC transport is disconnected");
     }
 
+    if (!isAllowedDrcTransition(current.state, "controlling")) {
+      throw new Error(`Invalid DRC transition ${current.state}->controlling`);
+    }
+
     this.controller.resetControlSequence();
     this.controller.startHeartbeat(current.gatewaySn);
-    await this.audit(current, "activated");
-    return { ...current };
+
+    const now = this.now();
+    const controlling = withoutReason({
+      ...current,
+      state: "controlling",
+      health: "healthy",
+      updatedAt: now,
+      lastInputAt: now
+    });
+    await this.persist(controlling);
+    this.startTimer(current.gatewaySn);
+    await this.audit(controlling, "activated");
+    return { ...controlling };
   }
 
   async sendStick(
@@ -390,7 +404,7 @@ export class DrcSessionManager {
     this.assertGuards(guards, "send DRC stick input");
 
     const current = await this.require(gatewaySn);
-    if (current.state !== "drc_mode_active" && current.state !== "controlling" && current.state !== "degraded") {
+    if (current.state !== "controlling") {
       throw new Error(`DRC session for gateway ${gatewaySn} cannot accept stick input (state=${current.state})`);
     }
     if (!current.transportConnected) {
@@ -408,7 +422,6 @@ export class DrcSessionManager {
     });
 
     await this.persist(record);
-    if (current.state === "drc_mode_active") this.startTimer(gatewaySn);
     await this.audit(record, "input");
     return seq;
   }
@@ -486,7 +499,7 @@ export class DrcSessionManager {
     let lastNeutralAt = draining.lastNeutralAt;
     const shouldNeutral =
       current.transportConnected &&
-      (current.state === "controlling" || current.state === "degraded");
+      current.state === "controlling";
 
     try {
       if (shouldNeutral) {
@@ -513,8 +526,7 @@ export class DrcSessionManager {
       if (
         current.state === "authority_grabbed" ||
         current.state === "drc_mode_active" ||
-        current.state === "controlling" ||
-        current.state === "degraded"
+        current.state === "controlling"
       ) {
         await this.controller.exitDrcMode(gatewaySn);
       }
@@ -551,7 +563,7 @@ export class DrcSessionManager {
     const current = await this.store.get(gatewaySn);
     return Boolean(
       current?.transportConnected &&
-      (current.state === "controlling" || current.state === "degraded")
+      current.state === "controlling"
     );
   }
 
@@ -569,7 +581,7 @@ export class DrcSessionManager {
 
     await Promise.allSettled(
       open.map(async (session) => {
-        if (session.state === "controlling" || session.state === "degraded" || session.state === "drc_mode_active" || session.state === "authority_grabbed") {
+        if (session.state === "controlling" || session.state === "drc_mode_active" || session.state === "authority_grabbed") {
           await this.closeGracefully(session.gatewaySn, "backend_shutdown");
           return;
         }
@@ -594,7 +606,7 @@ export class DrcSessionManager {
 
     try {
       const current = await this.store.get(gatewaySn);
-      if (!current || (current.state !== "controlling" && current.state !== "degraded")) {
+      if (!current || current.state !== "controlling") {
         this.stopTimer(gatewaySn);
         return;
       }
@@ -613,7 +625,6 @@ export class DrcSessionManager {
       ) {
         const degraded: DrcSessionRecord = {
           ...current,
-          state: "degraded",
           health: "degraded",
           updatedAt: this.now(),
           reason: "input_stale"
