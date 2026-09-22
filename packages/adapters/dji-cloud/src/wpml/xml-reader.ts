@@ -102,6 +102,23 @@ function validXmlCodePoint(codePoint: number): boolean {
   );
 }
 
+function predefinedEntity(entity: string): string | undefined {
+  switch (entity) {
+    case "amp":
+      return "&";
+    case "lt":
+      return "<";
+    case "gt":
+      return ">";
+    case "quot":
+      return '"';
+    case "apos":
+      return "'";
+    default:
+      return undefined;
+  }
+}
+
 function decodeEntities(value: string): string {
   let output = "";
   let cursor = 0;
@@ -120,16 +137,10 @@ function decodeEntities(value: string): string {
     }
 
     const entity = value.slice(ampersand + 1, semicolon);
-    const predefined: Record<string, string> = {
-      amp: "&",
-      lt: "<",
-      gt: ">",
-      quot: '"',
-      apos: "'"
-    };
+    const predefined = predefinedEntity(entity);
 
-    if (Object.hasOwn(predefined, entity)) {
-      output += predefined[entity];
+    if (predefined !== undefined) {
+      output += predefined;
     } else if (/^#[0-9]+$/.test(entity) || /^#x[0-9A-Fa-f]+$/.test(entity)) {
       const codePoint = entity.startsWith("#x")
         ? Number.parseInt(entity.slice(2), 16)
@@ -296,7 +307,10 @@ class XmlReader {
       rawAttributes.push({ rawName: attributeName, value });
     }
 
-    const namespaces = new Map(this.stack.at(-1)?.namespaces ?? [["xml", XML_NAMESPACE]]);
+    const inheritedNamespaces = this.stack.at(-1)?.namespaces;
+    const namespaces = inheritedNamespaces
+      ? new Map(inheritedNamespaces)
+      : new Map<string, string>([["xml", XML_NAMESPACE]]);
 
     for (const attribute of rawAttributes) {
       if (attribute.rawName === "xmlns") {
