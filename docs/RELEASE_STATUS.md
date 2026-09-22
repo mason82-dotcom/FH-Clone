@@ -2,8 +2,7 @@
 
 Stand: 22.09.2026
 
-Dieses Dokument unterstützt den Releases-Agenten bei der V3.0-Konvergenz.
-Es ersetzt keine Direktor-Freigabe und startet keine CI.
+Dieses Dokument ist die aktuelle Direktor-Sicht auf den V3-Abschluss.
 
 ## Versionsstatus
 
@@ -11,15 +10,31 @@ Aktuell:
 
 ```text
 package.json = 0.1.0
-V3.0       = noch nicht freigegeben
+V3.0         = noch nicht freigegeben
 ```
 
-Die Version `3.0.0` wird erst gesetzt, wenn alle Release-Gates bestanden
-sind. Es gibt aktuell keinen `VERSION`-Marker und keinen Release-Tag.
+`3.0.0` wird erst nach bestandenen Release-Gates und erfolgreicher
+Direktor-CI gesetzt. Es existiert noch kein finaler V3-Tag.
 
-## Gate-Übersicht
+## Bereits konsolidierte Merge-Kandidaten
 
-### Gate 1 – Build: TEILWEISE OFFEN
+Folgende V3-Kandidaten sind auf `main` übernommen:
+
+- PR #21 – konsolidierte DRC-Control-Integration
+- PR #22 – Release-Status / Changelog / Doku-Bereinigung
+- PR #24 – AuthZ-Reason-Vertrag und gepuffertes Audit
+
+Bewusst **nicht** gemergt:
+
+- PR #18 – durch #21 ersetzt
+- PR #19 – durch #24 ersetzt
+- ältere RC-Pro-/EMQX-/Gateway-/Mission-Branches – durch ihre aktuellen
+  Direktor-Integrationen ersetzt
+
+Damit existiert derzeit kein weiterer fachlich sinnvoller Merge-Kandidat vor
+dem Runtime-/Release-Gate.
+
+## Gate 1 – Build: OFFEN
 
 Vorhanden:
 
@@ -27,196 +42,187 @@ Vorhanden:
 - `npm run build`
 - `npm run typecheck`
 - `npm test`
-- `npm run test:authz`
+- Web-Workspace
+- UgCS-Bridge
 
-Noch als Release-Nachweis erforderlich:
+Noch erforderlich:
 
-- reproduzierbare lokale Ausführung aller Build-Schritte
-- Web-Build
-- optionaler UgCS-Bridge-Build
+- `package-lock.json` im Repository-Root
+- damit reproduzierbares `npm ci`
+- lokaler kompletter Build-/Testnachweis
 
-### Gate 2 – Runtime: OFFEN
+## Gate 2 – Runtime: OFFEN
 
-Im Repository fehlt aktuell der finale Root-Stack für:
+Noch erforderlich:
 
-```text
-control-api
-emqx
-web
-timescaledb
-```
-
-Ebenfalls noch nicht vorhanden:
-
+- finaler Root-Compose
 - Root-`.env.example`
-- Root-Verify-Skript
-- gemeinsamer Health-/Readiness-Abnahmepfad
+- Pflichtdienste:
+  - `control-api`
+  - `emqx`
+  - `web`
+  - `postgres` oder `timescaledb`
+- gemeinsamer Health-/Readiness-Pfad
+- Neustart ohne Verlust persistenter Daten
 
-TimescaleDB besitzt bereits einen separaten Unterstack, ist aber noch nicht in
-einen finalen Root-Compose integriert.
+Der separate Timescale-Unterstack ist vorhanden, ersetzt aber noch nicht den
+finalen Root-Stack.
 
-### Gate 3 – Tests: TEILWEISE OFFEN
+## Gate 3 – Tests: TEILWEISE IMPLEMENTIERT
 
-Automatisierte Tests existieren unter anderem für:
+Automatisiert vorhanden sind unter anderem:
 
 - AuthZ
+- AuthZ-Reason-Taxonomie
+- AuthZ-Audit-Selektion/Pufferung
 - Missionssitzung
-- DRC-Sitzung / Recovery
+- DRC-Sitzung
+- Dead-Man
+- Runtime-DRC-Session-ID
+- DRC-Recovery/Transportverlust
 
-Die verbindliche Restliste steht in
-`docs/TESTS_UND_ABNAHME.md`.
+Die finale lokale Gesamtabnahme bleibt offen.
 
-### Gate 4 – RC Pro: OFFEN / REAL ZU VERIFIZIEREN
+## Gate 4 – RC Pro: REAL ZU VERIFIZIEREN
 
-Noch mit echter Hardware nachzuweisen:
+Noch mit echter Hardware zu bestätigen:
 
-- MQTT-Identität
+- reale MQTT-Client-ID
+- Username-/Credential-Semantik
 - `update_topo`
 - OSD/State
 - Reconnect
 - Pair/Unpair
 - Credential-Fehler
-- tatsächlich benötigte Topic-Matrix
+- tatsächlich notwendige Topic-Matrix
+- Capability-Matrix der eingesetzten Produkte
 
-### Gate 5 – Multispektral: OFFEN
+Die Sicherheitsarchitektur bleibt unabhängig davon, ob
+`clientid == gateway_sn` beobachtet wird.
 
-Noch nicht final abgenommen:
+## Gate 5 – Multispektral: OFFEN
+
+Noch final abzunehmen:
 
 - Kamera-/Payload-Feldvertrag
 - M3M-Bandvertrag
 - Media-Korrelation
+- Processing-Profile
 - NDVI Ready/Partial/Not-Capable
 
-### Gate 6 – Safety: TEILWEISE IMPLEMENTIERT, ABNAHME OFFEN
+## Gate 6 – Safety: TEILWEISE IMPLEMENTIERT
 
 Auf `main` vorhanden:
 
 - FC0..FC3
 - Control Lease
-- DJI Authority
+- DJI Control Authority
 - DRC Session Manager
 - Dead-Man
 - Control Coordinator
-- Recovery-Logik
+- Transport-Recovery
+- Runtime-only Autorisierungszustand
+- Basic-Link-/DRC-Trennung
+- AuthZ-Audit
 
 Noch releasekritisch:
 
 - vollständige lokale Safety-Abnahme
 - Kill-Switch-Test
-- Nachweis, dass Defaultbetrieb keine öffentliche DRC-/Flight-Control-API
-  freigibt
 - reale Hardware-Verifikation
+- Nachweis, dass Defaultbetrieb keine öffentliche Flight-Control-API öffnet
 
-### Gate 7 – Direktor-CI: OFFEN
+## Gate 7 – Dokumentation: WEITGEHEND ERFÜLLT
 
-Im Repository existiert derzeit kein Workflow unter:
+Vorhanden:
+
+- deutsche Projektübersicht
+- Doku-Index
+- V3-Architektur
+- DJI-MQTT-Security
+- EMQX AuthN/AuthZ
+- RC Pro
+- DRC
+- RTK/NTRIP
+- Kompatibilität
+- Betrieb
+- Konfiguration
+- Fehlersuche
+- Glossar
+- Release-Status
+- Changelog
+
+Die Dokumentation wird bis zum RC nur noch an tatsächlich implementierte
+Runtime-/Konfigurationsänderungen angepasst.
+
+## Gate 8 – Direktor-CI: VORBEREITET, NOCH NICHT GESTARTET
+
+Workflow:
 
 ```text
-.github/workflows/
+.github/workflows/director-v3-validation.yml
 ```
 
-Das ist korrekt als noch offenes Gate dokumentiert.
+Trigger ausschließlich:
 
-Nur der Direktor darf die zentrale CI einrichten, starten und bewerten.
-
-## Offene Pull Requests
-
-### PR #18 – DJI Control Coordinator V3
-
-Status:
-
-```text
-open
-divergiert
-22 Commits hinter aktuellem main
-9 Commits eigener Verlauf gegenüber seinem alten Stand
+```yaml
+workflow_dispatch:
 ```
 
-Der aktuelle `main` enthält bereits einen Commit
-`DJI DRC Control Integration V3`. PR #18 darf deshalb nicht blind gemerged
-werden. Der Releases-Agent soll nur noch prüfen, ob dort einzelne Änderungen
-fehlen, und den PR danach schließen oder gezielt portieren.
+Die Direktor-CI prüft:
 
-### PR #19 – AuthZ Reason + Audit
+- Release-Struktur
+- Root-Compose-Pflichtdienste
+- `npm ci`
+- Build
+- Typecheck
+- Tests
+- UgCS-Bridge
+- TimescaleDB und Migrationen
+- deutsche Pflichtdokumentation
 
-Status:
+Die CI wird **erst gestartet**, wenn Gate 1 und Gate 2 lokal geschlossen sind.
+Ein früher Lauf würde erwartbar an fehlendem Lockfile/Root-Compose scheitern
+und wäre keine V3-Abnahme.
 
-```text
-open
-divergiert
-1 Commit hinter main
-1 Commit vor main
-```
+## Nächste zwingende Arbeit
 
-PR #19 ist ein echter Release-Gate-Kandidat für:
+Manager:
 
-- stabile AuthZ-Reason-Taxonomie
-- Runtime-only DRC-/Topology-Autorität
-- gepuffertes Audit
-- TimescaleDB-`authz_audit`
-- Shutdown-Flush
+1. `package-lock.json`
+2. Root-`.env.example`
+3. Root-Compose
+4. Health/Readiness
+5. lokale Verify-Suite
+6. finale EMQX-AuthN-/Credential-Bindung
 
-Empfehlung: auf aktuellen `main` portieren/rebasen und separat prüfen.
+RC Pro:
 
-## Dokumentations-Gate
+1. reale Hardware-/MQTT-Verifikation
+2. Reconnect/Pairing/Topic-Matrix
 
-`docs/README.md` ist vorhanden und listet die verbindlichen V3-Dokumente.
+Multispektral:
 
-Aktuell existieren jedoch zwei RC-Pro-Dokumente:
+1. finaler Media-/Bandvertrag
+2. NDVI-Regeln
 
-```text
-docs/RC_PRO.md      verbindliche ausführliche Fassung
-docs/RC-PRO.md      historischer Doppelstand
-```
+Direktor:
 
-Der Doppelstand wird im Release-Support-Branch auf einen eindeutigen
-Verweis reduziert, damit keine widersprüchliche zweite Quelle verbleibt.
+1. lokale Gate-Ergebnisse prüfen
+2. finale CI starten
+3. bei grünem Lauf `3.0.0` setzen
+4. Tag/Release erstellen
+5. Issues schließen
+6. Projektstopp / Feierabend
 
-## Release-Artefakte
-
-Vor dem RC sinnvoll:
-
-- `CHANGELOG.md` mit Abschnitt `Unreleased`
-- finaler Root-Compose
-- Root-`.env.example`
-- lokaler Release-/Verify-Check
-- danach erst `3.0.0`
-
-Noch nicht setzen:
-
-- kein `v3.0.0`-Tag
-- kein `package.json = 3.0.0`
-- kein finaler Release-Eintrag
-
-## Release-Reihenfolge
+## Abschlussregel
 
 ```text
-PR #19 auf aktuellen main bringen
-        |
-        v
-Gate 1 Build lokal
-        |
-        v
-Gate 2 Root Runtime
-        |
-        v
-Gate 3 Tests
-        |
-        v
-Gate 4 RC-Pro Hardware
-        |
-        v
-Gate 5 Multispektral
-        |
-        v
-Gate 6 Safety
-        |
-        v
-Doku-Gate
-        |
-        v
-Direktor-CI
-        |
-        v
-3.0.0 setzen + Tag + Release
+Gates schließen
+ -> Direktor-CI grün
+ -> 3.0.0
+ -> Tag/Release
+ -> alle V3-Issues schließen
+ -> main einfrieren
+ -> Feierabend
 ```
