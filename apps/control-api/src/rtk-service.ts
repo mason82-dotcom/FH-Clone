@@ -10,6 +10,7 @@ import {
 export interface RtkDeviceSnapshot extends DjiRtkStatus {
   deviceId: string;
   gatewaySn?: string;
+  missionId?: string;
   stale: boolean;
   ageMs: number;
 }
@@ -19,12 +20,14 @@ export type RtkLiveEvent =
       type: "status";
       deviceId: string;
       gatewaySn?: string;
+      missionId?: string;
       status: DjiRtkStatus;
     }
   | {
       type: "fix-transition";
       deviceId: string;
       gatewaySn?: string;
+      missionId?: string;
       transition: RtkFixTransition;
     };
 
@@ -32,6 +35,7 @@ export interface RtkTelemetryServiceOptions {
   staleAfterMs?: number;
   maxTransitions?: number;
   resolveGatewaySn?: (deviceId: string) => string | undefined;
+  resolveMissionId?: (deviceId: string) => string | undefined;
 }
 
 type Subscriber = (event: RtkLiveEvent) => void;
@@ -45,11 +49,13 @@ export class RtkTelemetryService {
   private readonly staleAfterMs: number;
   private readonly maxTransitions: number;
   private readonly resolveGatewaySn?: (deviceId: string) => string | undefined;
+  private readonly resolveMissionId?: (deviceId: string) => string | undefined;
 
   constructor(options: RtkTelemetryServiceOptions = {}) {
     this.staleAfterMs = options.staleAfterMs ?? 5_000;
     this.maxTransitions = options.maxTransitions ?? 200;
     this.resolveGatewaySn = options.resolveGatewaySn;
+    this.resolveMissionId = options.resolveMissionId;
   }
 
   observe(message: RawMessage): void {
@@ -63,12 +69,14 @@ export class RtkTelemetryService {
 
     const deviceId = message.deviceId;
     const gatewaySn = this.resolveGatewaySn?.(deviceId);
+    const missionId = this.resolveMissionId?.(deviceId);
     this.latest.set(deviceId, status);
 
     this.publish({
       type: "status",
       deviceId,
       ...(gatewaySn ? { gatewaySn } : {}),
+      ...(missionId ? { missionId } : {}),
       status
     });
 
@@ -84,6 +92,7 @@ export class RtkTelemetryService {
       type: "fix-transition",
       deviceId,
       ...(gatewaySn ? { gatewaySn } : {}),
+      ...(missionId ? { missionId } : {}),
       transition
     });
   }
@@ -94,10 +103,12 @@ export class RtkTelemetryService {
 
     const ageMs = Math.max(0, now - status.sampledAt);
     const gatewaySn = this.resolveGatewaySn?.(deviceId);
+    const missionId = this.resolveMissionId?.(deviceId);
 
     return {
       deviceId,
       ...(gatewaySn ? { gatewaySn } : {}),
+      ...(missionId ? { missionId } : {}),
       ...status,
       stale: ageMs > this.staleAfterMs,
       ageMs
