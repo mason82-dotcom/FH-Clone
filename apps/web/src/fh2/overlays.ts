@@ -236,7 +236,9 @@ function toCesiumEntity(
         positions,
         width: 3,
         ...(color ? { material: color } : {}),
-        clampToGround: false
+        clampToGround: feature.positions.every(
+          (position) => position.heightM === undefined
+        )
       }
     };
   }
