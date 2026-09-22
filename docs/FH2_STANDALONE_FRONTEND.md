@@ -300,3 +300,131 @@ dji-sdk/FlightHub-2-Frontend-Standalone-Component
 Die öffentliche Demo steht unter Apache-2.0. Die vom On-Premises-System
 gelieferte `paas.js` und die DJI-Microfrontends sind davon lizenzrechtlich
 getrennt zu betrachten.
+
+
+## Eigene Cesium-Layer im DJI Viewer
+
+FH-Clone erzeugt keine zweite Cesium-Instanz. Eigene Fachdaten werden direkt in:
+
+```ts
+window.FH2.cesiumViewer.global
+```
+
+eingehängt.
+
+Die Implementierung liegt in:
+
+```text
+apps/web/src/fh2/overlays.ts
+apps/web/src/fh2/Fh2OverlayController.tsx
+```
+
+### Layer-Namensräume
+
+Alle von FH-Clone erzeugten Cesium-Entities besitzen stabile IDs:
+
+```text
+fh2:rtk:<id>
+fh2:thermal:<id>
+fh2:multispectral:<id>
+fh2:ugcs:<id>
+```
+
+Dadurch kann jeder Layer unabhängig aktualisiert oder entfernt werden, ohne
+Entities der DJI-Microfrontends oder anderer FH2-Layer anzutasten.
+
+Unterstützte Geometrien:
+
+- Punkt
+- Polyline
+- Polygon
+
+### RTK
+
+Der RTK-Layer ist bereits mit echten Runtime-Daten verbunden.
+
+Quellen:
+
+```text
+/api/events/rtk
+/api/rtk
+/api/devices/{deviceSn}/telemetry
+```
+
+RTK-Status und normalisierte Aircraft-Position werden über `deviceSn`
+korreliert. Für die Höhe wird bevorzugt:
+
+```text
+flight.altitude.ellipsoid_m
+```
+
+und nur als Fallback:
+
+```text
+flight.altitude.relative_m
+```
+
+verwendet.
+
+### M4T Thermal
+
+Für erkannte Matrice-4T-Aircraft:
+
+```text
+domain=0
+type=99
+sub_type=1
+```
+
+wird die reale Aircraft-Position als Thermal-Sensorträger im Layer geführt.
+
+Solange kein verifizierter Media-/Radiometrie-Feed mit räumlichem Footprint
+vorliegt, erzeugt FH-Clone ausdrücklich **keine** erfundenen Temperaturflächen,
+Isothermen oder Kamera-Footprints.
+
+### Multispektral
+
+Der Multispektral-Layer ist als eigener Producer-/Rendering-Slot vollständig
+registriert.
+
+Geometrien dürfen erst erzeugt werden, wenn reale `MediaAsset`-/
+`CaptureContext`-Daten eine belastbare Position oder Fläche liefern.
+
+Insbesondere darf aus einem ProcessingProfile oder aus der bloßen Anwesenheit
+eines M3M keine künstliche NDVI-Fläche konstruiert werden.
+
+### UgCS
+
+Der UgCS-Layer ist ebenfalls vollständig im gemeinsamen Viewer registriert.
+
+Die aktuelle UCS-Bridge liefert Routen derzeit nur als ID/Name und keine
+Waypoints/Segmente. Deshalb rendert FH-Clone daraus noch keine erfundene
+Route.
+
+Sobald die Bridge explizite normalisierte Koordinaten bereitstellt, kann sie
+über denselben Producer-Vertrag Linien/Polygone hinzufügen.
+
+### Producer-Vertrag
+
+Fachdienste können Layerdaten unabhängig einspeisen:
+
+```ts
+setFh2OverlayFeatures(kind, producerId, features)
+clearFh2OverlayProducer(kind, producerId)
+```
+
+Damit bleiben Datenquelle und Cesium-Rendering getrennt.
+
+### UI
+
+Die Workspace-Leiste enthält unabhängige Schalter für:
+
+```text
+RTK
+M4T Thermal
+Multispektral
+UgCS
+```
+
+inklusive Entity-Zähler und Anzeige, ob der globale DJI-Cesium-Viewer bereits
+verfügbar ist.
