@@ -51,6 +51,11 @@ export class ControlCoordinator {
       throw new Error("flight_control_not_supported");
     }
 
+    const openSessions = await this.sessions.listOpenSessions();
+    if (openSessions.some((session) => session.gatewaySn !== gatewaySn)) {
+      throw new Error("drc_session_already_active");
+    }
+
     const initial = this.guards(input.aircraftSn, input.holder);
     if (initial.djiAuthority) throw new Error("dji_cloud_authority_already_held");
     await this.sessions.request({ aircraftSn: input.aircraftSn, gatewaySn, holder: input.holder, guards: initial });
