@@ -1,0 +1,186 @@
+---- ExifTool ----
+ExifTool Version Number         : 13.59
+---- File ----
+File Name                       : DJI_20230426201904_0001_V.JPG
+Directory                       : .
+File Size                       : 7.7 MB
+File Modification Date/Time     : 2026:09:22 21:36:52+02:00
+File Access Date/Time           : 2026:09:22 21:42:37+02:00
+File Creation Date/Time         : 2026:09:22 21:36:52+02:00
+File Permissions                : -rw-rw-rw-
+File Type                       : JPEG
+File Type Extension             : jpg
+MIME Type                       : image/jpeg
+Exif Byte Order                 : Little-endian (Intel, II)
+Image Width                     : 4000
+Image Height                    : 3000
+Encoding Process                : Baseline DCT, Huffman coding
+Bits Per Sample                 : 8
+Color Components                : 3
+Y Cb Cr Sub Sampling            : YCbCr4:2:0 (2 2)
+---- EXIF ----
+Image Description               : default
+Make                            : DJI
+Camera Model Name               : M3T
+Orientation                     : Horizontal (normal)
+X Resolution                    : 72
+Y Resolution                    : 72
+Resolution Unit                 : inches
+Software                        : 10.12.05.45
+Modify Date                     : 2023:04:26 20:19:04
+Y Cb Cr Positioning             : Co-sited
+Exposure Time                   : 1/50
+F Number                        : 2.8
+Exposure Program                : Program AE
+ISO                             : 490
+Sensitivity Type                : Recommended Exposure Index
+Exif Version                    : 0230
+Date/Time Original              : 2023:04:26 20:19:04
+Create Date                     : 2023:04:26 20:19:04
+Components Configuration        : Y, Cb, Cr, -
+Shutter Speed Value             : 1/50
+Aperture Value                  : 2.8
+Exposure Compensation           : 0
+Max Aperture Value              : 2.8
+Subject Distance                : 0 m
+Metering Mode                   : Average
+Light Source                    : Daylight
+Flash                           : No Flash
+Focal Length                    : 4.4 mm
+Maker Note Unknown Text         : DJI MakerNotes
+Flashpix Version                : 0100
+Color Space                     : sRGB
+Exif Image Width                : 4000
+Exif Image Height               : 3000
+Interoperability Index          : R98 - DCF basic file (sRGB)
+Interoperability Version        : 0100
+File Source                     : Digital Camera
+Scene Type                      : Directly photographed
+Custom Rendered                 : Normal
+Exposure Mode                   : Auto
+White Balance                   : Auto
+Digital Zoom Ratio              : 1
+Focal Length In 35mm Format     : 24 mm
+Scene Capture Type              : Standard
+Gain Control                    : None
+Contrast                        : Normal
+Saturation                      : Normal
+Sharpness                       : Normal
+Device Setting Description      : (Binary data 4 bytes, use -b option to extract)
+Serial Number                   : 1581F5FJD233600D2460
+Lens Info                       : 4.4mm f/2.8
+GPS Version ID                  : 2.3.0.0
+GPS Latitude Ref                : North
+GPS Latitude                    : 49.087615°
+GPS Longitude Ref               : East
+GPS Longitude                   : 8.560593°
+GPS Altitude Ref                : Above Sea Level
+GPS Altitude                    : 363.399 m
+GPS Status                      : Measurement Active
+GPS Map Datum                   : WGS-84
+XP Comment                      : 0.9.142
+XP Keywords                     : single
+Compression                     : JPEG
+X Resolution                    : 72
+Y Resolution                    : 72
+Resolution Unit                 : inches
+Thumbnail Offset                : 1350
+Thumbnail Length                : 24382
+Thumbnail Image                 : (Binary data 24382 bytes, use -b option to extract)
+---- XMP ----
+About                           : DJI Meta Data
+Modify Date                     : 2023:04:26 20:19:04+02:00
+Create Date                     : 2023:04:26 20:19:04+02:00
+Make                            : DJI
+Camera Model Name               : M3T
+Format                          : image/jpg
+Version                         : 1.6
+Image Source                    : WideCamera
+Gps Status                      : Normal
+Altitude Type                   : GpsFusionAlt
+GPS Latitude                    : 49.087615° N
+GPS Longitude                   : 8.560593° E
+Absolute Altitude               : +363.399
+Relative Altitude               : +60.021
+Gimbal Roll Degree              : +0.00
+Gimbal Yaw Degree               : -179.30
+Gimbal Pitch Degree             : -89.90
+Flight Roll Degree              : -2.50
+Flight Yaw Degree               : -179.60
+Flight Pitch Degree             : -0.70
+Flight X Speed                  : -0.3
+Flight Y Speed                  : 0.0
+Flight Z Speed                  : 0.0
+Cam Reverse                     : 0
+Gimbal Reverse                  : 0
+Self Data                       : 
+Surveying Mode                  : 1
+UTC At Exposure                 : 2023:04:26 18:19:25.140756
+Shutter Type                    : Electronic
+Camera Serial Number            : 1TCTL2J03BJ0D0
+Drone Model                     : M3T
+Drone Serial Number             : 1581F5FJD233600D2460
+LRF Status                      : Normal
+LRF Target Distance             : 0.000
+LRF Target Lon                  : 0.0000000
+LRF Target Lat                  : 0.0000000
+LRF Target Alt                  : 0.000
+LRF Target Abs Alt              : 0.000
+Version                         : 7.0
+Has Settings                    : False
+Has Crop                        : False
+Already Applied                 : False
+---- MPF ----
+MPF Version                     : 0100
+Number Of Images                : 2
+MP Image Flags                  : Representative image, Dependent parent image
+MP Image Format                 : JPEG
+MP Image Type                   : Baseline MP Primary Image
+MP Image Length                 : 6942718
+MP Image Start                  : 0
+Dependent Image 1 Entry Number  : 0
+Dependent Image 2 Entry Number  : 2
+MP Image Flags                  : Dependent child image
+MP Image Format                 : JPEG
+MP Image Type                   : Large Thumbnail (VGA equivalent)
+MP Image Length                 : 778993
+MP Image Start                  : 6942720
+Dependent Image 1 Entry Number  : 0
+Dependent Image 2 Entry Number  : 0
+Image UID List                  : (Binary data 66 bytes, use -b option to extract)
+Total Frames                    : 1
+Preview Image                   : (Binary data 778993 bytes, use -b option to extract)
+---- APP7 ----
+AE Debug Info                   : (Binary data 8192 bytes, use -b option to extract)
+AE Histogram Info               : (Binary data 4096 bytes, use -b option to extract)
+AE Local Histogram              : (Binary data 2048 bytes, use -b option to extract)
+AE Live View Histogram Info     : (Binary data 2048 bytes, use -b option to extract)
+AE Live View Local Histogram    : (Binary data 10000 bytes, use -b option to extract)
+AWB Debug Info                  : (Binary data 10240 bytes, use -b option to extract)
+AF Debug Info                   : (Binary data 1024 bytes, use -b option to extract)
+Histogram                       : (Binary data 1024 bytes, use -b option to extract)
+ADJ Debug Info                  : (Binary data 4096 bytes, use -b option to extract)
+Sensor ID                       : 1TCTL2J03BJ0D0
+Hyperlaps Debug Info            : (Binary data 8 bytes, use -b option to extract)
+Scap Info                       : (Binary data 8192 bytes, use -b option to extract)
+Sisr Info                       : (Binary data 4096 bytes, use -b option to extract)
+---- JFIF ----
+JFIF Version                    : 1.02
+Resolution Unit                 : None
+X Resolution                    : 1
+Y Resolution                    : 1
+---- Composite ----
+Aperture                        : 2.8
+Image Size                      : 4000x3000
+Megapixels                      : 12.0
+Scale Factor To 35 mm Equivalent: 5.5
+Shutter Speed                   : 1/50
+GPS Altitude                    : 363.3 m Above Sea Level
+GPS Latitude                    : 49.087615° N
+GPS Longitude                   : 8.560593° E
+Circle Of Confusion             : 0.006 mm
+Field Of View                   : 73.7 deg
+Focal Length 35mm Equiv         : 4.4 mm (35 mm equivalent: 24.0 mm)
+GPS Position                    : 49.087615° N, 8.560593° E
+Hyperfocal Distance             : 1.26 m
+Light Value                     : 6.3

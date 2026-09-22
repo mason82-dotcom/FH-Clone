@@ -1,0 +1,201 @@
+---- ExifTool ----
+ExifTool Version Number         : 13.59
+Warning                         : [minor] Possibly incorrect maker notes offsets (fix by -452?)
+---- File ----
+File Name                       : DJI_20250815164005_0005_V.JPG
+Directory                       : .
+File Size                       : 3.9 MB
+File Modification Date/Time     : 2026:09:22 21:36:52+02:00
+File Access Date/Time           : 2026:09:22 21:42:47+02:00
+File Creation Date/Time         : 2026:09:22 21:36:52+02:00
+File Permissions                : -rw-rw-rw-
+File Type                       : JPEG
+File Type Extension             : jpg
+MIME Type                       : image/jpeg
+Exif Byte Order                 : Little-endian (Intel, II)
+Image Width                     : 4032
+Image Height                    : 3024
+Encoding Process                : Baseline DCT, Huffman coding
+Bits Per Sample                 : 8
+Color Components                : 3
+Y Cb Cr Sub Sampling            : YCbCr4:2:0 (2 2)
+---- EXIF ----
+Image Description               : default
+Make                            : DJI
+Camera Model Name               : M4T
+Orientation                     : Horizontal (normal)
+X Resolution                    : 72
+Y Resolution                    : 72
+Resolution Unit                 : inches
+Software                        : 10.04.00.16
+Modify Date                     : 2025:08:15 16:40:05
+Y Cb Cr Positioning             : Co-sited
+Exposure Time                   : 1/2500
+F Number                        : 1.7
+Exposure Program                : Program AE
+ISO                             : 240
+Sensitivity Type                : Recommended Exposure Index
+Recommended Exposure Index      : 240
+Exif Version                    : 0230
+Date/Time Original              : 2025:08:15 16:40:05
+Create Date                     : 2025:08:15 16:40:05
+Components Configuration        : Y, Cb, Cr, -
+Shutter Speed Value             : 1/2500
+Aperture Value                  : 1.7
+Exposure Compensation           : 0
+Max Aperture Value              : 1.7
+Subject Distance                : 0 m
+Metering Mode                   : Average
+Light Source                    : Cloudy
+Flash                           : No Flash
+Focal Length                    : 6.7 mm
+Flashpix Version                : 0100
+Color Space                     : sRGB
+Exif Image Width                : 4032
+Exif Image Height               : 3024
+Interoperability Index          : R98 - DCF basic file (sRGB)
+Interoperability Version        : 0100
+File Source                     : Digital Camera
+Scene Type                      : Directly photographed
+Custom Rendered                 : Normal
+Exposure Mode                   : Auto
+White Balance                   : Auto
+Digital Zoom Ratio              : 1
+Focal Length In 35mm Format     : 24 mm
+Scene Capture Type              : Standard
+Gain Control                    : None
+Contrast                        : Normal
+Saturation                      : Normal
+Sharpness                       : Normal
+Device Setting Description      : (Binary data 4 bytes, use -b option to extract)
+Serial Number                   : 1581F7K3C251C00C7XZT
+Lens Info                       : 24mm f/1.7
+Unique Camera Model             : DJI M4T
+GPS Version ID                  : 2.3.0.0
+GPS Latitude Ref                : North
+GPS Latitude                    : 49.152437°
+GPS Longitude Ref               : East
+GPS Longitude                   : 8.604163°
+GPS Altitude Ref                : Above Sea Level
+GPS Altitude                    : 162.768 m
+GPS Status                      : Measurement Active
+GPS Map Datum                   : WGS-84
+XP Comment                      : 0.9.142
+XP Keywords                     : single
+Compression                     : JPEG
+X Resolution                    : 72
+Y Resolution                    : 72
+Resolution Unit                 : inches
+Thumbnail Offset                : 11644
+Thumbnail Length                : 22749
+Thumbnail Image                 : (Binary data 22749 bytes, use -b option to extract)
+---- XMP ----
+About                           : DJI Meta Data
+Modify Date                     : 2025:08:15 16:40:05+02:00
+Create Date                     : 2025:08:15 16:40:05+02:00
+Make                            : DJI
+Camera Model Name               : M4T
+Format                          : image/jpeg
+Version                         : 1.6
+Image Source                    : WideCamera
+Gps Status                      : RTK
+Altitude Type                   : RtkAlt
+GPS Latitude                    : 49.152437° N
+GPS Longitude                   : 8.604163° E
+Absolute Altitude               : +162.768
+Relative Altitude               : +8.246
+Gimbal Roll Degree              : +0.00
+Gimbal Yaw Degree               : +91.20
+Gimbal Pitch Degree             : -12.00
+Flight Roll Degree              : -18.40
+Flight Yaw Degree               : +90.40
+Flight Pitch Degree             : +1.80
+Flight X Speed                  : -1.0
+Flight Y Speed                  : 0.0
+Flight Z Speed                  : -0.1
+Cam Reverse                     : 0
+Gimbal Reverse                  : 0
+Sensor Temperature              : 45.0
+Product Name                    : DJI Matrice 4T
+Self Data                       : 
+Rtk Flag                        : 16
+Rtk Std Lon                     : 0.09992
+Rtk Std Lat                     : 0.07822
+Rtk Std Hgt                     : 0.13946
+Rtk Diff Age                    : 0.00000
+Surveying Mode                  : 1
+UTC At Exposure                 : 2025:08:15 14:40:23.007966
+Shutter Type                    : Electronic
+Camera Serial Number            : 53HFM7W0M7X88V
+Drone Model                     : M4T
+Drone Serial Number             : 1581F7K3C251C00C7XZT
+LRF Status                      : Normal
+LRF Target Distance             : 17.300
+LRF Target Lon                  : 8.6043778
+LRF Target Lat                  : 49.1524434
+LRF Target Alt                  : 4.671
+LRF Target Abs Alt              : 166.500
+White Balance CCT               : 5194
+Sensor FPS                      : 29.97
+Lens Position                   : 34
+Lens Infinite Position          : 34
+Lens Temperature                : 45.600000
+File Type                       : single
+Version                         : 7.0
+Has Settings                    : False
+Has Crop                        : False
+Already Applied                 : False
+---- MPF ----
+MPF Version                     : 0100
+Number Of Images                : 2
+MP Image Flags                  : Representative image, Dependent parent image
+MP Image Format                 : JPEG
+MP Image Type                   : Baseline MP Primary Image
+MP Image Length                 : 3686398
+MP Image Start                  : 0
+Dependent Image 1 Entry Number  : 0
+Dependent Image 2 Entry Number  : 2
+MP Image Flags                  : Dependent child image
+MP Image Format                 : JPEG
+MP Image Type                   : Large Thumbnail (VGA equivalent)
+MP Image Length                 : 163655
+MP Image Start                  : 3686400
+Dependent Image 1 Entry Number  : 0
+Dependent Image 2 Entry Number  : 0
+Image UID List                  : (Binary data 66 bytes, use -b option to extract)
+Total Frames                    : 1
+Preview Image                   : (Binary data 163655 bytes, use -b option to extract)
+---- APP7 ----
+AE Debug Info                   : (Binary data 10240 bytes, use -b option to extract)
+AE Histogram Info               : (Binary data 1024 bytes, use -b option to extract)
+AE Local Histogram              : (Binary data 2048 bytes, use -b option to extract)
+AE Live View Histogram Info     : (Binary data 2048 bytes, use -b option to extract)
+AE Live View Local Histogram    : (Binary data 10000 bytes, use -b option to extract)
+Awb Dbg Data V2                 : (Binary data 5120 bytes, use -b option to extract)
+AF Debug Info                   : (Binary data 4096 bytes, use -b option to extract)
+Histogram                       : (Binary data 1024 bytes, use -b option to extract)
+ADJ Debug Info                  : (Binary data 4096 bytes, use -b option to extract)
+Sensor ID                       : 53HFM7W0M7X88V
+Hyperlaps Debug Info            : (Binary data 8 bytes, use -b option to extract)
+Scap Info                       : (Binary data 8192 bytes, use -b option to extract)
+Sisr Info                       : (Binary data 4096 bytes, use -b option to extract)
+---- JFIF ----
+JFIF Version                    : 1.02
+Resolution Unit                 : None
+X Resolution                    : 1
+Y Resolution                    : 1
+---- Composite ----
+Aperture                        : 1.7
+Image Size                      : 4032x3024
+Megapixels                      : 12.2
+Scale Factor To 35 mm Equivalent: 3.6
+Shutter Speed                   : 1/2500
+GPS Altitude                    : 162.7 m Above Sea Level
+GPS Latitude                    : 49.152437° N
+GPS Longitude                   : 8.604163° E
+Circle Of Confusion             : 0.008 mm
+Field Of View                   : 73.7 deg
+Focal Length 35mm Equiv         : 6.7 mm (35 mm equivalent: 24.0 mm)
+GPS Position                    : 49.152437° N, 8.604163° E
+Hyperfocal Distance             : 3.16 m
+Light Value                     : 11.6
