@@ -85,7 +85,12 @@ Erforderlich:
 5. Nachweis, dass der Upstream dem aktiven Gateway/der aktiven Runtime-Session
    zugeordnet wurde,
 6. ein echter `hsi_info_push`-Capture, **wenn** FH2 diese
-   DRC-Hindernis-Telemetrie als Runtimefunktion freigibt.
+   DRC-Hindernis-Telemetrie als Runtimefunktion freigibt,
+7. ein realer M4T-Thermal-Medienbeleg für den bereits vorhandenen
+   FH2-M4T-Thermal-Layer. Dieser ist ein **Projekt-Feature-Gate**, kein
+   Cloud-API-Pflichtfeldvertrag. Es werden daher nur reale Herkunft,
+   M4T-/Thermal-Zuordnung, Dateihash und die tatsächlich beobachteten
+   Metadaten verlangt; keine undokumentierten EXIF-Tags werden erfunden.
 
 `drc_status_notify` allein reicht nicht als DRC-Link-Liveness-Beleg. Der
 Heartbeat-Upstream ist der maßgebliche Datenpfad für die aktive
