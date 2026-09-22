@@ -73,18 +73,32 @@ M3E/M3T/M3M übertragen.
 
 ## Produktbezogene Regeln
 
-### Mavic 3 Enterprise / M3T / M3M
+### Mavic 3 Enterprise / M3T / M3TA
 
-- Cloud-API-Topologie über RC Pro Enterprise
-- Telemetrie nach realer Capability
-- keine automatische Cloud-`control.flight`-Freigabe
+- Pilot-to-Cloud über RC Pro Enterprise
+- Produktidentität nur bei `domain=0,type=77,sub_type=0/1/3`
+- Cloud-Live-Control im M3-Profil nur für Payload/Kamera/Gimbal
+- keine Cloud-`control.flight`-, RTH-, Pointing- oder Orbit-Capability
 - RTK/NTRIP-Grenze gemäß [RTK_NTRIP.md](RTK_NTRIP.md)
+
+### M3M
+
+- in MSDK/WPML-/Mapping-Kontexten dokumentiert
+- in der aktuellen Pilot-to-Cloud-Produktmatrix nicht als eigener
+  Cloud-Runtime-Produkttyp enumeriert
+- erhält daher **kein** automatisch abgeleitetes M3E/M3T-Live-Control-Profil
+- eine spätere Cloud-Capability benötigt eindeutige DJI-Enumeration oder
+  reale, bestätigte `update_topo`-Identität
 
 ### Matrice 4E/4T
 
 - RC Plus 2 als relevantes Gatewayprofil
-- Cloud-Control-Funktionen produktspezifisch
+- Produktidentität nur bei `domain=0,type=99,sub_type=0/1`
+- DJI dokumentiert Flight/Payload Control, FlyTo, Pointing, Orbit/POI und RTH
+- FH2 exponiert daraus nur die im V3-Capability-Vertrag freigegebenen Funktionen
 - FC3 wird niemals automatisch aus Produktunterstützung aktiviert
+
+Details: [DJI_CAPABILITY_MATRIX.md](DJI_CAPABILITY_MATRIX.md)
 
 ## Firmware
 
