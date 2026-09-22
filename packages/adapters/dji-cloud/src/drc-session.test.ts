@@ -62,6 +62,12 @@ async function advanceToControlling(manager: DrcSessionManager, gatewaySn: strin
   await manager.markAuthorityGrabbed(gatewaySn);
   await manager.markDrcModeActive(gatewaySn);
   await manager.activate({ gatewaySn, guards: activeGuards });
+  await manager.sendStick(gatewaySn, {
+    roll: DJI_STICK_CENTER,
+    pitch: DJI_STICK_CENTER,
+    throttle: DJI_STICK_CENTER,
+    yaw: DJI_STICK_CENTER
+  }, activeGuards);
 }
 
 
@@ -73,7 +79,7 @@ test("request guards do not require DJI authority yet", () => {
   });
 });
 
-test("session follows requesting -> active -> draining -> closed", async () => {
+test("session follows explicit setup -> controlling -> draining -> closed", async () => {
   let now = 1_000;
   const transport = new FakeTransport();
   const store = new InMemoryDrcSessionStore(() => now);
@@ -101,7 +107,7 @@ test("session follows requesting -> active -> draining -> closed", async () => {
     /djiAuthority/
   );
 
-  const active = await advanceToControlling(manager, "RC-PLUS2-001");
+  await advanceToControlling(manager, "RC-PLUS2-001");
   const active = await manager.get("RC-PLUS2-001");
   assert.equal(active?.state, "controlling");
   assert.equal(transport.heartbeatsStarted, 1);
@@ -118,7 +124,7 @@ test("session follows requesting -> active -> draining -> closed", async () => {
     },
     activeGuards
   );
-  assert.equal(transport.stickCommands, 1);
+  assert.equal(transport.stickCommands, 2);
 
   const closed = await manager.closeGracefully(
     "RC-PLUS2-001",
