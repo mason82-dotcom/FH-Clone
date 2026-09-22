@@ -91,6 +91,19 @@ GET /api/devices/{device_sn}/telemetry
 
 Liefert den aktuellen normalisierten Parametersnapshot.
 
+### Automatische Flugsitzungen
+
+```http
+GET /api/missions/active
+GET /api/devices/{device_sn}/mission
+```
+
+Die Control API erkennt aus flugaktiven DJI-`mode_code`-Werten automatisch
+eine Flugsitzung und vergibt eine `missionId`. Die aktuelle Zuordnung ist
+In-Memory und dient zunächst der Korrelation von RTK-/Telemetriedaten.
+
+Details: [Missionen](../../docs/MISSIONEN.md).
+
 ### RTK/GNSS
 
 ```http
@@ -139,7 +152,7 @@ false -> true  = acquired
 true  -> false = lost
 ```
 
-Der aktuelle Verlauf ist In-Memory. Persistenz ist ein V3-Release-Gate.
+Der aktuelle Verlauf ist In-Memory. Persistenz ist ein V3-Release-Gate. RTK-Snapshots können zusätzlich die aktive `missionId` tragen.
 
 ## Interne EMQX-API
 
