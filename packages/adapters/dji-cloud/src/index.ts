@@ -45,7 +45,6 @@ const DEFAULT_TOPICS = [
   "thing/product/+/state",
   "thing/product/+/events",
   "thing/product/+/services_reply",
-  "thing/product/+/drc/up",
   "sys/product/+/status"
 ];
 
