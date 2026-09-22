@@ -27,6 +27,8 @@ export interface WpmlMissionConfig {
   takeOffRefPoint?: string;
   takeOffRefPointAglHeightM?: number;
   globalTransitionalSpeedMps?: number;
+  /** Required by DJI in waylines.wpml; kept read-only and never implies RTH authority. */
+  globalRthHeightM?: number;
   drone?: WpmlDroneInfo;
   payload?: WpmlPayloadInfo;
 }
@@ -80,6 +82,8 @@ export interface WpmlWaylineFolder {
   waylineId: number;
   executeHeightMode: string;
   autoFlightSpeedMps?: number;
+  /** Optional DJI initial actions executed before the wayline begins. */
+  startActionGroups: WpmlActionGroup[];
   waypoints: WpmlWaypoint[];
 }
 

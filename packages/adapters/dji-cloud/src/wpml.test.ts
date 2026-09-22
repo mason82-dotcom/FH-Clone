@@ -15,6 +15,7 @@ const templateXml = `<?xml version="1.0" encoding="UTF-8"?>
     <wpml:exitOnRCLost>goContinue</wpml:exitOnRCLost>
     <wpml:takeOffSecurityHeight>20</wpml:takeOffSecurityHeight>
     <wpml:globalTransitionalSpeed>8</wpml:globalTransitionalSpeed>
+    <wpml:globalRTHHeight>120</wpml:globalRTHHeight>
     <wpml:droneInfo>
       <wpml:droneEnumValue>77</wpml:droneEnumValue>
       <wpml:droneSubEnumValue>2</wpml:droneSubEnumValue>
@@ -69,6 +70,7 @@ const waylinesXml = `<?xml version="1.0" encoding="UTF-8"?>
     <wpml:exitOnRCLost>goContinue</wpml:exitOnRCLost>
     <wpml:takeOffSecurityHeight>20</wpml:takeOffSecurityHeight>
     <wpml:globalTransitionalSpeed>8</wpml:globalTransitionalSpeed>
+    <wpml:globalRTHHeight>120</wpml:globalRTHHeight>
     <wpml:droneInfo>
       <wpml:droneEnumValue>77</wpml:droneEnumValue>
       <wpml:droneSubEnumValue>2</wpml:droneSubEnumValue>
@@ -83,6 +85,19 @@ const waylinesXml = `<?xml version="1.0" encoding="UTF-8"?>
     <wpml:executeHeightMode>WGS84</wpml:executeHeightMode>
     <wpml:waylineId>0</wpml:waylineId>
     <wpml:autoFlightSpeed>7</wpml:autoFlightSpeed>
+    <wpml:startActionGroup>
+      <wpml:actionGroupId>1</wpml:actionGroupId>
+      <wpml:actionGroupStartIndex>0</wpml:actionGroupStartIndex>
+      <wpml:actionGroupEndIndex>0</wpml:actionGroupEndIndex>
+      <wpml:actionGroupMode>sequence</wpml:actionGroupMode>
+      <wpml:actionTrigger>
+        <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>
+      </wpml:actionTrigger>
+      <wpml:action>
+        <wpml:actionId>0</wpml:actionId>
+        <wpml:actionActuatorFunc>gimbalRotate</wpml:actionActuatorFunc>
+      </wpml:action>
+    </wpml:startActionGroup>
     <Placemark>
       <Point><coordinates>8.588000,49.218000</coordinates></Point>
       <wpml:index>0</wpml:index>
@@ -118,6 +133,8 @@ test("parses DJI WPML template and execution documents without conflating height
   assert.equal(bundle.template.missionConfig.payload?.enumValue, 68);
   assert.equal(bundle.template.folders[0]?.heightMode, "EGM96");
   assert.equal(bundle.waylines.folders[0]?.executeHeightMode, "WGS84");
+  assert.equal(bundle.waylines.missionConfig.globalRthHeightM, 120);
+  assert.equal(bundle.waylines.folders[0]?.startActionGroups[0]?.actions[0]?.actuator, "gimbalRotate");
 
   const templatePoint = bundle.template.folders[0]?.waypoints[0];
   const executionPoint = bundle.waylines.folders[0]?.waypoints[0];
@@ -129,6 +146,32 @@ test("parses DJI WPML template and execution documents without conflating height
   assert.equal(
     executionPoint?.actionGroups[0]?.actions[0]?.params.payloadLensIndex,
     "narrow_band,visable"
+  );
+});
+
+test("flags non-contiguous waypoint indexes and missing execution RTH height", () => {
+  const nonContiguous = waylinesXml
+    .replace("<wpml:index>0</wpml:index>", "<wpml:index>2</wpml:index>")
+    .replace("<wpml:globalRTHHeight>120</wpml:globalRTHHeight>", "");
+  const bundle = parseWpmlBundle(templateXml, nonContiguous);
+  assert.equal(
+    bundle.waylines.issues.some((issue) => issue.code === "waypoint.index_sequence_invalid"),
+    true
+  );
+  assert.equal(
+    bundle.waylines.issues.some((issue) => issue.code === "mission.global_rth_height_missing"),
+    true
+  );
+});
+
+test("requires positive trigger parameters for repeated timing/distance triggers", () => {
+  const invalidTrigger = waylinesXml
+    .replace("<wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>",
+             "<wpml:actionTriggerType>multipleDistance</wpml:actionTriggerType>");
+  const bundle = parseWpmlBundle(templateXml, invalidTrigger);
+  assert.equal(
+    bundle.waylines.issues.some((issue) => issue.code === "action_group.trigger_param_invalid"),
+    true
   );
 });
 

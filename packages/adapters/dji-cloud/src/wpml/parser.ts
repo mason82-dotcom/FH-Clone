@@ -180,6 +180,12 @@ export function parseWpmlWaylines(xml: string): WpmlWaylinesDocument {
     } else if (folder.autoFlightSpeedMps <= 0) {
       issues.push(error("waylines.speed_invalid", "autoFlightSpeed must be > 0", path));
     }
+    validateActionGroups(
+      folder.startActionGroups,
+      issues,
+      `${path}.startActionGroups`,
+      actionGroupIds
+    );
     validateWaypoints(folder.waypoints, issues, path, actionGroupIds, true);
   }
 
@@ -246,6 +252,7 @@ function parseMissionConfig(xml: string): WpmlMissionConfig {
   const takeOffRefPoint = xmlText(xml, "takeOffRefPoint");
   const takeOffRefPointAglHeightM = xmlNumber(xml, "takeOffRefPointAGLHeight");
   const globalTransitionalSpeedMps = xmlNumber(xml, "globalTransitionalSpeed");
+  const globalRthHeightM = xmlNumber(xml, "globalRTHHeight");
   const drone = droneXml ? parseDroneInfo(droneXml) : undefined;
   const payload = payloadXml ? parsePayloadInfo(payloadXml) : undefined;
 
@@ -259,6 +266,7 @@ function parseMissionConfig(xml: string): WpmlMissionConfig {
     ...(takeOffRefPoint ? { takeOffRefPoint } : {}),
     ...(takeOffRefPointAglHeightM !== undefined ? { takeOffRefPointAglHeightM } : {}),
     ...(globalTransitionalSpeedMps !== undefined ? { globalTransitionalSpeedMps } : {}),
+    ...(globalRthHeightM !== undefined ? { globalRthHeightM } : {}),
     ...(drone ? { drone } : {}),
     ...(payload ? { payload } : {})
   };
@@ -322,6 +330,7 @@ function parseWaylineFolder(xml: string): WpmlWaylineFolder {
     waylineId: xmlNumber(xml, "waylineId") ?? -1,
     executeHeightMode: xmlText(xml, "executeHeightMode") ?? "",
     ...(autoFlightSpeedMps !== undefined ? { autoFlightSpeedMps } : {}),
+    startActionGroups: xmlBlocks(xml, "startActionGroup").map(parseActionGroup),
     waypoints: xmlBlocks(xml, "Placemark").map((block) => parseWaypoint(block, true))
   };
 }
@@ -437,6 +446,16 @@ function validateMissionConfig(
     );
   }
 
+  if (documentKind === "waylines" && config.globalRthHeightM === undefined) {
+    issues.push(
+      error(
+        "mission.global_rth_height_missing",
+        "waylines.wpml requires wpml:globalRTHHeight",
+        path
+      )
+    );
+  }
+
   if (
     config.payload &&
     (!Number.isInteger(config.payload.positionIndex) ||
@@ -484,6 +503,15 @@ function validateWaypoints(
       issues.push(error("waypoint.index_duplicate", "wpml:index must be unique in a Folder", waypointPath));
     }
     waypointIndexes.add(waypoint.index);
+    if (Number.isInteger(waypoint.index) && waypoint.index !== index) {
+      issues.push(
+        error(
+          "waypoint.index_sequence_invalid",
+          "wpml:index must increase continuously from 0 in document order",
+          waypointPath
+        )
+      );
+    }
 
     if (!Number.isFinite(waypoint.longitude) || !Number.isFinite(waypoint.latitude)) {
       issues.push(error("waypoint.coordinates_invalid", "Point/coordinates must contain longitude,latitude", waypointPath));
@@ -499,50 +527,69 @@ function validateWaypoints(
       issues.push(error("waypoint.speed_invalid", "waypointSpeed must be > 0", waypointPath));
     }
 
-    const actionIdsByGroup = new Map<number, Set<number>>();
-    for (const group of waypoint.actionGroups) {
-      if (!Number.isInteger(group.id) || group.id < 0 || group.id > 65_535) {
-        issues.push(error("action_group.id_invalid", "actionGroupId must be in [0,65535]", waypointPath));
-      } else if (actionGroupIds.has(group.id)) {
-        issues.push(error("action_group.id_duplicate", "actionGroupId must be unique within the WPML document", waypointPath));
-      }
-      actionGroupIds.add(group.id);
+    validateActionGroups(waypoint.actionGroups, issues, waypointPath, actionGroupIds);
+  }
+}
 
-      if (
-        !Number.isInteger(group.startIndex) ||
-        !Number.isInteger(group.endIndex) ||
-        group.startIndex < 0 ||
-        group.endIndex < 0 ||
-        group.startIndex > 65_535 ||
-        group.endIndex > 65_535 ||
-        group.endIndex < group.startIndex
-      ) {
-        issues.push(error("action_group.range_invalid", "actionGroup start/end indexes must be in [0,65535] and end >= start", waypointPath));
-      }
-      if (group.mode && group.mode !== "sequence") {
-        issues.push(warning("action_group.mode_unknown", `Unknown actionGroupMode: ${group.mode}`, waypointPath));
-      }
-      if (!group.triggerType) {
-        issues.push(error("action_group.trigger_missing", "actionTriggerType is required", waypointPath));
-      } else if (!KNOWN_TRIGGER_TYPES.has(group.triggerType)) {
-        issues.push(warning("action_group.trigger_unknown", `Unknown actionTriggerType: ${group.triggerType}`, waypointPath));
-      }
+function validateActionGroups(
+  groups: WpmlActionGroup[],
+  issues: WpmlValidationIssue[],
+  path: string,
+  actionGroupIds: Set<number>
+): void {
+  for (const group of groups) {
+    if (!Number.isInteger(group.id) || group.id < 0 || group.id > 65_535) {
+      issues.push(error("action_group.id_invalid", "actionGroupId must be in [0,65535]", path));
+    } else if (actionGroupIds.has(group.id)) {
+      issues.push(error("action_group.id_duplicate", "actionGroupId must be unique within the WPML document", path));
+    }
+    actionGroupIds.add(group.id);
 
-      const actionIds = actionIdsByGroup.get(group.id) ?? new Set<number>();
-      for (const action of group.actions) {
-        if (!Number.isInteger(action.id) || action.id < 0 || action.id > 65_535) {
-          issues.push(error("action.id_invalid", "actionId must be in [0,65535]", waypointPath));
-        } else if (actionIds.has(action.id)) {
-          issues.push(error("action.id_duplicate", "actionId must be unique within an actionGroup", waypointPath));
-        }
-        actionIds.add(action.id);
-        if (!action.actuator) {
-          issues.push(error("action.actuator_missing", "actionActuatorFunc is required", waypointPath));
-        } else if (!KNOWN_ACTIONS.has(action.actuator)) {
-          issues.push(warning("action.actuator_unknown", `Unknown actionActuatorFunc: ${action.actuator}`, waypointPath));
-        }
+    if (
+      !Number.isInteger(group.startIndex) ||
+      !Number.isInteger(group.endIndex) ||
+      group.startIndex < 0 ||
+      group.endIndex < 0 ||
+      group.startIndex > 65_535 ||
+      group.endIndex > 65_535 ||
+      group.endIndex < group.startIndex
+    ) {
+      issues.push(error("action_group.range_invalid", "actionGroup start/end indexes must be in [0,65535] and end >= start", path));
+    }
+    if (group.mode && group.mode !== "sequence") {
+      issues.push(warning("action_group.mode_unknown", `Unknown actionGroupMode: ${group.mode}`, path));
+    }
+    if (!group.triggerType) {
+      issues.push(error("action_group.trigger_missing", "actionTriggerType is required", path));
+    } else if (!KNOWN_TRIGGER_TYPES.has(group.triggerType)) {
+      issues.push(warning("action_group.trigger_unknown", `Unknown actionTriggerType: ${group.triggerType}`, path));
+    }
+    if (
+      (group.triggerType === "multipleTiming" || group.triggerType === "multipleDistance") &&
+      (group.triggerParam === undefined || group.triggerParam <= 0)
+    ) {
+      issues.push(
+        error(
+          "action_group.trigger_param_invalid",
+          "multipleTiming/multipleDistance require actionTriggerParam > 0",
+          path
+        )
+      );
+    }
+
+    const actionIds = new Set<number>();
+    for (const action of group.actions) {
+      if (!Number.isInteger(action.id) || action.id < 0 || action.id > 65_535) {
+        issues.push(error("action.id_invalid", "actionId must be in [0,65535]", path));
+      } else if (actionIds.has(action.id)) {
+        issues.push(error("action.id_duplicate", "actionId must be unique within an actionGroup", path));
       }
-      actionIdsByGroup.set(group.id, actionIds);
+      actionIds.add(action.id);
+      if (!action.actuator) {
+        issues.push(error("action.actuator_missing", "actionActuatorFunc is required", path));
+      } else if (!KNOWN_ACTIONS.has(action.actuator)) {
+        issues.push(warning("action.actuator_unknown", `Unknown actionActuatorFunc: ${action.actuator}`, path));
+      }
     }
   }
 }
