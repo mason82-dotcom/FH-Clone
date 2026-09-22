@@ -51,6 +51,31 @@ gesperrt.
 
 Das ist beabsichtigtes Fail-Closed-Verhalten.
 
+## TimescaleDB und Missionspersistenz
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `TIMESCALE_URL` | leer | PostgreSQL-/TimescaleDB-Verbindungszeichenfolge; aktiviert den MissionStore |
+| `RTK_SOURCE_LABEL` | leer | nicht-sensitive Bezeichnung der RTK-Korrekturquelle |
+| `RTK_SOURCE_PROVIDER` | leer | nicht-sensitiver Anbietername der RTK-Korrekturquelle |
+
+Für den eigenständigen TimescaleDB-Unterstack:
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `TIMESCALE_PASSWORD` | `change-me` in der Vorlage | Datenbankpasswort; vor dem Start zwingend ändern |
+
+Der aktuelle Unterstack verwendet intern:
+
+```text
+Datenbank: fhclone
+Benutzer:  fhclone
+Port:      5432 nur intern exponiert
+Image:     timescale/timescaledb:2.30.1-pg16
+```
+
+`RTK_SOURCE_LABEL` und `RTK_SOURCE_PROVIDER` enthalten keine NTRIP-Secrets.
+
 ## Diagnose
 
 | Variable | Standard | Bedeutung |
@@ -93,7 +118,7 @@ weitergereicht:
 Für folgende Bereiche sind die endgültigen Variablennamen noch **nicht**
 verbindlich festgelegt und dürfen daher nicht vorab erfunden werden:
 
-- PostgreSQL-Verbindungsdaten des finalen Root-Compose
+- endgültige Root-Compose-Verdrahtung der bereits vorhandenen TimescaleDB-Konfiguration
 - Gateway-Credential-Store
 - EMQX HTTP AuthN
 - Audit-Persistenz
