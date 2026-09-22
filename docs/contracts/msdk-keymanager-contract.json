@@ -1,0 +1,81 @@
+{
+  "schema": "fh2.dji-msdk-keymanager-contract.v1",
+  "msdkBaseline": "5.18.0",
+  "supportedSince": "5.0.0",
+  "sourceLayer": "dji-mobile-sdk-v5",
+  "separation": {
+    "cloudApiAndMsdkAreDistinct": true,
+    "djiTypesMayEnterCore": false,
+    "keySupportImpliesCoreCapability": false,
+    "keyWriteSupportBypassesSafety": false
+  },
+  "operations": {
+    "getCache": {
+      "djiMethod": "IKeyManager.getValue(DJIKey)",
+      "requiresFlag": "isCanGet"
+    },
+    "getHardware": {
+      "djiMethod": "IKeyManager.getValue(DJIKey, callback)",
+      "requiresFlag": "isCanGet"
+    },
+    "set": {
+      "djiMethod": "IKeyManager.setValue",
+      "requiresFlag": "isCanSet"
+    },
+    "listen": {
+      "djiMethod": "IKeyManager.listen",
+      "requiresFlag": "isCanListen"
+    },
+    "action": {
+      "djiMethod": "IKeyManager.performAction",
+      "requiresFlag": "isCanPerformAction"
+    }
+  },
+  "keyCreation": [
+    {
+      "scope": "generic",
+      "factory": "KeyTools.createKey(DJIKeyInfo)"
+    },
+    {
+      "scope": "gimbal",
+      "factory": "KeyTools.createKey(DJIKeyInfo, ComponentIndexType)"
+    },
+    {
+      "scope": "camera",
+      "factory": "KeyTools.createCameraKey(DJIKeyInfo, ComponentIndexType, CameraLensType)"
+    },
+    {
+      "scope": "low-level",
+      "factory": "KeyTools.createKey(DJIKeyInfo, productId, componentIndex, subComponentType, subComponentIndex)"
+    }
+  ],
+  "listenerLifecycle": {
+    "holderRequired": true,
+    "cancelOnScopeStop": true,
+    "cancelForms": [
+      "cancelListen(key, holder)",
+      "cancelListen(key)",
+      "cancelListen(holder)"
+    ]
+  },
+  "runtimeSupportStates": [
+    "supported",
+    "unsupported_on_product",
+    "temporarily_unavailable",
+    "disconnected",
+    "error"
+  ],
+  "requiredBridgeDescriptorFields": [
+    "identifier",
+    "componentIndex",
+    "cameraLensType",
+    "subComponentType",
+    "canGet",
+    "canSet",
+    "canListen",
+    "canPerformAction",
+    "isEvent",
+    "valueType",
+    "runtimeStatus"
+  ]
+}

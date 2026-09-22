@@ -204,8 +204,9 @@ Wichtige Kernunterlagen:
 - [Aktueller Release-Status](docs/RELEASE_STATUS.md)
 - [Changelog](CHANGELOG.md)
 
-Fachunterlagen zu RC Pro, DRC, RTK, Missionen, Medien/Multispektral, UgCS und
-Kompatibilität sind über den Dokumentationsindex verlinkt.
+Fachunterlagen zu RC Pro, DRC, RTK, Missionen, Medien/Multispektral, UgCS,
+MSDK V5 KeyManager und Kompatibilität sind über den Dokumentationsindex
+verlinkt.
 
 ## Projektsteuerung
 

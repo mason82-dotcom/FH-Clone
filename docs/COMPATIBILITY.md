@@ -45,6 +45,19 @@ Die offizielle DJI-Liste nennt für 5.18.0 unter anderem Unterstützung für:
 Ein späterer FH2-MSDK-Adapter muss seine Capability weiterhin pro Gerät und
 SDK-Laufzeit melden.
 
+Für den KeyManager-Pfad ist zusätzlich verbindlich:
+
+- `IKeyManager` ist seit MSDK 5.0.0 dokumentiert,
+- ein `DJIKeyInfo` beschreibt getrennt, ob Get, Set, Listen oder Action
+  unterstützt wird,
+- FH2 prüft diese Operationsmerkmale vor Nutzung,
+- tatsächliche Produkt-/Firmware-/Component-/Lens-Verfügbarkeit wird erst
+  durch Runtime-Probe beziehungsweise Callback bestätigt,
+- MSDK-Key-Support erzeugt keine automatische Cloud- oder FH2-Schreib-
+  Capability.
+
+Details: [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md).
+
 ## Payload SDK
 
 **Aktuell verifizierter Release: 3.16.0 vom 31. März 2026**

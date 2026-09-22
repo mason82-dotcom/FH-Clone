@@ -152,6 +152,10 @@ Zuständigkeit in FH2:
 
 - reale MSDK-V5-Implementierungsmuster
 - KeyManager-/Action-/Value-Nutzung
+- `DJIKeyInfo.isCanGet/isCanSet/isCanListen/isCanPerformAction`
+- `KeyTools.createKey/createCameraKey` einschließlich Component-/Lens-Kontext
+- Cache-Get versus asynchroner Hardware-Get
+- Listener-Holder und `cancelListen`-Lifecycle
 - Produkt-/Komponentenverhalten auf Android
 - Payload-, Kamera-, Gimbal-, FlightController- und RTK-Integration
 - Beispielcode für gerätenahe Funktionen
@@ -159,6 +163,10 @@ Zuständigkeit in FH2:
 
 Der Sample-Code ist Referenz für SDK-Verwendung, aber kein automatisches
 Sicherheits- oder Architekturmodell für den FH2-Server.
+
+Der verbindliche FH2-Key-Vertrag ist in
+[MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md) und zusätzlich maschinenlesbar in
+`docs/contracts/msdk-keymanager-contract.json` festgehalten.
 
 ### DJI Mobile SDK V5 – API-Dokumentation
 

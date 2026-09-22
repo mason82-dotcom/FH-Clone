@@ -214,6 +214,23 @@ Vorgesehener Android-/RC-Adapter. SDK-KeyManager- und Gerätewerte werden in
 die Core-Verträge übersetzt. Ein MSDK-Adapter darf keine DJI-Typen in den Core
 durchreichen.
 
+Für den MSDK-Key-Pfad gilt verbindlich:
+
+```text
+DJIKeyInfo
+  -> isCanGet / isCanSet / isCanListen / isCanPerformAction
+  -> konkrete DJIKey-Instanz über KeyTools
+  -> Runtime-Probe/Callback
+  -> erst danach FH2-Capability
+```
+
+Ein vorhandener MSDK-Key oder ein positives `canSet/canPerformAction` ist
+keine automatische FH2-Schreibfreigabe. Kamera-/Gimbal-Keys werden mit
+Component-/Lens-Kontext erzeugt; Listener sind an einen Lifecycle-Holder
+gebunden und beim Scope-Ende vollständig abzuräumen.
+
+Details: [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md).
+
 ### UgCS
 
 UgCS ist ein eigenständiger Groundstation-Adapter. DJI-Geräteintegration und
