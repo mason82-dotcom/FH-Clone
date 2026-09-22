@@ -16,7 +16,7 @@ die übergreifenden Schutzschichten.
 4. Control Lease, SafetyGate und DJI Authority sind getrennte Ebenen.
 5. MQTT-Client-ID ist keine Sicherheitsidentität.
 6. DRC ist keine dauerhafte Basic-Link-Berechtigung.
-7. Browser erhalten keine direkten MQTT- oder Flight-Control-Credentials.
+7. Browser erhalten keine direkten MQTT- oder FH-Clone-DRC-Credentials.
 8. Fehler in dynamischer Autorisierung müssen fail-closed enden.
 9. Secrets werden weder geloggt noch in öffentliche API-Antworten geschrieben.
 10. Unbekannte oder nicht verifizierte Gerätepfade bleiben gesperrt.
@@ -130,15 +130,25 @@ DRC-Sitzung und Basic Link sind getrennte Sicherheitsdomänen.
 
 Die Weboberfläche darf:
 
-- öffentliche Read-APIs verwenden
+- öffentliche FH-Clone-APIs verwenden
 - RTK-SSE konsumieren
-- später freigegebene Control-APIs nur über die Control API nutzen
+- freigegebene FH-Clone-Control-APIs nur über die Control API nutzen
+- die offizielle FlightHub-2-On-Premises-Frontend-Runtime direkt über
+  `window.FH2` verwenden
 
-Sie darf nicht:
+Die `window.FH2`-Ausnahme gilt ausschließlich für die offiziellen
+Standalone-Komponenten. Sie darf nicht auf MQTT oder den FH-Clone-DRC-Pfad
+ausgeweitet werden.
+
+Die Weboberfläche darf nicht:
 
 - direkte MQTT-Credentials besitzen
-- direkt `services` oder DRC-Topics publizieren
-- Safety-/Authority-Prüfungen umgehen
+- direkt `services` oder FH-Clone-DRC-Topics publizieren
+- Safety-/Authority-Prüfungen des FH-Clone-Control-Pfads umgehen
+
+Das offizielle DJI Virtual Cockpit ist ein separater nativer
+FlightHub-2-Control-Pfad. Es ist standardmäßig deaktiviert und muss bewusst
+über `VITE_FH2_NATIVE_COCKPIT_ENABLED=true` aktiviert werden.
 
 ## Interne Ports
 
@@ -153,7 +163,7 @@ Als geheim behandeln:
 
 - MQTT-Passwörter
 - EMQX-Interntoken
-- DJI-Tokens
+- serverseitige DJI-/OpenAPI-Tokens
 - DRC-Relay-Credentials
 - UgCS-Passwort
 - NTRIP-Credentials
@@ -173,6 +183,11 @@ Sicherheitsrelevante Entscheidungen sollen mindestens erfassen:
 - Correlation-ID
 
 Keine Secrets protokollieren.
+
+Der browserseitige `VITE_FH2_PROJECT_TOKEN` der offiziellen Standalone-
+Runtime ist technisch im Frontend sichtbar und deshalb **kein geeigneter Ort
+für serverseitige Geheimnisse**. Insbesondere darf `FH2_USER_TOKEN` niemals
+als `VITE_FH2_PROJECT_TOKEN` wiederverwendet werden.
 
 ## Trust Boundaries
 
