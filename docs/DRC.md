@@ -63,7 +63,6 @@ Der DJI-Adapter unterscheidet produktspezifische DRC-Profile, zum Beispiel:
 ```ts
 type DjiDrcProfile =
   | "none"
-  | "pilot-m3-payload"
   | "pilot-m4-stick"
   | "dock-velocity";
 ```
