@@ -95,6 +95,40 @@ echo "[8/10] AuthN/AuthZ Credential-Bindung und Revocation prüfen"
 verify_gateway="VERIFY-GW-$(date +%s)"
 verify_user="dji-gateway-verify-$(date +%s)"
 verify_password="Verify-Only-$verify_gateway-A9!"
+verify_credential_created=0
+
+cleanup_verify_credential() {
+  if [ "$verify_credential_created" -ne 1 ]; then
+    return 0
+  fi
+
+  if docker compose --env-file .env exec -T \
+    -e VERIFY_USER="$verify_user" \
+    control-api \
+    node --input-type=module -e '
+      import { Pool } from "pg";
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+      try {
+        await pool.query(
+          "DELETE FROM gateway_credentials WHERE username = $1",
+          [process.env.VERIFY_USER]
+        );
+      } finally {
+        await pool.end();
+      }
+    '
+  then
+    verify_credential_created=0
+    return 0
+  fi
+
+  echo "WARNUNG: temporäres Verify-Credential konnte nicht entfernt werden: $verify_user" >&2
+  return 1
+}
+
+trap 'status=$?; trap - 0; cleanup_verify_credential || true; exit "$status"' 0
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 docker compose --env-file .env exec -T \
   -e VERIFY_GATEWAY="$verify_gateway" \
@@ -124,6 +158,7 @@ docker compose --env-file .env exec -T \
       await pool.end();
     }
   '
+verify_credential_created=1
 
 authn_allow="$(
   docker compose --env-file .env exec -T \
@@ -235,21 +270,10 @@ if [ "$authz_revoked" != "200:deny" ]; then
   exit 1
 fi
 
-docker compose --env-file .env exec -T \
-  -e VERIFY_USER="$verify_user" \
-  control-api \
-  node --input-type=module -e '
-    import { Pool } from "pg";
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
-    try {
-      await pool.query(
-        "DELETE FROM gateway_credentials WHERE username = $1",
-        [process.env.VERIFY_USER]
-      );
-    } finally {
-      await pool.end();
-    }
-  '
+if ! cleanup_verify_credential; then
+  echo "FEHLER: temporäres Verify-Credential blieb in der Datenbank: $verify_user" >&2
+  exit 1
+fi
 
 echo "[9/10] Statische ACL darf keine permanenten DRC-Rechte enthalten"
 if grep -Eq 'drc/(up|down)' infra/emqx/acl.conf; then
