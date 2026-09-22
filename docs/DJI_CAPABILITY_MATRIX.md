@@ -240,7 +240,23 @@ FlightHub-2 / SIKONG CE paid livestream
 
 Der kostenpflichtige FlightHub-2-/SIKONG-CE-Pfad wird nicht implementiert,
 nicht automatisch aktiviert und nicht aus Hersteller-Capabilities abgeleitet.
-Eine spätere Aktivierung erfordert einen neuen ausdrücklichen Auftrag.
+
+Der stattdessen verbindliche FH2-Zielpfad ist:
+
+```text
+DJI Cloud API / Pilot 2
+  -> RTMP
+  -> eigener MediaMTX
+  -> WebRTC
+  -> FH2 WebUI
+```
+
+`live_capacity` wird dabei ausschließlich als Runtime-Evidenz für verfügbare
+Videoquellen verwendet. `livestream.read` bleibt bis zur vollständig
+implementierten und real getesteten End-to-End-Kette weiterhin **nicht
+beworben**.
+
+Details: [LIVESTREAM.md](LIVESTREAM.md).
 
 ### Media Management
 
