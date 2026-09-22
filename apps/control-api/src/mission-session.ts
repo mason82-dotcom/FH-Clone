@@ -89,7 +89,7 @@ export class MissionSessionTracker {
   private readonly standbyGraceMs: number;
   private readonly disconnectedGraceMs: number;
   private readonly telemetryTimeoutMs: number;
-  private readonly resolveGatewaySn?: (deviceId: string) => string | undefined;
+  private readonly resolveGatewaySn: ((deviceId: string) => string | undefined) | undefined;
 
   constructor(options: MissionSessionTrackerOptions = {}) {
     this.standbyGraceMs = options.standbyGraceMs ?? DEFAULT_STANDBY_GRACE_MS;
