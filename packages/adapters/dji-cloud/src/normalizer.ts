@@ -47,6 +47,16 @@ const LEAF_FIELDS: Record<string, FieldSpec> = {
     unit: "deg",
     capability: "telemetry.flight"
   },
+  attitude_pitch: {
+    key: "flight.attitude.pitch_deg",
+    unit: "deg",
+    capability: "telemetry.flight"
+  },
+  attitude_roll: {
+    key: "flight.attitude.roll_deg",
+    unit: "deg",
+    capability: "telemetry.flight"
+  },
   yaw: {
     key: "flight.attitude.yaw_deg",
     unit: "deg",
