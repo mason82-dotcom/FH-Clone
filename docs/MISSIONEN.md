@@ -153,13 +153,15 @@ automatisch erkannten Flugkontext zugeordnet werden.
 
 ## Persistenz
 
-Der aktuelle Tracker ist In-Memory.
+Der Laufzeit-Tracker ist In-Memory. Zusätzlich kann die Control API
+automatisch erkannte Missionssitzungen bereits in TimescaleDB/PostgreSQL
+persistieren, wenn `TIMESCALE_URL` gesetzt ist.
 
-V3 verlangt persistente Missionshistorie, bevor Missions- und Mediendaten als
-dauerhaft auswertbar gelten.
+Persistiert werden Start, Ende, Endgrund, Gateway-/Drone-SN,
+Produktidentität und optionale nicht-sensitive RTK-Quellenmetadaten.
 
-Ein Neustart darf im finalen V3-Betrieb nicht stillschweigend relevante
-abgeschlossene Missionshistorie verlieren.
+Noch offen ist die vollständige persistente Telemetrie- und Medienkorrelation.
+Details: [Persistenz](PERSISTENZ.md).
 
 ## Verhältnis zu UgCS und FlightHub 2
 
