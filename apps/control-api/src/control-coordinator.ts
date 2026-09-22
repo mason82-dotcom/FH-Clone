@@ -74,8 +74,8 @@ export class ControlCoordinator {
       await this.sessions.markAuthorityGrabbed(gatewaySn);
       await this.dji.drc.enterDrcMode(gatewaySn, input.drc);
       drcEntered = true;
-      await this.dji.connectDrcTransport(input.drc.mqttBroker);
       await this.sessions.markDrcModeActive(gatewaySn);
+      await this.dji.connectDrcTransport(input.drc.mqttBroker);
       await this.sessions.setTransportConnected(gatewaySn, true);
       const finalGuards = this.guards(input.aircraftSn, input.holder);
       const activated = await this.sessions.activate({ gatewaySn, guards: finalGuards });
