@@ -427,19 +427,18 @@ const internalServer = createServer(async (request, response) => {
           return json(response, 400, { error: "invalid_media_asset_batch" });
         }
 
-        for (const candidate of candidates) {
-          if (!isMediaAsset(candidate)) {
-            return json(response, 400, { error: "invalid_media_asset" });
-          }
+        const assets = candidates.filter(isMediaAsset);
+        if (assets.length !== candidates.length) {
+          return json(response, 400, { error: "invalid_media_asset" });
         }
 
         let overlayed = 0;
-        for (const asset of candidates) {
+        for (const asset of assets) {
           if (mediaOverlays.upsert(asset)) overlayed += 1;
         }
 
         return json(response, 200, {
-          accepted: candidates.length,
+          accepted: assets.length,
           overlayed
         });
       } catch (error) {
