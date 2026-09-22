@@ -16,11 +16,13 @@ import {
 import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
+import { PostgresGatewayRegistryStore } from "./topology-store.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 
-const djiOptions = getDjiOptions();
+const topologyStore = await createTopologyStore();
+const djiOptions = getDjiOptions(topologyStore);
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
@@ -152,6 +154,11 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, dji?.topology.listGateways() ?? []);
     }
 
+    if (request.method === "GET" && url.pathname === "/api/dji/topology/persisted") {
+      if (!topologyStore) return json(response, 503, { error: "topology_persistence_disabled" });
+      return json(response, 200, await topologyStore.list());
+    }
+
     if (request.method === "GET" && url.pathname === "/api/missions/active") {
       return json(response, 200, missions.listActive());
     }
@@ -267,12 +274,13 @@ async function shutdown(): Promise<void> {
   internalServer.close();
   await dji?.stop();
   await missionStore.close();
+  await topologyStore?.close();
 }
 
 process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
 process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
 
-function getDjiOptions(): DjiCloudAdapterOptions | undefined {
+function getDjiOptions(topologyStore: PostgresGatewayRegistryStore | undefined): DjiCloudAdapterOptions | undefined {
   const brokerUrl = process.env.DJI_MQTT_URL;
   if (!brokerUrl) return undefined;
 
@@ -281,7 +289,8 @@ function getDjiOptions(): DjiCloudAdapterOptions | undefined {
     ...(process.env.DJI_MQTT_USERNAME ? { username: process.env.DJI_MQTT_USERNAME } : {}),
     ...(process.env.DJI_MQTT_PASSWORD ? { password: process.env.DJI_MQTT_PASSWORD } : {}),
     clientId: process.env.DJI_MQTT_CLIENT_ID ?? "fh-clone-backend",
-    ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {})
+    ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {}),
+    ...(topologyStore ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyStore.save(change) } : {})
   };
 }
 
@@ -389,4 +398,19 @@ function getMissionProduct(
   )?.product;
 
   return product ? { product } : {};
+}
+
+
+async function createTopologyStore(): Promise<PostgresGatewayRegistryStore | undefined> {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) return undefined;
+  const store = new PostgresGatewayRegistryStore(connectionString);
+  try {
+    await store.assertReady();
+    return store;
+  } catch (error) {
+    console.error("[Topology] PostgreSQL registry unavailable; inventory persistence disabled:", errorMessage(error));
+    await store.close();
+    return undefined;
+  }
 }
