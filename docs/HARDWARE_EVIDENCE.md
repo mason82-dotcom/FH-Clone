@@ -166,7 +166,7 @@ Erforderlich:
 
 1. ein tatsächlich von DJI Pilot 2 erzeugtes KMZ für eine unterstützte
    M3-/M4-Konfiguration,
-2. `template.kml` und – bei ausführbarer Wayline – `waylines.wpml`,
+2. `template.kml` **und** `waylines.wpml` aus diesem realen Standard-KMZ,
 3. Parservergleich gegen das reale Artefakt:
    - MissionConfig
    - Produkt-/Payload-Enums
@@ -176,8 +176,17 @@ Erforderlich:
    - ActionGroup/Trigger/Parameter, soweit im Fixture vorhanden
 4. ein realer, redigierter Pilot-Wayline-List-Response aus einem Workspace.
 
-`res/` ist optional und darf nicht als allgemeines Pflichtfixture behandelt
-werden.
+DJI führt `template.kml`, `waylines.wpml` und den Ressourcenbereich
+`res/` als Bestandteile der WPML-Dateistruktur. Für die CI gilt deshalb
+präzise:
+
+- ein **leerer** bzw. im ZIP nicht separat materialisierter `res/`-Ordner
+  wird nicht pauschal erzwungen,
+- sobald das reale WPML auf Ressourcen verweist (z. B. Referenzbilder oder
+  andere Action-Ressourcen), müssen die referenzierten Dateien unter dem
+  erwarteten Ressourcenpfad tatsächlich im KMZ vorhanden sein,
+- Vorhandensein und Inhalt von `res/` werden im Evidence-Report immer
+  protokolliert.
 
 `narrow_band` und DJIs dokumentierte Schreibweise `visable` werden
 verlustfrei behandelt, wenn sie im realen WPML vorkommen. WPML-Payload-Enums,
@@ -200,9 +209,18 @@ Erforderlich ist ein redigierter Runtime-Trace aus dem Pilot-2-WebView:
 10. Secret-Scan des Browser-Bundles: keine statischen Gateway-/MQTT-/API-/WS-
     Credentials.
 
-Map benötigt Workspace + API + WS; Mission/Wayline benötigt Workspace + API
-und die dokumentierte Pilot-2-Modulfolge. Media/Live werden nur als Gate
-aktiviert, wenn sie im Draft tatsächlich freigegeben werden.
+DJI bezeichnet das Cloud-Modul in JSBridge als `thing`. Die kombinierte
+Abhängigkeit aus JSBridge-API und den jeweiligen Feature-Flows wird wie folgt
+geprüft:
+
+- Map: `thing` + Workspace + API + WS + Map-Modul,
+- TSA: `thing` + Workspace + API + WS + TSA-Modul,
+- Mission/Wayline: `thing` + Workspace + API + WS + Mission-Modul,
+- Media: `thing` + Workspace + API + Media-Modul,
+- Live: Live-Modul, sofern der Livestream-Pfad im Draft aktiviert wird.
+
+Damit wird weder eine schwächere Feature-Anleitung noch eine einzelne
+JSBridge-Note isoliert als vollständiger Modulvertrag interpretiert.
 
 ## 7. MSDK KeyManager — kein Hardware-Gate für PR #44
 
