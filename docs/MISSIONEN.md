@@ -199,6 +199,24 @@ Der Control-API-Pfad erzeugt/persistiert die automatische `missionId`, bevor
 derselbe Raw-Frame an den RTK-Service weitergereicht wird. Dadurch verwenden
 Live-RTK und der spätere Telemetrie-Schreibpfad dieselbe Missions-ID.
 
+## Wayline-Status ist keine Wayline-Capability
+
+`mode_code == 5` bedeutet im aktuellen DJI-Telemetrievertrag, dass das
+Aircraft einen Wayline-Flug ausführt. FH2 verwendet diesen Wert ausschließlich
+zur Missions-/Flugsitzungsbeobachtung.
+
+Er bedeutet nicht, dass der DJI-Cloud-Adapter selbst Waylines verwalten,
+hochladen oder starten kann.
+
+Der aktuelle Stand meldet daher aus diesem Zustand keine:
+
+```text
+mission.wayline
+```
+
+DJI Pilot Wayline Management ist ein eigener JSBridge-/HTTPS-/Dateipfad und
+muss als separate Integration implementiert und abgenommen werden.
+
 ## Verhältnis zu UgCS und FlightHub 2
 
 Die automatische Flugsitzung ist nicht gleichbedeutend mit:
