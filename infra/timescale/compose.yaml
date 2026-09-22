@@ -8,7 +8,10 @@ services:
       POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD}
     volumes:
       - timescale_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d:ro
+      - ./sql/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+      - ./sql/002_rtk_fix_enum.sql:/docker-entrypoint-initdb.d/002_rtk_fix_enum.sql:ro
+      - ./sql/003_authz_audit.sql:/docker-entrypoint-initdb.d/003_authz_audit.sql:ro
+      - ./sql/004_gateway_credentials.sql:/docker-entrypoint-initdb.d/004_gateway_credentials.sql:ro
       - ../postgres/migrations/001_dji_gateway_registry.sql:/docker-entrypoint-initdb.d/005_dji_gateway_registry.sql:ro
     expose:
       - "5432"
