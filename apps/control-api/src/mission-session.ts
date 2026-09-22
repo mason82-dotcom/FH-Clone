@@ -140,7 +140,7 @@ export class MissionSessionTracker {
       state.standbySince ??= message.receivedAt;
 
       if (message.receivedAt - state.standbySince >= this.standbyGraceMs) {
-        return this.end(message.deviceId, message.receivedAt, "standby");
+        return this.end(message.deviceId, state.standbySince, "standby");
       }
       return state.active;
     }
@@ -155,7 +155,7 @@ export class MissionSessionTracker {
       ) {
         return this.end(
           message.deviceId,
-          message.receivedAt,
+          state.disconnectedSince,
           "device_disconnected"
         );
       }
@@ -176,7 +176,8 @@ export class MissionSessionTracker {
       if (!state.active) continue;
 
       if (now - state.active.lastTelemetryAt >= this.telemetryTimeoutMs) {
-        const session = this.end(deviceId, now, "telemetry_timeout");
+        const endedAt = state.active.lastTelemetryAt + this.telemetryTimeoutMs;
+        const session = this.end(deviceId, endedAt, "telemetry_timeout");
         if (session) ended.push(session);
       }
     }

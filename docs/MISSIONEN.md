@@ -93,6 +93,20 @@ Aktueller Standard:
 
 Diese Zeiten sind FH2-Laufzeitregeln, keine DJI-Protokollkonstanten.
 
+### Semantischer Endzeitpunkt
+
+Grace-Zeiten bestätigen einen Zustand, verschieben aber nicht die historische
+Fluggrenze. Bei bestätigt stabilem Standby oder Disconnect wird daher der
+Zeitpunkt des **ersten** terminalen Frames als `endedAt` verwendet.
+
+Beim Telemetrie-Timeout ist `endedAt` deterministisch:
+
+```text
+lastTelemetryAt + telemetryTimeoutMs
+```
+
+Damit beeinflusst der 5-Sekunden-Sweep nicht die gespeicherte Flugdauer.
+
 ## Endgründe
 
 ```text
@@ -162,6 +176,16 @@ Produktidentität und optionale nicht-sensitive RTK-Quellenmetadaten.
 
 Noch offen ist die vollständige persistente Telemetrie- und Medienkorrelation.
 Details: [Persistenz](PERSISTENZ.md).
+
+Der Runtime-Tracker bleibt bewusst In-Memory. TimescaleDB speichert Historie
+und Analysezustand, ist aber **keine Runtime-Autoritätsquelle**. Eine nach
+Backend-Neustart noch offene Missionszeile darf später nur mit expliziter
+Freshness-Prüfung korreliert werden. DRC-/Control-Sessions werden niemals aus
+historischer Persistenz reaktiviert.
+
+Der Control-API-Pfad erzeugt/persistiert die automatische `missionId`, bevor
+derselbe Raw-Frame an den RTK-Service weitergereicht wird. Dadurch verwenden
+Live-RTK und der spätere Telemetrie-Schreibpfad dieselbe Missions-ID.
 
 ## Verhältnis zu UgCS und FlightHub 2
 
