@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@fh-clone/aircraft-core": "0.1.0",
-    "@fh-clone/adapter-dji-cloud": "0.1.0"
+    "@fh-clone/adapter-dji-cloud": "0.1.0",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@types/pg": "^8.23.1"
   }
 }

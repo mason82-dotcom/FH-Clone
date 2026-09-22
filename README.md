@@ -32,3 +32,12 @@ Nicht jedes DJI-Modell und nicht jedes SDK stellt dieselben Parameter bereit. FH
 4. **Control Authority** – zentrale Freigabe, welcher Adapter ein Fluggerät steuern darf.
 
 So bleibt die Anwendung erweiterbar, ohne Backend oder Frontend für jedes SDK neu zu implementieren.
+
+
+## Persistente Gateway-Registry
+
+Optional kann die DJI-`update_topo`-Zuordnung in PostgreSQL persistiert
+werden. Die Datenbank dient nur Inventar/Diagnose; EMQX-AuthZ bleibt an die
+frische Runtime-Topologie gebunden.
+
+Siehe `docs/GATEWAY-REGISTRY.md`.
