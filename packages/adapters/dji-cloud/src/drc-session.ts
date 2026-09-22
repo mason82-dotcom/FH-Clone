@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   type DrcStickChannels,
   type NormalizedStickInput,
@@ -41,6 +43,8 @@ export interface DrcSessionGuards {
 }
 
 export interface DrcSessionRecord {
+  /** Eindeutige ID nur für diese Runtime-Session; wird niemals rehydriert. */
+  sessionId: string;
   aircraftSn: string;
   gatewaySn: string;
   /** Runtime lease holder. Never restored as authorization state after restart. */
@@ -145,6 +149,7 @@ export interface DrcSessionManagerOptions {
 }
 
 export interface DrcSessionAuditEvent {
+  sessionId: string;
   gatewaySn: string;
   aircraftSn: string;
   at: number;
@@ -282,6 +287,7 @@ export class DrcSessionManager {
 
     const now = this.now();
     const record: DrcSessionRecord = {
+      sessionId: randomUUID(),
       aircraftSn: input.aircraftSn,
       gatewaySn: input.gatewaySn,
       holder: input.holder,
@@ -715,6 +721,7 @@ export class DrcSessionManager {
     reason?: string
   ): Promise<void> {
     await this.onAudit?.({
+      sessionId: record.sessionId,
       gatewaySn: record.gatewaySn,
       aircraftSn: record.aircraftSn,
       at: this.now(),
