@@ -47,6 +47,8 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
+      emqx:
+        condition: service_healthy
     ports:
       - "${FH2_API_BIND:-0.0.0.0}:${FH2_API_PORT:-8080}:8080"
     expose:
