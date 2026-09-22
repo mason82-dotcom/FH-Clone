@@ -67,6 +67,7 @@ export interface DrcBrokerCredentials {
 }
 
 export interface EnterDrcModeOptions {
+  /** Broker advertised by FH-Clone to DJI for the DRC data plane. */
   mqttBroker: DrcBrokerCredentials;
   osdFrequencyHz?: number;
   hsiFrequencyHz?: number;
@@ -119,7 +120,7 @@ export interface DrcControllerOptions {
    * This is deliberately configurable and is not treated as a Cloud API protocol constant.
    */
   postEmergencyStopCooldownMs?: number;
-  /** Heartbeat period. DJI exits an idle DRC link after prolonged heartbeat absence. */
+  /** Heartbeat period. Keep configurable until the exact product/firmware contract is verified. */
   heartbeatIntervalMs?: number;
 }
 
@@ -175,7 +176,7 @@ export class DrcController {
     this.envelopeProfile = options.envelopeProfile ?? "modern";
     this.minControlIntervalMs = options.minControlIntervalMs ?? 100;
     this.postEmergencyStopCooldownMs = options.postEmergencyStopCooldownMs ?? 2_200;
-    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 10_000;
+    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 1_000;
   }
 
   resetControlSequence(): void {
