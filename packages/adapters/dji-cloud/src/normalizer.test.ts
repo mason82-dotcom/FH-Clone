@@ -200,3 +200,38 @@ test("wayline flight mode is observation, not mission.wayline capability", () =>
     5
   );
 });
+
+test("DJI attitude_pitch and attitude_roll map to canonical aircraft attitude", () => {
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    {
+      data: {
+        attitude_head: 123.5,
+        attitude_pitch: -4.25,
+        attitude_roll: 7.75
+      }
+    },
+    1_000
+  );
+
+  assert.equal(
+    result.samples.find((sample) => sample.key === "flight.attitude.yaw_deg")?.value,
+    123.5
+  );
+  assert.equal(
+    result.samples.find((sample) => sample.key === "flight.attitude.pitch_deg")?.value,
+    -4.25
+  );
+  assert.equal(
+    result.samples.find((sample) => sample.key === "flight.attitude.roll_deg")?.value,
+    7.75
+  );
+  assert.equal(
+    result.samples.some((sample) => sample.key === "raw.dji-cloud.attitude_pitch"),
+    false
+  );
+  assert.equal(
+    result.samples.some((sample) => sample.key === "raw.dji-cloud.attitude_roll"),
+    false
+  );
+});
