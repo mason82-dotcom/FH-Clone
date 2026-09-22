@@ -48,7 +48,10 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
     };
     client.on("close", () => lose("mqtt_close"));
     client.on("offline", () => lose("mqtt_offline"));
-    client.on("error", () => lose("mqtt_error"));
+    client.on("error", () => {
+      // After connect, MQTT errors are diagnostic; close/offline are the
+      // authoritative transport-loss signals. Initial errors still reject below.
+    });
 
     await new Promise<void>((resolve, reject) => {
       const onConnect = () => {
