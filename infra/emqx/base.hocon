@@ -3,8 +3,17 @@ authorization {
   deny_action = ignore
 
   cache {
+    enable = true
     max_size = 1024
-    ttl = 5s
+
+    # Short by design: dynamic control revocations should not linger for 10s.
+    ttl = 1s
+
+    # Low-rate, command-like writes are always evaluated in real time.
+    excludes = [
+      "thing/product/+/services",
+      "thing/product/+/property/set"
+    ]
   }
 
   sources = [
@@ -12,23 +21,31 @@ authorization {
       type = http
       enable = true
 
-      # Only provisioned DJI gateway identities need dynamic topology checks.
-      precondition = "regex_match(username, '^dji-gateway-.+$')"
-
+      # EMQX 5.7 has no authorizer preconditions. The backend therefore
+      # returns "ignore" for identities handled by the following file ACL.
       method = post
       url = "http://control-api:8081/internal/emqx/authz"
 
       headers {
         "Content-Type" = "application/json"
+
+        # Secure disabled default. Deployment must replace this with the same
+        # secret configured as EMQX_AUTHZ_TOKEN in control-api before dynamic
+        # DJI/DRC authorization can succeed.
+        "Authorization" = "Bearer __FH_CLONE_AUTHZ_DISABLED__"
       }
 
       body {
         username = "${username}"
         clientid = "${clientid}"
+        peerhost = "${peerhost}"
         action = "${action}"
         topic = "${topic}"
         qos = "${qos}"
       }
+
+      pool_size = 8
+      request_timeout = "1s"
     },
     {
       type = file
