@@ -49,6 +49,111 @@ Bei späterem Drift zwischen dem gespeicherten ZIP-Snapshot und dem offiziellen
 DJI-Repository wird vor einer Änderung der aktuelle DJI-Upstream erneut
 verifiziert.
 
+## Verbindliche DJI-SDK-/Cloud-Referenzen
+
+Zusätzlich zur FlightHub-2-OpenAPI-V2-Demo gelten für FH2 folgende offizielle
+DJI-Repositories als normative Upstream-Referenzen:
+
+### DJI Cloud API
+
+Repository:
+
+`dji-sdk/Cloud-API-Doc`
+
+Referenzbranch:
+
+`master`
+
+Primärer Dokumentationspfad:
+
+`docs/en`
+
+Zuständigkeit in FH2:
+
+- MQTT-Topic-Verträge
+- Basic Link
+- `update_topo`
+- OSD/State
+- Events/Requests/Services/Replies
+- DRC
+- Product-/Payload-Properties
+- RC-/Aircraft-/Dock-Cloud-Verhalten
+- Cloud-Control-Authority und cloudseitige Capabilities
+
+Bei Cloud-API-Protokollfragen hat diese Quelle Vorrang vor Beispielcode,
+Blogbeiträgen und abgeleiteten Drittquellen.
+
+### DJI Mobile SDK V5 – Android
+
+Repository:
+
+`dji-sdk/Mobile-SDK-Android-V5`
+
+Aktueller Referenzbranch:
+
+`dev-sdk-main`
+
+Aktuell dokumentierter SDK-Stand:
+
+`5.18.0`
+
+Zuständigkeit in FH2:
+
+- reale MSDK-V5-Implementierungsmuster
+- KeyManager-/Action-/Value-Nutzung
+- Produkt-/Komponentenverhalten auf Android
+- Payload-, Kamera-, Gimbal-, FlightController- und RTK-Integration
+- Beispielcode für gerätenahe Funktionen
+- Abgleich der späteren MSDK-V5-Bridge
+
+Der Sample-Code ist Referenz für SDK-Verwendung, aber kein automatisches
+Sicherheits- oder Architekturmodell für den FH2-Server.
+
+### DJI Mobile SDK V5 – API-Dokumentation
+
+Repository:
+
+`dji-sdk/Mobile-SDK-Doc-V5`
+
+Aktueller Default-/Release-Referenzbranch:
+
+`sdk_releases/v_5.18.0`
+
+Zuständigkeit in FH2:
+
+- API-Signaturen
+- Keys, Enums und Datentypen
+- dokumentierte Produktunterstützung
+- Komponenten-/Capability-Semantik
+- Parametergrenzen und dokumentierte Zustandswerte
+- Abgleich zwischen Cloud-API- und MSDK-Begriffen
+
+### Referenzhierarchie
+
+Wenn Quellen unterschiedliche Ebenen beschreiben, gilt:
+
+```text
+Cloud-Vertrag / MQTT
+  -> Cloud-API-Doc
+
+MSDK API-Semantik / Typen / Keys
+  -> Mobile-SDK-Doc-V5
+
+MSDK reale Implementierung / Beispielnutzung
+  -> Mobile-SDK-Android-V5
+
+FlightHub 2 Privatization REST
+  -> FlightHub-2-OpenAPI-V2-Demo/Privatization
+```
+
+Ein MSDK-Key oder Sample erzeugt **keine** Cloud-API-Capability und ein
+Cloud-API-Property erzeugt **keine** MSDK-Verfügbarkeit. FH2 hält beide
+Integrationspfade getrennt und vereinheitlicht sie erst im SDK-neutralen Core.
+
+Bei späterem Drift wird vor einer produktiven Änderung immer der aktuelle
+offizielle DJI-Upstream gegen den im Projekt dokumentierten Referenzstand
+geprüft.
+
 ## Referenzstand M4
 
 M4-Cloud bleibt der stabile V2-Referenzpfad für:
