@@ -1,5 +1,4 @@
 import {
-  DrcController,
   type DrcStickChannels,
   type NormalizedStickInput,
   toDjiStickChannels
@@ -32,6 +31,18 @@ export interface DrcSessionRecord {
   lastNeutralAt?: number;
   closedAt?: number;
   reason?: string;
+}
+
+export interface DrcSessionTransport {
+  resetControlSequence(): void;
+  startHeartbeat(gatewaySn: string): void;
+  stopHeartbeat(): void;
+  sendStickControl(
+    gatewaySn: string,
+    channels: DrcStickChannels
+  ): Promise<number>;
+  sendNeutralStickControl(gatewaySn: string): Promise<number>;
+  exitDrcMode(gatewaySn: string): Promise<unknown>;
 }
 
 export interface DrcSessionStore {
@@ -180,7 +191,7 @@ export class DrcSessionManager {
     | undefined;
 
   constructor(
-    private readonly controller: DrcController,
+    private readonly controller: DrcSessionTransport,
     private readonly store: DrcSessionStore,
     options: DrcSessionManagerOptions = {}
   ) {
@@ -365,6 +376,11 @@ export class DrcSessionManager {
   async isActive(gatewaySn: string): Promise<boolean> {
     const current = await this.store.get(gatewaySn);
     return current?.state === "active";
+  }
+
+  /** Deterministic dead-man evaluation hook used by tests and schedulers. */
+  async checkDeadman(gatewaySn: string): Promise<void> {
+    await this.tick(gatewaySn);
   }
 
   /**
