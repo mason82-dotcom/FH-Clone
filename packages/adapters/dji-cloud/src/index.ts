@@ -54,12 +54,11 @@ interface PendingServiceRequest {
   reject: (error: Error) => void;
 }
 
-const DEFAULT_TOPICS = [
+export const DEFAULT_TOPICS = [
   "thing/product/+/osd",
   "thing/product/+/state",
   "thing/product/+/events",
   "thing/product/+/services_reply",
-  "thing/product/+/drc/up",
   "thing/product/+/status",
   "sys/product/+/status"
 ];
