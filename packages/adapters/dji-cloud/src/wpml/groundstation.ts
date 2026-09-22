@@ -4,7 +4,12 @@ import type {
   MissionExternalReference
 } from "@fh-clone/aircraft-core";
 import { createMissionExternalReference } from "@fh-clone/aircraft-core";
-import type { WpmlBundle, WpmlValidationIssue } from "./types.js";
+import { readWpmlKmz, type ReadWpmlKmzOptions } from "./kmz.js";
+import type {
+  WpmlBundle,
+  WpmlKmzPackage,
+  WpmlValidationIssue
+} from "./types.js";
 
 export interface WpmlGroundStationProjectionOptions {
   /**
@@ -20,6 +25,22 @@ export interface WpmlGroundStationProjection {
   mission: GroundStationMission;
   routes: GroundStationRoute[];
   references: MissionExternalReference[];
+}
+
+export interface WpmlGroundStationImport extends WpmlGroundStationProjection {
+  package: WpmlKmzPackage;
+}
+
+export function importWpmlKmzToGroundStation(
+  input: Uint8Array,
+  projection: WpmlGroundStationProjectionOptions,
+  kmzOptions: ReadWpmlKmzOptions = {}
+): WpmlGroundStationImport {
+  const pkg = readWpmlKmz(input, kmzOptions);
+  return {
+    package: pkg,
+    ...projectWpmlToGroundStation(pkg.bundle, projection)
+  };
 }
 
 /**
