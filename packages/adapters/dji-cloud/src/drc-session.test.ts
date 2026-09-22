@@ -253,7 +253,9 @@ test("transport loss revokes runtime DRC activity immediately and recovery resum
   const audits: string[] = [];
   const manager = new DrcSessionManager(transport, new InMemoryDrcSessionStore(), {
     checkIntervalMs: 60_000,
-    onAudit: (event) => audits.push(event.event)
+    onAudit: (event) => {
+      audits.push(event.event);
+    }
   });
   await manager.request({ aircraftSn: "M4T-006", gatewaySn: "RC-PLUS2-006", holder: "operator-a", guards: preAuthorityGuards });
   await advanceToControlling(manager, "RC-PLUS2-006");
