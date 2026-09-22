@@ -104,7 +104,6 @@ test("session follows explicit setup -> controlling -> draining -> closed", asyn
   await assert.rejects(
     manager.activate({
       gatewaySn: "RC-PLUS2-001",
-      holder: "operator-a",
       guards: preAuthorityGuards
     }),
     /djiAuthority/
@@ -249,12 +248,25 @@ test("DRC status becomes unknown when stale", async () => {
   assert.equal(await manager.getDrcStatus("RC-PLUS2-005"), "unknown");
 });
 
-test("transport loss revokes runtime DRC activity immediately", async () => {
-  const manager = new DrcSessionManager(new FakeTransport(), new InMemoryDrcSessionStore(), { checkIntervalMs: 60_000 });
+test("transport loss revokes runtime DRC activity immediately and recovery resumes runtime loops", async () => {
+  const transport = new FakeTransport();
+  const audits: string[] = [];
+  const manager = new DrcSessionManager(transport, new InMemoryDrcSessionStore(), {
+    checkIntervalMs: 60_000,
+    onAudit: (event) => audits.push(event.event)
+  });
   await manager.request({ aircraftSn: "M4T-006", gatewaySn: "RC-PLUS2-006", holder: "operator-a", guards: preAuthorityGuards });
   await advanceToControlling(manager, "RC-PLUS2-006");
   assert.equal(await manager.isActive("RC-PLUS2-006"), true);
+  const startedBeforeLoss = transport.heartbeatsStarted;
   await manager.markTransportLost("RC-PLUS2-006", "mqtt_close");
   assert.equal(await manager.isActive("RC-PLUS2-006"), false);
   assert.equal((await manager.get("RC-PLUS2-006"))?.state, "controlling");
+  assert.ok(transport.heartbeatsStopped >= 1);
+  assert.ok(audits.includes("transport_lost"));
+
+  await manager.setTransportConnected("RC-PLUS2-006", true);
+  assert.equal(await manager.isActive("RC-PLUS2-006"), true);
+  assert.equal(transport.heartbeatsStarted, startedBeforeLoss + 1);
+  assert.ok(audits.includes("transport_recovered"));
 });
