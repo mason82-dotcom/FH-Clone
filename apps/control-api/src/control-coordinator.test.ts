@@ -21,7 +21,9 @@ function fixture(authorized = true) {
   const dji = {
     resolveGatewaySn: () => "RC-PLUS2-001",
     supportsFlightControl: () => true,
-    async connectDrcTransport() { calls.push("transport.connect"); },
+    async connectDrcTransport(gatewaySn: string, aircraftSn: string) {
+      calls.push(`transport.connect:${gatewaySn}:${aircraftSn}`);
+    },
     async disconnectDrcTransport() { calls.push("transport.disconnect"); },
     pilotAuthority: {
       async requestFlightAuthority() {
@@ -53,7 +55,7 @@ test("start orders authority before DRC activation", async () => {
   assert.deepEqual(f.calls, [
     "session.request", "authority.request", "session.authorized",
     "session.authorityGrabbed", "drc.enter", "session.drcModeActive",
-    "transport.connect", "session.transportConnected", "session.activate"
+    "transport.connect:RC-PLUS2-001:M4T-001", "session.transportConnected", "session.activate"
   ]);
 });
 
@@ -99,7 +101,7 @@ test("branch A reconnects only with fresh active DRC status and valid runtime gu
   });
   f.calls.length = 0;
   assert.equal(await coordinator.recoverTransport("M4T-001"), true);
-  assert.deepEqual(f.calls, ["session.drcStatus", "transport.connect", "session.transportConnected"]);
+  assert.deepEqual(f.calls, ["session.drcStatus", "transport.connect:RC-PLUS2-001:M4T-001", "session.transportConnected"]);
 });
 
 test("branch A stays fail-closed when runtime guards are lost", async () => {
