@@ -183,8 +183,11 @@ Dynamische Gateway-Rechte dürfen nur sehr kurz gecacht werden, weil
 `update_topo`, Unpairing und Credential-Deaktivierung schnell wirksam werden
 müssen.
 
-Schreibende Services und Property-Set sollten nicht über lang laufende
-Autorisierungs-Caches freigegeben werden.
+Schreibende Services und Property-Set werden nicht über lang laufende
+Autorisierungs-Caches freigegeben. DRC wird vollständig vom AuthZ-Cache
+ausgeschlossen (`drc/down` und `drc/up`), damit Start, Entzug und Dead-Man-
+Übergänge ohne TTL-Nachlauf wirksam werden. Für übrige dynamische Rechte gilt
+eine kurze TTL von 1 s.
 
 ## Audit und Betrieb
 
