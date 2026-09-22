@@ -214,6 +214,14 @@ jobs:
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
             -c "SELECT 1 FROM gateway_credentials LIMIT 1;" >/dev/null
 
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM dji_gateways LIMIT 1;" >/dev/null
+
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM dji_gateway_devices LIMIT 1;" >/dev/null
+
       - name: TimescaleDB-Logs bei Fehlern
         if: failure()
         working-directory: infra/timescale
