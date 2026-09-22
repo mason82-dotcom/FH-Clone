@@ -40,7 +40,9 @@ die M3-Serie kommen OSD-Daten mit stabiler Frequenz und State-Daten bei
 
 Erforderlich:
 
-1. realer, redigierter `update_topo`-Capture mit RC Pro Enterprise und M3T,
+1. realer, redigierter `update_topo`-Capture mit RC Pro Enterprise und M3T
+   auf `thing/product/{gateway_sn}/status`; die zugehörige Antwort läuft auf
+   `sys/product/{gateway_sn}/status_reply`,
 2. realer M3T-`osd`-Capture mit den tatsächlich gelieferten Grundfeldern:
    - `attitude_head`, `attitude_roll`, `attitude_pitch`
    - Position/Höhen/Speed
