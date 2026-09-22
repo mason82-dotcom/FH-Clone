@@ -61,6 +61,7 @@ async function advanceToControlling(manager: DrcSessionManager, gatewaySn: strin
   await manager.markAuthorized(gatewaySn);
   await manager.markAuthorityGrabbed(gatewaySn);
   await manager.markDrcModeActive(gatewaySn);
+  await manager.setTransportConnected(gatewaySn, true);
   await manager.activate({ gatewaySn, guards: activeGuards });
   await manager.sendStick(gatewaySn, {
     roll: DJI_STICK_CENTER,
