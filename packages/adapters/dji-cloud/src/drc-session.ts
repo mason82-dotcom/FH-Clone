@@ -21,9 +21,9 @@ const DRC_TRANSITIONS: Readonly<Record<DrcSessionState, readonly DrcSessionState
   idle: ["requesting"],
   requesting: ["authorized", "closed"],
   authorized: ["authority_grabbed", "closed"],
-  authority_grabbed: ["drc_mode_active", "closed"],
-  drc_mode_active: ["controlling", "closed"],
-  controlling: ["degraded", "closed"],
+  authority_grabbed: ["drc_mode_active", "draining", "closed"],
+  drc_mode_active: ["controlling", "draining", "closed"],
+  controlling: ["degraded", "draining", "closed"],
   degraded: ["controlling", "draining", "closed"],
   draining: ["closed"],
   closed: ["requesting"]
@@ -444,7 +444,15 @@ export class DrcSessionManager {
     if (current.state === "closed") return current;
     if (current.state === "draining") return current;
 
+    if (current.state === "requesting" || current.state === "authorized") {
+      return this.forceClose(gatewaySn, reason);
+    }
+
     this.stopTimer(gatewaySn);
+
+    if (!isAllowedDrcTransition(current.state, "draining")) {
+      throw new Error(`Invalid DRC transition ${current.state}->draining`);
+    }
 
     const draining: DrcSessionRecord = {
       ...current,
