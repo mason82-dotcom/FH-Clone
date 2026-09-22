@@ -213,20 +213,14 @@ Missionssitzung funktionsfähig; nur die Datenbankpersistenz entfällt.
 Aktuell implementiert:
 
 ```http
+POST /internal/emqx/authn
 POST /internal/emqx/authz
 ```
 
-Dieser Endpunkt ist ausschließlich für EMQX im internen Servicenetz
-vorgesehen.
-
-V3-Ziel zusätzlich:
-
-```http
-POST /internal/emqx/authn
-```
-
-Die geplante AuthN bindet Gateway-Credentials serverseitig an eine
-vertrauenswürdige `gateway_sn`.
+Beide Endpunkte sind ausschließlich für EMQX im internen Servicenetz
+vorgesehen. AuthN bindet Gateway-Credentials serverseitig an eine
+vertrauenswürdige `gateway_sn`; AuthZ verwendet diese trusted Identity zusammen
+mit der Runtime-Topologie.
 
 ## Topologie
 
@@ -286,7 +280,6 @@ Vor V3 fehlen insbesondere noch:
 
 - vollständiger Telemetrie-Writer
 - vollständige V3-Persistenz
-- HTTP AuthN
 - finaler Root-Compose-Gesamtstart
 - vollständige automatisierte Abnahme
 
