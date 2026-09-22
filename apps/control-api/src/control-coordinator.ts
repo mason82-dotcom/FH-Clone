@@ -9,6 +9,8 @@ export interface DjiControlRuntime {
   resolveGatewaySn(deviceSn: string): string | undefined;
   supportsFlightControl(deviceSn: string): boolean;
   isCloudControlAuthorized(deviceOrGatewaySn: string): boolean;
+  connectDrcTransport(credentials: EnterDrcModeOptions["mqttBroker"]): Promise<void>;
+  disconnectDrcTransport(): Promise<void>;
   drc: {
     requestCloudControlAuthority(gatewaySn: string, request: CloudControlAuthRequest): Promise<unknown>;
     releaseCloudControlAuthority(gatewaySn: string): Promise<unknown>;
@@ -66,6 +68,7 @@ export class ControlCoordinator {
       await this.sessions.markAuthorityGrabbed(gatewaySn);
       await this.dji.drc.enterDrcMode(gatewaySn, input.drc);
       drcEntered = true;
+      await this.dji.connectDrcTransport(input.drc.mqttBroker);
       await this.sessions.markDrcModeActive(gatewaySn);
       const finalGuards = this.guards(input.aircraftSn, input.holder);
       return await this.sessions.activate({ gatewaySn, guards: finalGuards });
@@ -75,6 +78,7 @@ export class ControlCoordinator {
       } else {
         await this.sessions.forceClose(gatewaySn, "activation_failed").catch(() => undefined);
       }
+      await this.dji.disconnectDrcTransport().catch(() => undefined);
       if (authorityRequested) {
         await this.dji.drc.releaseCloudControlAuthority(gatewaySn).catch(() => undefined);
       }
@@ -86,6 +90,7 @@ export class ControlCoordinator {
     const gatewaySn = this.dji.resolveGatewaySn(aircraftSn);
     if (!gatewaySn) throw new Error("dji_gateway_unknown");
     const closed = await this.sessions.closeGracefully(gatewaySn, reason);
+    await this.dji.disconnectDrcTransport();
     await this.dji.drc.releaseCloudControlAuthority(gatewaySn);
     return closed;
   }
