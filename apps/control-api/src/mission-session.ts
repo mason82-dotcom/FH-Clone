@@ -100,6 +100,11 @@ export class MissionSessionTracker {
     if (state.active) {
       state.active.lastTelemetryAt = message.receivedAt;
       if (modeCode !== undefined) state.active.lastModeCode = modeCode;
+
+      if (!state.active.gatewaySn) {
+        const gatewaySn = this.resolveGatewaySn?.(message.deviceId);
+        if (gatewaySn) state.active.gatewaySn = gatewaySn;
+      }
     }
 
     if (modeCode === undefined) {
