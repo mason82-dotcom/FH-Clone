@@ -291,6 +291,20 @@ Interne API:
 - Service-Authentisierung
 - Fail-Closed für dynamische DJI-Rechte
 
+## DJI OpenAPI-/Gerätefehlerreferenz
+
+Herstellerseitige DJI-Business-/Gerätefehler werden getrennt von den
+HTTP-Fehlern der FH2-Control-API behandelt.
+
+Referenz:
+
+- [FlightHub 2 OpenAPI – Fehlerreferenz](FH2_OPENAPI_FEHLERCODES.md)
+
+Ein DJI-Code wie `321776`, `324012`, `238001` oder `312011` wird nicht
+automatisch in einen HTTP-Status oder eine Safety-Aktion übersetzt. FH2 soll
+bei späterer strukturierter Auswertung mindestens den originalen Code, die
+Rohmeldung und den Quellendpunkt erhalten.
+
 ## Fehlercodes
 
 Aktuell werden je nach Endpunkt JSON-Fehler ausgegeben.
