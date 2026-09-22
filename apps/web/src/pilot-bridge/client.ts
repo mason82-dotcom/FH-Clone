@@ -249,6 +249,13 @@ export class DjiPilotBridgeClient {
   }
 
   loadApi(config: DjiApiModuleConfig): void {
+    // DJI documents map/wayline/TSA as API-module dependants. A stale
+    // dependant must not survive an API reload with a new host/token.
+    for (const dependent of ["map", "tsa", "mission"] as const) {
+      if (this.isComponentLoaded(dependent)) {
+        this.unloadComponent(dependent);
+      }
+    }
     this.loadComponent("api", config as unknown as Record<string, unknown>);
   }
 
