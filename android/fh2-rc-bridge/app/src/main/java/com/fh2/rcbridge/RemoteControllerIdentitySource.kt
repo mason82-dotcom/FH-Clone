@@ -13,6 +13,10 @@ data class RemoteControllerIdentitySnapshot(
     val connected: Boolean = false,
     val serialNumber: String? = null,
     val firmwareVersion: String? = null,
+    val rcGpsValid: Boolean = false,
+    val rcLatitude: Double? = null,
+    val rcLongitude: Double? = null,
+    val rcAccuracyM: Double? = null,
     val componentIndex: String =
         ComponentIndexType.LEFT_OR_MAIN.name
 )
@@ -45,6 +49,28 @@ object RemoteControllerIdentitySource {
             .create()
             .listen(this) { serial ->
                 update { copy(serialNumber = serial) }
+            }
+
+        RemoteControllerKey.KeyRcGPSInfo
+            .create()
+            .listen(this) { info ->
+                val valid = info?.isValid == true
+                val location = info?.location
+                update {
+                    copy(
+                        rcGpsValid = valid,
+                        rcLatitude =
+                            if (valid) location?.latitude else null,
+                        rcLongitude =
+                            if (valid) location?.longitude else null,
+                        rcAccuracyM =
+                            if (valid) {
+                                location?.accuracy?.toDouble()
+                            } else {
+                                null
+                            }
+                    )
+                }
             }
 
         refreshIdentity()
