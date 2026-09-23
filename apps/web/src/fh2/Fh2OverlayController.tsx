@@ -201,7 +201,7 @@ function useMediaOverlayFeed(): void {
     let controller: AbortController | undefined;
 
     const refresh = async () => {
-      controller?.abort();
+      if (controller) return;
       const request = new AbortController();
       controller = request;
 
@@ -228,6 +228,8 @@ function useMediaOverlayFeed(): void {
       } catch {
         if (cancelled || request.signal.aborted) return;
         // Preserve the last known-good overlay during transient fetch failures.
+      } finally {
+        if (controller === request) controller = undefined;
       }
     };
 
@@ -250,7 +252,7 @@ function useUgcsOverlayFeed(): void {
     let controller: AbortController | undefined;
 
     const refresh = async () => {
-      controller?.abort();
+      if (controller) return;
       const request = new AbortController();
       controller = request;
 
@@ -285,6 +287,8 @@ function useUgcsOverlayFeed(): void {
       } catch {
         if (cancelled || request.signal.aborted) return;
         // Preserve the last known-good UgCS overlay on transient failures.
+      } finally {
+        if (controller === request) controller = undefined;
       }
     };
 
@@ -532,7 +536,7 @@ function useAircraftPositions(
     let controller: AbortController | undefined;
 
     const refresh = async () => {
-      controller?.abort();
+      if (controller) return;
       const request = new AbortController();
       controller = request;
 
@@ -577,6 +581,7 @@ function useAircraftPositions(
           )
         )
       );
+      if (controller === request) controller = undefined;
     };
 
     void refresh();
