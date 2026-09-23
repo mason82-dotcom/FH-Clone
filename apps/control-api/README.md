@@ -99,6 +99,8 @@ Liefert unter anderem:
 - DJI-API-Kompatibilitätsprofil
 - Anzahl aktiver Missionssitzungen
 - Status der Missionspersistenz
+- ob die zentrale ControlCoordinator-Runtime instanziiert ist
+- Anzahl aktiver DRC-Runtime-Sitzungen
 
 ### Geräte
 
@@ -115,6 +117,17 @@ GET /api/dji/topology
 ```
 
 Liefert bekannte Gateway-/Sub-Device-Beziehungen.
+
+### DJI-Control-Runtime – read-only
+
+```http
+GET /api/dji/control/runtime
+```
+
+Der Endpunkt zeigt nur, ob die zentrale `ControlCoordinator`-Runtime
+konfiguriert ist und welche DRC-Sitzungen aktuell im Prozess bekannt sind.
+Er aktiviert keine Safety-Stufe, erzeugt keinen Lease und bietet **keinen**
+öffentlichen Schreibpfad für Flight Control.
 
 ### Telemetrie
 
