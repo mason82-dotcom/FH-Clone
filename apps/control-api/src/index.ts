@@ -38,6 +38,7 @@ import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } fro
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 import { MsdkBridgeService, isMsdkBridgeSnapshot } from "./msdk-bridge.js";
+import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -230,6 +231,7 @@ const publicServer = createServer(async (request, response) => {
         return json(response, 401, { error: "msdk_pairing_unauthorized" });
       }
 
+      ingestMsdkSnapshot(body, Date.now());
       return json(response, 200, pairing);
     }
 
@@ -248,9 +250,11 @@ const publicServer = createServer(async (request, response) => {
         return json(response, 401, { error: "msdk_agent_unauthorized" });
       }
 
+      const serverTimeMs = Date.now();
+      ingestMsdkSnapshot(body, serverTimeMs);
       return json(response, 200, {
         accepted: true,
-        serverTimeMs: Date.now()
+        serverTimeMs
       });
     }
 
@@ -766,6 +770,15 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+
+function ingestMsdkSnapshot(
+  snapshot: import("./msdk-bridge.js").MsdkBridgeSnapshot,
+  receivedAt: number
+): void {
+  const normalized = normalizeMsdkBridgeSnapshot(snapshot, receivedAt);
+  devices.upsert(normalized.device);
+  normalized.samples.forEach((sample) => parameters.update(sample));
+}
 
 function readBearerToken(request: IncomingMessage): string | undefined {
   const header = request.headers.authorization;
