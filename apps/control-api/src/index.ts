@@ -38,6 +38,7 @@ import { MissionStore } from "./mission-store.js";
 import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
+import { ControlCoordinator } from "./control-coordinator.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -77,6 +78,9 @@ drcSessions = dji
       onAudit: (event) => console.info("[DRC]", event)
     })
   : undefined;
+
+let controlCoordinator: ControlCoordinator | undefined;
+
 function getDrcGuards(aircraftSn: string, holder?: string) {
   return resolveRuntimeDrcGuards({
     hasFc3: (sn) => controlGuards.hasFc3(sn),
@@ -85,6 +89,11 @@ function getDrcGuards(aircraftSn: string, holder?: string) {
     isCloudControlAuthorized: (sn) => dji?.isCloudControlAuthorized(sn) ?? false
   }, aircraftSn, holder);
 }
+
+controlCoordinator =
+  dji && drcSessions
+    ? new ControlCoordinator(dji, drcSessions, getDrcGuards)
+    : undefined;
 
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
@@ -172,6 +181,10 @@ const publicServer = createServer(async (request, response) => {
         },
         mediaOverlays: {
           assets: mediaOverlays.size()
+        },
+        controlRuntime: {
+          configured: Boolean(controlCoordinator),
+          activeSessions: drcRuntimeContext.size
         }
       });
     }
@@ -235,6 +248,22 @@ const publicServer = createServer(async (request, response) => {
           updatedAt: null,
           source: "local"
         }
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/dji/control/runtime") {
+      return json(response, 200, {
+        configured: Boolean(controlCoordinator),
+        publicWriteApiEnabled: false,
+        fc3Default: false,
+        activeSessions: [...drcRuntimeContext.entries()].map(
+          ([gatewaySn, session]) => ({
+            gatewaySn,
+            sessionId: session.sessionId,
+            aircraftSn: session.aircraftSn,
+            state: session.state
+          })
+        )
       });
     }
 
