@@ -8,7 +8,11 @@ Baseline:
 
 - DJI MSDK `5.18.0`
 - Android minSdk 24
-- compile/targetSdk 35
+- compileSdk 36
+- targetSdk 35 (DJI-MSDK-5.18-Kompatibilitätsgrenze)
+- Android Build Tools 36.0.0
+- AGP 8.13.2
+- Kotlin 2.3.21
 - arm64-v8a
 - Ziel zuerst: M3E / M3T / M3TA + DJI RC Pro Enterprise
 
@@ -180,3 +184,31 @@ ausschließlich für localhost beziehungsweise private RFC1918-LAN-Adressen.
 
 Der Pairing-/Heartbeat-Kanal besitzt keinerlei Flight-Control-Command-
 Nachrichten.
+
+
+## Android API 36
+
+Der Branch verwendet jetzt:
+
+```text
+compileSdk = 36
+targetSdk  = 35
+AGP        = 8.13.2
+Kotlin     = 2.3.21
+BuildTools = 36.0.0
+Core-KTX   = 1.17.0
+AppCompat  = 1.8.0
+DJI MSDK   = 5.18.0
+```
+
+`compileSdk 36` ist mit AGP 8.13.x unterstützt. `targetSdk 36` bleibt
+vorerst bewusst deaktiviert, weil DJI MSDK 5.18.0 Android 16 / API 36 noch
+nicht offiziell als unterstütztes Target bestätigt.
+
+`androidx.core:core-ktx` bleibt bei 1.17.0. Ab Core 1.18.0 wurde die
+Compile-Basis auf API 36.1 angehoben; das würde für diese RC-App derzeit nur
+Tooling-Komplexität hinzufügen, ohne einen MSDK-Vorteil zu bringen.
+
+Für den Build wird JDK 17 benötigt. Der erzeugte App-Bytecode bleibt
+absichtlich auf Java/Kotlin JVM 1.8, solange DJI MSDK hierfür keinen höheren
+Bytecode-Level verlangt.
