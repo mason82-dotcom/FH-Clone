@@ -7,6 +7,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -17,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rtkText: TextView
     private lateinit var enableButton: Button
     private lateinit var disableButton: Button
+    private lateinit var evidenceButton: Button
 
     private val sdkListener: (DjiSdkSnapshot) -> Unit = { state ->
         runOnUiThread {
@@ -178,6 +180,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        evidenceButton = Button(this).apply {
+            text = "Hardware-Evidence speichern"
+            setOnClickListener {
+                runCatching {
+                    HardwareEvidenceExporter.export(this@MainActivity)
+                }.onSuccess { file ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Gespeichert: ${file.absolutePath}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }.onFailure { error ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Export fehlgeschlagen: ${error.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
         val notice = TextView(this).apply {
             text =
                 "MSDK-Modus: DJI Pilot 2 muss auf RC Pro Enterprise beendet " +
@@ -198,6 +221,7 @@ class MainActivity : AppCompatActivity() {
             addView(controlText, matchWidth(top = 24))
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
+            addView(evidenceButton, matchWidth(top = 24))
         }
 
         setContentView(
