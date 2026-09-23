@@ -8,7 +8,7 @@ import {
 } from "./drc.js";
 import type { DjiServiceRequester } from "./service.js";
 
-test("global policy allows drone_control but blocks stick_control", async () => {
+test("global policy allows both drone_control and stick_control", async () => {
   const publications: Array<{ topic: string; payload: any; qos: number }> = [];
 
   const services: DjiServiceRequester = {
@@ -27,28 +27,26 @@ test("global policy allows drone_control but blocks stick_control", async () => 
     minControlIntervalMs: 1
   });
 
-  const seq = await controller.sendControl("RC-PLUS2-001", {
+  const droneSeq = await controller.sendControl("RC-PLUS2-001", {
     x: 0,
     y: 0,
     h: 0,
     w: 0
   });
 
-  assert.equal(seq, 0);
-  assert.equal(publications.length, 1);
+  assert.equal(droneSeq, 0);
   assert.equal(publications[0]?.topic, "thing/product/RC-PLUS2-001/drc/down");
   assert.equal(publications[0]?.payload?.method, "drone_control");
 
-  await assert.rejects(
-    () =>
-      controller.sendStickControl("RC-PLUS2-001", {
-        roll: DJI_STICK_CENTER,
-        pitch: DJI_STICK_CENTER,
-        throttle: DJI_STICK_CENTER,
-        yaw: DJI_STICK_CENTER
-      }),
-    /dji_cloud_stick_control_disabled/
-  );
+  const stickSeq = await controller.sendStickControl("RC-PLUS2-001", {
+    roll: DJI_STICK_CENTER,
+    pitch: DJI_STICK_CENTER,
+    throttle: DJI_STICK_CENTER,
+    yaw: DJI_STICK_CENTER
+  });
 
-  assert.equal(publications.length, 1);
+  assert.equal(stickSeq, 0);
+  assert.equal(publications[1]?.topic, "thing/product/RC-PLUS2-001/drc/down");
+  assert.equal(publications[1]?.payload?.method, "stick_control");
+  assert.equal(publications.length, 2);
 });

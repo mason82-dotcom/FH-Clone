@@ -59,15 +59,15 @@ bleibt davon getrennt.
 ## Produktprofile
 
 Der DJI-Adapter kennt die DJI-Protokollprofile weiterhin als Typinformation.
-Die Runtime-Auswahl für den Stick-Pfad ist aktuell projektweit fest auf:
+Die Runtime-Auswahl für den Stick-Pfad ist wieder produktabhängig:
 
 ```text
-DjiDrcProfile = none
+M4E/M4T + RC Plus 2 -> DjiDrcProfile = pilot-m4-stick
+M3 Enterprise       -> DjiDrcProfile = none
+unbekannt/falsch    -> DjiDrcProfile = none
 ```
 
-`pilot-m4-stick` bleibt ausschließlich als Protokollreferenz im Code erhalten
-und wird von keinem Produktprofil aktiviert. Das verhindert nicht den separat
-freigegebenen DJI-`drone_control`-Pfad.
+`drone_control` bleibt zusätzlich als separater DJI-DRC-Pfad aktiv.
 
 ### Mavic 3 Enterprise + RC Pro Enterprise
 
@@ -446,25 +446,21 @@ Umgebungsvariablen aktiviert werden.
 
 ## Cloud-Control-Policy
 
-FH2 trennt `stick_control` und `drone_control` ausdrücklich:
+FH2 erlaubt wieder beide DJI-DRC-Steuerpfade, aber ausschließlich hinter den
+Produkt-/Gateway- und Safety-Gates:
 
 ```text
-stick_control  = DISABLED
+stick_control  = ENABLED
 drone_control  = ENABLED
 ```
 
-`stick_control` bleibt projektweit fail-closed und besitzt keinen
-Environment-/Runtime-Schalter. Deshalb bleibt auch die generische
-`flightControl`-Capability für die WebUI auf `false`.
+Für Matrice 4 + RC Plus 2 gilt damit wieder `flightControl=true` und
+`DjiDrcProfile=pilot-m4-stick`. M3E/M3T/M3TA bleiben ohne Cloud-
+Flugsteuerungsprofil.
 
-`drone_control` ist als eigener DJI-DRC-Methodenpfad wieder aktiv und bleibt
-an die vorhandenen FC3-/Control-Lease-/DJI-Authority-/DRC-Session-Guards
-gebunden.
-
-Wichtig: DJI beschreibt `drone_control` selbst als Steuerung von
-Flugrichtung und Geschwindigkeit. Die Bezeichnung „nur manuelle
-Stick-Steuerung deaktiviert“ meint in FH2 daher technisch ausschließlich die
-Sperre des separaten `stick_control`-Pfads.
+Beide Pfade bleiben an FC3, Control Lease, DJI Control Authority, aktive
+DRC-Sitzung und Dead-Man gebunden. Das Aktivieren des globalen Stick-Schalters
+hebt diese Guards nicht auf.
 
 `fly_to_point` bleibt als eigener Servicepfad davon unabhängig.
 
