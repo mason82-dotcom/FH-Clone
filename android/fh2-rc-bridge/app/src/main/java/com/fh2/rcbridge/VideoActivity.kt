@@ -5,7 +5,9 @@ import android.view.Gravity
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
@@ -61,8 +63,50 @@ class VideoActivity : AppCompatActivity(), SurfaceHolder.Callback {
             text = "Warte auf DJI CameraStreamManager …"
         }
 
-        cameraSpinner = Spinner(this)
-        sourceSpinner = Spinner(this)
+        cameraSpinner = Spinner(this).apply {
+            onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long
+                    ) {
+                        selectedCamera =
+                            cameraOptions.getOrNull(position)
+                                ?: ComponentIndexType.LEFT_OR_MAIN
+                        refreshSourceOptions(
+                            SensorInventorySource.snapshot,
+                            selectedCamera
+                        )
+                    }
+
+                    override fun onNothingSelected(
+                        parent: AdapterView<*>?
+                    ) = Unit
+                }
+        }
+
+        sourceSpinner = Spinner(this).apply {
+            onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long
+                    ) {
+                        selectedSource =
+                            sourceOptions.getOrNull(position)
+                                ?: CameraVideoStreamSourceType.DEFAULT_CAMERA
+                        updateStatus()
+                    }
+
+                    override fun onNothingSelected(
+                        parent: AdapterView<*>?
+                    ) = Unit
+                }
+        }
 
         surfaceView = SurfaceView(this).apply {
             holder.addCallback(this@VideoActivity)
@@ -255,10 +299,6 @@ class VideoActivity : AppCompatActivity(), SurfaceHolder.Callback {
         selectedCamera =
             cameraOptions.getOrNull(cameraSpinner.selectedItemPosition)
                 ?: ComponentIndexType.LEFT_OR_MAIN
-
-        val snapshot = SensorInventorySource.snapshot
-        refreshSourceOptions(snapshot, selectedCamera)
-
         selectedSource =
             sourceOptions.getOrNull(sourceSpinner.selectedItemPosition)
                 ?: CameraVideoStreamSourceType.DEFAULT_CAMERA
