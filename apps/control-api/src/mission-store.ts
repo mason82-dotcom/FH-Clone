@@ -26,6 +26,13 @@ export class MissionStore {
         })
       : undefined;
 
+    this.pool?.on("error", (error) => {
+      console.warn(
+        "[Mission] PostgreSQL pool connection lost; next query will reconnect:",
+        error.message
+      );
+    });
+
     this.rtkSourceLabel = clean(options.rtkSourceLabel);
     this.rtkProvider = clean(options.rtkProvider);
   }

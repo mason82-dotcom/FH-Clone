@@ -34,6 +34,12 @@ export class PostgresGatewayRegistryStore {
       connectionString,
       max: 5
     });
+    this.pool.on("error", (error) => {
+      console.warn(
+        "[Topology] PostgreSQL pool connection lost; next query will reconnect:",
+        error.message
+      );
+    });
   }
 
   async assertReady(): Promise<void> {
