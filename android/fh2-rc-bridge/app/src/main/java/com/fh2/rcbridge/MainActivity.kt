@@ -11,9 +11,26 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.text.InputType
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
+    private val waylinePicker =
+        registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            if (uri == null) return@registerForActivityResult
+
+            runCatching {
+                WaylineMissionController.importKmz(this, uri)
+            }.onFailure { error ->
+                Toast.makeText(
+                    this,
+                    "KMZ Import fehlgeschlagen: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     private lateinit var sdkText: TextView
     private lateinit var controlText: TextView
     private lateinit var telemetryText: TextView
@@ -26,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapButton: Button
     private lateinit var bridgeText: TextView
     private lateinit var payloadControlText: TextView
+    private lateinit var waylineText: TextView
     private lateinit var baseUrlInput: EditText
     private lateinit var pairingTokenInput: EditText
     private lateinit var pairButton: Button
@@ -154,6 +172,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val waylineListener:
+        (WaylineMissionSnapshot) -> Unit = { state ->
+        runOnUiThread {
+            val progress =
+                if (state.uploadProgress in 0.0..1.0) {
+                    state.uploadProgress * 100.0
+                } else {
+                    state.uploadProgress
+                }
+
+            waylineText.text = buildString {
+                appendLine("Wayline / KMZ")
+                appendLine(
+                    "Datei: ${state.selectedFileName ?: "-"}"
+                )
+                appendLine(
+                    "Wayline IDs: " +
+                        if (state.availableWaylineIds.isEmpty()) {
+                            "-"
+                        } else {
+                            state.availableWaylineIds.joinToString()
+                        }
+                )
+                appendLine("Status: ${state.uploadState}")
+                append(
+                    "Upload: " +
+                        String.format("%.1f", progress) +
+                        "%"
+                )
+                state.lastError?.let {
+                    appendLine()
+                    append("Fehler: $it")
+                }
+            }
+        }
+    }
+
     private val payloadControlListener:
         (CameraGimbalControlSnapshot) -> Unit = { state ->
         runOnUiThread {
@@ -216,6 +271,9 @@ class MainActivity : AppCompatActivity() {
         payloadControlText = TextView(this).apply {
             textSize = 18f
         }
+        waylineText = TextView(this).apply {
+            textSize = 18f
+        }
         baseUrlInput = EditText(this).apply {
             hint = "FH2 URL, z. B. https://fh2.example:8080"
             inputType =
@@ -229,6 +287,35 @@ class MainActivity : AppCompatActivity() {
                 InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_VARIATION_PASSWORD
             setSingleLine(true)
+        }
+
+        val selectWaylineButton = Button(this).apply {
+            text = "KMZ auswählen"
+            setOnClickListener {
+                waylinePicker.launch(
+                    arrayOf(
+                        "application/vnd.google-earth.kmz",
+                        "application/zip",
+                        "application/octet-stream"
+                    )
+                )
+            }
+        }
+
+        val uploadWaylineButton = Button(this).apply {
+            text = "KMZ zur Aircraft hochladen"
+            setOnClickListener {
+                WaylineMissionController.uploadSelected { result ->
+                    showLocalActionResult("KMZ Upload", result)
+                }
+            }
+        }
+
+        val clearWaylineButton = Button(this).apply {
+            text = "KMZ Auswahl löschen"
+            setOnClickListener {
+                WaylineMissionController.clearSelection()
+            }
         }
 
         val photoButton = Button(this).apply {
@@ -393,7 +480,11 @@ class MainActivity : AppCompatActivity() {
             addView(rtkText, matchWidth(top = 24))
             addView(bridgeText, matchWidth(top = 24))
             addView(payloadControlText, matchWidth(top = 24))
-            addView(photoButton, matchWidth(top = 12))
+            addView(waylineText, matchWidth(top = 24))
+            addView(selectWaylineButton, matchWidth(top = 12))
+            addView(uploadWaylineButton, matchWidth(top = 12))
+            addView(clearWaylineButton, matchWidth(top = 12))
+            addView(photoButton, matchWidth(top = 24))
             addView(startVideoButton, matchWidth(top = 12))
             addView(stopVideoButton, matchWidth(top = 12))
             addView(gimbalUpButton, matchWidth(top = 12))
@@ -427,6 +518,7 @@ class MainActivity : AppCompatActivity() {
         SensorInventorySource.addListener(sensorListener)
         RtkTelemetrySource.addListener(rtkListener)
         Fh2BridgeClient.addListener(bridgeListener)
+        WaylineMissionController.addListener(waylineListener)
         CameraGimbalController.addListener(payloadControlListener)
         VirtualStickController.addListener(controlListener)
     }
@@ -438,6 +530,7 @@ class MainActivity : AppCompatActivity() {
         SensorInventorySource.removeListener(sensorListener)
         RtkTelemetrySource.removeListener(rtkListener)
         Fh2BridgeClient.removeListener(bridgeListener)
+        WaylineMissionController.removeListener(waylineListener)
         CameraGimbalController.removeListener(payloadControlListener)
         VirtualStickController.removeListener(controlListener)
         super.onDestroy()
