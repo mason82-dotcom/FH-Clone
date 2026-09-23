@@ -196,14 +196,16 @@ Nicht im Typ repräsentierbar:
 
 ## V3-Persistenz
 
-Ein erstes TimescaleDB-/PostgreSQL-Schema ist implementiert:
+Das TimescaleDB-/PostgreSQL-Schema ist für die V3-Basis implementiert:
 
 - relationale Tabelle `missions`
-- Hypertable `telemetry`
+- Hypertable `telemetry` als missionsbezogene Flugprojektion
+- Hypertable `raw_messages` für sanitierte RawMessage-Historie
+- Hypertable `normalized_parameters` für vollständige ParameterSample-Historie
 - kontinuierliches Aggregat `telemetry_1m`
-- MissionStore für automatische Missionssitzungen
+- MissionStore, TelemetryStore, Gateway-/Audit-/Media-Persistenz
 
-Weitere fachliche Bereiche bleiben V3-Ziel:
+Weitere fachliche Bereiche bleiben optionale Erweiterungen:
 
 ### Geräte
 
@@ -221,29 +223,34 @@ Die konkrete Tabellenstruktur wird erst mit der Implementierung verbindlich.
 
 ### Rohmeldungen
 
-Zu speichern:
+`raw_messages` speichert:
 
 - Adapter
-- Device/Gateway
+- Device/Gateway, soweit vorhanden
+- optionale Mission-ID
 - Topic/Kanal
 - Empfangszeit
-- Payload
-- optional Correlation-/Trace-ID
+- sanitierte JSONB-Payload
 
-Rohdaten dürfen nicht durch Normalisierung ersetzt werden.
+Rohdaten werden nicht durch Normalisierung ersetzt. Credential-/Secret-Felder
+werden vor dem Persistieren fail-closed abgelehnt.
 
 ### Normalisierte Parameter
 
-Historisch speicherbar:
+`normalized_parameters` speichert append-only:
 
 - deviceId
 - adapterId
+- optionale Mission-ID
 - key
 - rawKey
-- value
+- value als JSONB
 - unit
 - quality
 - sampledAt
+
+Damit bleibt die Adapter-Provenienz auch dann erhalten, wenn die Live-Registry
+mehrere Quellen zu einem aktuellen kanonischen Wert fusioniert.
 
 ### Topologie
 
@@ -428,6 +435,10 @@ getrennte Datenebenen:
 Live-Telemetrie
   -> ParameterRegistry
   -> fused current + per-adapter provenance
+  -> TelemetryStore
+       -> normalized_parameters
+       -> raw_messages
+       -> missionsbezogene telemetry-Projektion
 
 MediaAsset
   -> MediaStore / TimescaleDB
