@@ -359,18 +359,12 @@ jobs:
           - pr: 44
             ref: agent/msdk-keymanager-contract-v3
             label: MSDK KeyManager
-          - pr: 45
-            ref: agent/dji-wpml-readonly-v3
-            label: WPML/Pilot Waylines
           - pr: 46
             ref: agent/dji-jsbridge-v3
             label: Pilot2 JSBridge
-          - pr: 47
-            ref: agent/wpml-parser-importliste-v1
-            label: WPML Parservertrag
-          - pr: 49
-            ref: agent/wpml-template-reader-v1
-            label: WPML Template Reader
+          - pr: 51
+            ref: agent/wpml-integration-current-v1
+            label: WPML aktuelle Integration
     steps:
       - name: Aktuellen main auschecken
         uses: actions/checkout@v4
@@ -452,9 +446,11 @@ jobs:
                 JSON.parse(fs.readFileSync("docs/contracts/msdk-keymanager-contract.json", "utf8"));
               '
               ;;
-            45)
-              if git diff "$base..origin/${{ matrix.ref }}" -- apps/control-api/src                 | grep '^+'                 | grep -E 'request\.method === "(POST|PUT|PATCH|DELETE)"'; then
-                echo "::error::PR #45 enthält neue schreibende öffentliche HTTP-Routen."
+            51)
+              if git diff "$base..origin/${{ matrix.ref }}" -- apps/control-api/src packages/adapters/dji-cloud/src \
+                | grep '^+' \
+                | grep -E 'request\.method === "(POST|PUT|PATCH|DELETE)"|wayline_(upload|create|execute|start)|flighttask_(execute|prepare)'; then
+                echo "::error::PR #51 verletzt die read-only WPML-/Pilot-Grenze."
                 exit 1
               fi
               ;;

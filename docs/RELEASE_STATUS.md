@@ -4,12 +4,14 @@ Stand: 23.09.2026
 
 ## Release-Entscheidung
 
-FH2 V3.0.0 ist als **Software-/FC0-Basisrelease** vorbereitet.
+FH2 V3.0.0 ist als **Software-/FC0-Basisrelease freigegeben**.
 
 Der freigegebene Basisumfang ist fail-closed: Standardstufe ist FC0.
 Die Existenz interner FC2-/FC3-/DRC-Bausteine aktiviert keine reale
-Flugsteuerung. Der öffentliche Control-API stellt weiterhin keinen Endpoint
-bereit, der FC3 oder DJI Flight Control Authority automatisch freigibt.
+Flugsteuerung. DJI `stick_control` ist projektweit deaktiviert.
+Der separate M4-/RC-Plus-2-`drone_control`-Pfad bleibt hinter
+FC3, Control Lease, DJI Control Authority, aktiver DRC-Sitzung und
+Hardware-Evidence gegatet.
 
 ## Versionsstand
 
@@ -89,8 +91,11 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 ## Globale Produkt-Policy
 
 Seit dem Policy-Update sind **DJI Dock 1, Dock 2, Dock 3, Multi-Dock und
-PSDK-Payloads projektweit deaktiviert**. Die Sperre ist fest im DJI-Adapter und
-in der CI verankert und besitzt keinen Konfigurationsschalter.
+PSDK-Payloads projektweit deaktiviert**. Zusätzlich ist DJI `stick_control`
+global deaktiviert. Der getrennte `drone_control`-Pfad bleibt für M4 + RC
+Plus 2 vorhanden, ist aber ohne reale Hardwareabnahme nicht Teil der
+Hardware-Supportzusage. Die globalen Sperren besitzen keinen
+Konfigurationsschalter.
 
 ## Nicht als Hardwarefunktion freigegeben
 
@@ -107,12 +112,12 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
 Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
 
-- #43 Dock3/M4D/M4TD: durch globale Dock-Policy obsolet; nicht mergefähig
-- #46 Pilot2 JSBridge: Build FAIL in Direktor-CI
-- #44 MSDK KeyManager-Vertrag: Build/Test PASS, nach V3.0 verschoben
-- #45 WPML/Pilot Waylines: Build/Test PASS, Realfixture offen
-- #47 WPML Parser-Importvertrag: Build/Test PASS, nach V3.0 verschoben
-- #49 WPML template.kml Reader: Build/Test PASS, nach V3.0 verschoben
+- #44 MSDK KeyManager-Vertrag: Vertrags-/Dokumentationsstand; nach V3.0 verschoben
+- #46 Pilot2 JSBridge: noch nicht releasefähig; reales Pilot-2-Runtime-Fixture offen
+- #51 aktuelle WPML-Integration: Draft; Parser-Test für `actionUUID` schlägt fehl und reales Pilot-2-WPML-/Workspace-Fixture fehlt
+
+Die älteren WPML-Drafts #45/#47/#49 wurden in #51 konsolidiert und gehören
+nicht zum V3.0.0-Release.
 
 ## Release-Regel
 

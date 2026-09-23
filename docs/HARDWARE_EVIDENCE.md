@@ -76,12 +76,13 @@ Cloud-Flight-Control unterstützt.
 Bereits vorhanden: zwei reale, redigiert dokumentierte M3T-Wide-Samples unter
 `docs/fixtures/m3t/`. Diese schließen Tele, Thermal und MQTT nicht.
 
-## 2. RC Plus 2 + M4T Cloud-Control-Protokoll — OPTIONAL_REFERENCE
+## 2. RC Plus 2 + M4T `drone_control` — HARDWARE_PROFILE_GATE
 
 DJI dokumentiert für Matrice 4 Cloud-Flight-Control/DRC. FH2 deaktiviert
 `stick_control` global, lässt den separaten `drone_control`-DRC-Pfad aber
-aktiv. Hardwarebelege für diesen Pfad bleiben vor produktiver Nutzung
-erforderlich. Die CI **führt keine Flugbefehle aus**;
+aktiv. Dieser Pfad ist **nicht Teil der V3.0.0-Hardware-Supportzusage**, solange
+die nachfolgenden realen Nachweise fehlen. Die Belege bleiben vor produktiver
+`drone_control`-Nutzung verpflichtend. Die CI **führt keine Flugbefehle aus**;
 sie analysiert ausschließlich vorher aufgezeichnete, redigierte Captures.
 
 Erforderlich:
@@ -174,7 +175,7 @@ Wichtig: Eingebaute DJI-Kameras wie M3T/M4T bleiben davon unberührt. Die
 globale PSDK-Sperre richtet sich gegen PSDK-spezifische Erweiterungspayloads,
 nicht gegen die dokumentierten nativen Kamera-`payload_index`-Werte.
 
-## 5. WPML / Pilot Wayline — REQUIRED_DRAFT für PR #45
+## 5. WPML / Pilot Wayline — REQUIRED_DRAFT für PR #51
 
 Erforderlich:
 
