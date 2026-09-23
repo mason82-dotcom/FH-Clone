@@ -46,3 +46,30 @@ jobs:
       - name: Lint debug
         run: |
           gradle :app:lintDebug --stacktrace --no-daemon
+
+
+  node-msdk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build control API
+        run: npm run build --workspace @fh-clone/control-api
+
+      - name: MSDK bridge tests
+        run: |
+          node --test \
+            apps/control-api/dist/msdk-bridge.test.js \
+            apps/control-api/dist/msdk-normalizer.test.js
