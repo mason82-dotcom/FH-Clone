@@ -3,6 +3,7 @@ import type {
   ParameterSample,
   RawMessage
 } from "@fh-clone/aircraft-core";
+import { RetryQueue, type RetryQueueStatus } from "./retry-queue.js";
 
 const FORBIDDEN_KEY =
   /^(?:authorization|bearer(?:token)?|password|secret|token|api[_-]?key|client[_-]?secret|device[_-]?secret|nonce)$/i;
@@ -11,6 +12,13 @@ const RAW_BEARER =
 
 export interface TelemetryStoreOptions {
   connectionString?: string;
+  queueCapacity?: number;
+  retryIntervalMs?: number;
+}
+
+interface TelemetryPendingWrite {
+  kind: string;
+  write(): Promise<void>;
 }
 
 export interface TelemetryProjection {
@@ -40,8 +48,7 @@ export interface TelemetryProjection {
  */
 export class TelemetryStore {
   private readonly pool: Pool | undefined;
-  private tail: Promise<void> = Promise.resolve();
-  private writeFailure: Error | undefined;
+  private readonly queue: RetryQueue<TelemetryPendingWrite> | undefined;
 
   constructor(options: TelemetryStoreOptions = {}) {
     this.pool = options.connectionString
@@ -52,8 +59,27 @@ export class TelemetryStore {
         })
       : undefined;
 
+    this.queue = this.pool
+      ? new RetryQueue<TelemetryPendingWrite>({
+          capacity: options.queueCapacity ?? 10_000,
+          retryIntervalMs: options.retryIntervalMs ?? 1_000,
+          dropPolicy: "drop-oldest",
+          process: (item) => item.write(),
+          onError: (error) => {
+            console.error(
+              "[Telemetry] Persistenz vorübergehend nicht verfügbar:",
+              error.message
+            );
+          },
+          onDrop: (item) => {
+            console.error(
+              `[Telemetry] Queue-Limit erreicht; ältester Write verworfen (${item.kind}).`
+            );
+          }
+        })
+      : undefined;
+
     this.pool?.on("error", (error) => {
-      this.writeFailure ??= error;
       console.warn(
         "[Telemetry] PostgreSQL pool connection lost; next query will reconnect:",
         error.message
@@ -65,10 +91,18 @@ export class TelemetryStore {
     return Boolean(this.pool);
   }
 
+  get status(): RetryQueueStatus {
+    return this.queue?.status ?? {
+      pending: 0,
+      dropped: 0,
+      healthy: true
+    };
+  }
+
   enqueueRaw(message: RawMessage, missionId?: string): void {
     if (!this.pool) return;
+    assertTelemetryPersistenceSafe(message.payload, "$.payload");
     this.enqueue("raw_message", async () => {
-      assertTelemetryPersistenceSafe(message.payload, "$.payload");
       await this.pool!.query(
         `INSERT INTO raw_messages (
            received_at,
@@ -103,9 +137,8 @@ export class TelemetryStore {
     projectionSample: ParameterSample = sample
   ): void {
     if (!this.pool) return;
+    assertParameterSamplePersistenceSafe(sample);
     this.enqueue("parameter_sample", async () => {
-      assertParameterSamplePersistenceSafe(sample);
-
       await this.pool!.query(
         `INSERT INTO normalized_parameters (
            sampled_at,
@@ -155,29 +188,27 @@ export class TelemetryStore {
   }
 
   async ping(): Promise<boolean> {
-    if (!this.pool || this.writeFailure) return false;
+    if (!this.pool) return false;
     try {
       await this.pool.query("SELECT 1 FROM raw_messages LIMIT 0");
       await this.pool.query(
         "SELECT 1 FROM normalized_parameters LIMIT 0"
       );
-      return true;
+      this.queue?.kick();
+      return this.queue?.status.healthy ?? true;
     } catch {
       return false;
     }
   }
 
   async flush(): Promise<void> {
-    await this.tail;
-    if (this.writeFailure) {
-      throw this.writeFailure;
-    }
+    await this.queue?.flush();
   }
 
   async close(): Promise<void> {
     let failure: unknown;
     try {
-      await this.flush();
+      await this.queue?.shutdown();
     } catch (error) {
       failure = error;
     } finally {
@@ -190,19 +221,7 @@ export class TelemetryStore {
     kind: string,
     write: () => Promise<void>
   ): void {
-    this.tail = this.tail
-      .then(async () => {
-        await write();
-      })
-      .catch((error: unknown) => {
-        const normalized =
-          error instanceof Error ? error : new Error(String(error));
-        this.writeFailure ??= normalized;
-        console.error(
-          `[Telemetry] Persistenzfehler (${kind}):`,
-          normalized.message
-        );
-      });
+    this.queue?.enqueue({ kind, write });
   }
 
   private async writeMissionProjection(
