@@ -113,6 +113,9 @@ private fun AircraftTelemetrySnapshot.toJson() =
         putNullable("latitude", latitude)
         putNullable("longitude", longitude)
         putNullable("altitudeM", altitudeM)
+        putNullable("homeLatitude", homeLatitude)
+        putNullable("homeLongitude", homeLongitude)
+        putNullable("headingDeg", headingDeg)
     }
 
 private fun SensorComponentSnapshot.toJson() =
