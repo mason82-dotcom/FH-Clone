@@ -1,6 +1,17 @@
 name: Direktor V3 Validierung
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       r1_bootstrap:
@@ -8,6 +19,34 @@ on:
         type: boolean
         required: false
         default: false
+      hardware_scope:
+        description: "Hardware-Evidence: main oder zusätzlich alle Draft-Gates"
+        type: choice
+        required: true
+        default: main
+        options:
+          - main
+          - all
+      multi_dock_required:
+        description: "Multi-Dock-Hardware als Pflichtgate aktivieren"
+        type: boolean
+        required: false
+        default: false
+      psdk_required:
+        description: "PSDK-Hardware als Pflichtgate aktivieren"
+        type: boolean
+        required: false
+        default: false
+      drc_hsi_required:
+        description: "DRC hsi_info_push als Pflichtgate aktivieren"
+        type: boolean
+        required: false
+        default: false
+      analyze_drafts:
+        description: "Draft-PRs #43-#46 gegen aktuellen main analysieren"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -195,11 +234,18 @@ jobs:
           cp .env.example .env
           docker compose --env-file .env up -d
 
-          for attempt in $(seq 1 30); do
-            if docker compose --env-file .env exec -T timescaledb               pg_isready -U fhclone -d fhclone >/dev/null 2>&1; then
+          for attempt in $(seq 1 45); do
+            schema_ready="$(docker compose --env-file .env exec -T timescaledb               psql -U fhclone -d fhclone -tAc               "SELECT CASE WHEN
+                 to_regclass('public.missions') IS NOT NULL
+                 AND to_regclass('public.authz_audit') IS NOT NULL
+                 AND to_regclass('public.gateway_credentials') IS NOT NULL
+                 AND to_regclass('public.dji_gateways') IS NOT NULL
+                 AND to_regclass('public.dji_gateway_devices') IS NOT NULL
+               THEN 1 ELSE 0 END" 2>/dev/null || true)"
+            if [ "$(printf '%s' "$schema_ready" | tr -d '[:space:]')" = "1" ]; then
               break
             fi
-            if [ "$attempt" -eq 30 ]; then
+            if [ "$attempt" -eq 45 ]; then
               docker compose --env-file .env logs
               exit 1
             fi
@@ -232,6 +278,40 @@ jobs:
         working-directory: infra/timescale
         run: docker compose --env-file .env down -v || true
 
+  runtime:
+    name: Root Compose / Runtime Verify
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.r1_bootstrap }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: CI-Runtime-Konfiguration erzeugen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          sed -i 's/^FH2_API_BIND=.*/FH2_API_BIND=127.0.0.1/' .env
+          sed -i 's/^FH2_WEB_BIND=.*/FH2_WEB_BIND=127.0.0.1/' .env
+          sed -i 's/^MQTT_BIND=.*/MQTT_BIND=127.0.0.1/' .env
+          sed -i 's/^EMQX_NODE_COOKIE=.*/EMQX_NODE_COOKIE=ci-emqx-node-cookie-A7-safe/' .env
+          sed -i 's/^TIMESCALE_PASSWORD=.*/TIMESCALE_PASSWORD=ci-timescale-A7-safe/' .env
+          sed -i 's/^MQTT_BACKEND_PASSWORD=.*/MQTT_BACKEND_PASSWORD=ci-backend-A7-safe/' .env
+          sed -i 's/^EMQX_AUTHN_TOKEN=.*/EMQX_AUTHN_TOKEN=ci-authn-A7-safe/' .env
+          sed -i 's/^EMQX_AUTHZ_TOKEN=.*/EMQX_AUTHZ_TOKEN=ci-authz-A7-safe/' .env
+          ! grep -Eq '=(change-me|change-me-)' .env
+
+      - name: Vollständige Root-Runtime verifizieren
+        run: ./scripts/verify.sh
+
+      - name: Runtime-Logs bei Fehlern
+        if: failure()
+        run: docker compose --env-file .env logs --no-color || true
+
+      - name: Runtime abbauen
+        if: always()
+        run: docker compose --env-file .env down -v --remove-orphans || true
+
   dokumentation:
     name: Deutsche V3-Dokumentation
     if: ${{ !inputs.r1_bootstrap }}
@@ -251,3 +331,170 @@ jobs:
               exit 1
             }
           done
+
+
+  hardware-evidence:
+    name: DJI Hardware Evidence
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.r1_bootstrap }}
+    continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js 22.23.2 einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: Reale DJI-Hardware-Nachweise prüfen
+        env:
+          FH2_HARDWARE_SCOPE: ${{ inputs.hardware_scope }}
+          FH2_MULTI_DOCK_REQUIRED: ${{ inputs.multi_dock_required }}
+          FH2_PSDK_REQUIRED: ${{ inputs.psdk_required }}
+          FH2_DRC_HSI_REQUIRED: ${{ inputs.drc_hsi_required }}
+        run: node scripts/hardware-evidence-audit.mjs
+
+      - name: Evidence-Vertrag muss vorhanden sein
+        if: always()
+        run: test -s docs/HARDWARE_EVIDENCE.md
+
+  draft-analysis:
+    name: "Draft #${{ matrix.pr }} · ${{ matrix.label }}"
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.r1_bootstrap && inputs.analyze_drafts) }}
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pr: 43
+            ref: agent/m4d-dock3-properties-v4
+            label: Dock3 M4D/M4TD
+          - pr: 44
+            ref: agent/msdk-keymanager-contract-v3
+            label: MSDK KeyManager
+          - pr: 45
+            ref: agent/dji-wpml-readonly-v3
+            label: WPML/Pilot Waylines
+          - pr: 46
+            ref: agent/dji-jsbridge-v3
+            label: Pilot2 JSBridge
+          - pr: 47
+            ref: agent/wpml-parser-importliste-v1
+            label: WPML Parservertrag
+          - pr: 49
+            ref: agent/wpml-template-reader-v1
+            label: WPML Template Reader
+    steps:
+      - name: Aktuellen main auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Draft und Branch-Drift erfassen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/${{ matrix.ref }}:refs/remotes/origin/${{ matrix.ref }}"
+          behind="$(git rev-list --count "origin/${{ matrix.ref }}..origin/main")"
+          ahead="$(git rev-list --count "origin/main..origin/${{ matrix.ref }}")"
+          merge_base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
+          {
+            printf '## Draft #%s – %s\n\n' '${{ matrix.pr }}' '${{ matrix.label }}'
+            printf -- '- Branch: %s\n' '${{ matrix.ref }}'
+            printf -- '- Ahead gegenüber main: **%s**\n' "$ahead"
+            printf -- '- Behind gegenüber main: **%s**\n' "$behind"
+            printf -- '- Merge-Base: %s\n' "$merge_base"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ephemeren main+Draft-Stand erzeugen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "FH2 Director CI"
+          git config user.email "director-ci@users.noreply.github.com"
+          git checkout -B "ci-draft-${{ matrix.pr }}" "origin/${{ matrix.ref }}"
+          if ! git merge --no-commit --no-ff origin/main; then
+            {
+              echo
+              echo "### Ergebnis"
+              echo
+              echo "**MERGE_CONFLICT**"
+              echo
+              echo "Konfliktdateien:"
+              git diff --name-only --diff-filter=U | sed 's/^/- /'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Node.js 22.23.2 und npm 11.19.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.2"
+
+      - name: npm 11.19.1 einrichten
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.19.1 --no-audit --no-fund
+          test "$(npm --version)" = "11.19.1"
+
+      - name: Reproduzierbar installieren
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Draft-spezifische Safety-Grenzen prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
+          patch="/tmp/pr-${{ matrix.pr }}.patch"
+          git diff "$base..origin/${{ matrix.ref }}" > "$patch"
+
+          case "${{ matrix.pr }}" in
+            43)
+              if git diff "$base..origin/${{ matrix.ref }}" -- packages/adapters/dji-cloud/src                 | grep '^+'                 | grep -E '"control\.|property/set|drc/down'; then
+                echo "::error::PR #43 erweitert den read-only Codepfad um Control-/Write-Muster."
+                exit 1
+              fi
+              ;;
+            44)
+              node -e '
+                const fs = require("fs");
+                JSON.parse(fs.readFileSync("docs/contracts/msdk-keymanager-contract.json", "utf8"));
+              '
+              ;;
+            45)
+              if git diff "$base..origin/${{ matrix.ref }}" -- apps/control-api/src                 | grep '^+'                 | grep -E 'request\.method === "(POST|PUT|PATCH|DELETE)"'; then
+                echo "::error::PR #45 enthält neue schreibende öffentliche HTTP-Routen."
+                exit 1
+              fi
+              ;;
+            46)
+              if git diff "$base..origin/${{ matrix.ref }}" -- .env.example apps/web infra/docker                 | grep '^+'                 | grep -Ei 'VITE_.*(MQTT.*PASSWORD|EMQX.*TOKEN|DRC.*PASSWORD|AUTH_TOKEN)'; then
+                echo "::error::PR #46 würde Backend-/MQTT-/DRC-Secrets ins Browser-Bundle verdrahten."
+                exit 1
+              fi
+              ;;
+          esac
+
+      - name: Draft-Ergebnis dokumentieren
+        if: success()
+        run: |
+          {
+            echo
+            echo "### Ergebnis"
+            echo
+            echo "**MERGE_SIMULATION_BUILD_TEST_PASS**"
+            echo
+            echo "Hardware-Evidence wird separat im zentralen Hardware-Evidence-Job bewertet."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -117,6 +117,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       protocolVersion: 5,
       clean: false,
       reconnectPeriod: 2_000,
+      reconnectOnConnackError: true,
       connectTimeout: 10_000,
       ...(this.options.username ? { username: this.options.username } : {}),
       ...(this.options.password ? { password: this.options.password } : {}),
@@ -135,23 +136,19 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       this.connected = false;
     });
 
+    client.on("error", (error) => {
+      this.connected = false;
+      console.warn("DJI MQTT connection error; retrying", error.message);
+    });
+
     client.on("message", (topic, bytes) => {
       void this.handleMessage(topic, bytes).catch((error: unknown) => {
         console.error("DJI MQTT message processing failed", error);
       });
     });
 
-    await new Promise<void>((resolve, reject) => {
-      const onConnect = () => {
-        client.off("error", onError);
-        resolve();
-      };
-      const onError = (error: Error) => {
-        client.off("connect", onConnect);
-        reject(error);
-      };
-      client.once("connect", onConnect);
-      client.once("error", onError);
+    await new Promise<void>((resolve) => {
+      client.once("connect", () => resolve());
     });
   }
 

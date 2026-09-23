@@ -1,55 +1,71 @@
 # Changelog
 
-Alle wesentlichen Änderungen an FH-Clone werden hier für den V3-Abschluss
-zusammengeführt.
+Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
-### Architektur
+Keine Änderungen. V3.0.0 ist der eingefrorene Basisstand.
+
+## 3.0.0 – 2026-09-23
+
+### Plattform
 
 - SDK-neutraler Aircraft Core
 - DJI Cloud API / MQTT Adapter
 - RC-Pro-/RC-Plus-2-Gateway- und Sub-Device-Topologie
-- UgCS Groundstation Adapter
-- TimescaleDB-/PostgreSQL-Persistenzbausteine
+- UgCS Groundstation Adapter und Java-Bridge
+- TimescaleDB-/PostgreSQL-Persistenz
+- Root-Compose für Control API, EMQX, Web und TimescaleDB
+- reproduzierbarer npm-11.19.1-Lockfile-Stand
 
 ### Safety und Control
 
 - SafetyGate FC0..FC3
+- FC0 als Standard
 - Control Lease und Control Authority
 - DJI Cloud-Control-Authority
 - getrennte Basic-Link-/DRC-Sicherheitsdomänen
 - DRC Session Manager mit Dead-Man
-- DRC Transport und Recovery
-- V3 Control Coordinator
+- Transport-Recovery
+- keine öffentliche automatische FC3-Freigabe
 
 ### Security
 
 - EMQX Default-Deny
-- dynamische HTTP AuthN/AuthZ-Architektur
-- trusted Gateway Identity als Zielmodell
+- HTTP AuthN/AuthZ
+- serverseitige Gateway-Credential-Bindung
 - Runtime-only Topology-/DRC-Autorisierung
+- AuthZ-Audit
+- fail-closed interne Fehlerbehandlung
 - keine Browser-MQTT-Credentials
 
-### RTK, Mission und Media
+### Telemetrie, RTK, Mission und Media
 
-- RTK-/GNSS-Normalisierung
-- RTK-Live-API und WebUI
-- Missions-/RTK-Metadaten
-- Media-/Multispektral-Vertrag in V3-Konvergenz
+- normalisierte DJI-Telemetrie
+- RTK-/GNSS-Normalisierung und Live-API
+- Missionsbeobachtung und Persistenz
+- herstellerneutraler Media-/Multispektral-Core
+- NDVI READY/PARTIAL/NOT_NDVI_CAPABLE
+- reale M3T-Wide-EXIF/XMP-Evidenz
+- DJI `attitude_pitch` / `attitude_roll` kanonisch korrigiert
+- FlightHub-2 OpenAPI V2 read-only
 
-### Noch nicht freigegeben
+### Release-CI
 
-- finaler Root-Compose
-- finale RC-Pro-Hardwareabnahme
-- finaler Multispektral-/NDVI-Vertrag
-- vollständige V3-Test-/Safety-Abnahme
-- Direktor-CI
-- Version `3.0.0`
+- automatische PR-/main-Direktor-CI
+- npm ci / Build / Typecheck / Tests
+- Root-Compose-Struktur
+- UgCS-Build
+- TimescaleDB/Migrationen
+- vollständige Root-Runtime-`verify.sh`-Abnahme
+- zentrale reale DJI-Hardware-Evidence-Matrix
+- automatische Analyse der offenen DJI-Drafts
 
-## 3.0.0
+### Nicht im V3.0.0-Hardware-Supportumfang
 
-Noch nicht veröffentlicht.
-
-Dieser Abschnitt wird erst beim freigegebenen Release Candidate/finalen
-V3-Release mit Datum und finalen Release Notes ausgefüllt.
+- M4T FC3/DRC ohne reale Hardwareabnahme
+- Dock3/M4D/M4TD
+- Pilot-2-JSBridge
+- vollständige WPML/Pilot-Wayline-Integration
+- produktive M3M-Radiometrie ohne reale Capture-Fixtures
+- nicht belegte M3T/M4T Thermal-/Tele-Medienpfade

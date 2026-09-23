@@ -20,6 +20,7 @@ COPY packages packages
 
 RUN npm run build -w @fh-clone/aircraft-core \
  && npm run build -w @fh-clone/adapter-dji-cloud \
+ && npm run build -w @fh-clone/adapter-ugcs \
  && npm run build -w @fh-clone/control-api
 
 ENV NODE_ENV=production

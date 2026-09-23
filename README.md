@@ -4,9 +4,10 @@ FH-Clone ist die modulare, lokale Integrationsplattform für DJI-Enterprise-
 Fluggeräte, FlightHub-2-nahe Funktionen, DJI Cloud API, RTK, Medien,
 Multispektral-Verarbeitung und Groundstation-Anbindung.
 
-Der aktuelle Stand auf `main` ist **V3-Entwicklung**. Die Versionsnummer
-`3.0.0` wird erst gesetzt, wenn alle V3-Release-Gates erfüllt und vom
-Direktor freigegeben wurden.
+Der freigegebene Basisstand ist **FH2 V3.0.0**. Der Release ist als
+Software-/FC0-Basisstand definiert: hardwareabhängige FC3-, DRC-, Dock-,
+Pilot-2-, Thermal- und produktive Multispektralpfade benötigen zusätzlich
+ihre jeweils dokumentierte reale Hardwareabnahme.
 
 ## Projektziel
 
@@ -89,14 +90,14 @@ Auf `main` sind unter anderem vorhanden:
 - FlightHub-2-OpenAPI-V2-Client für Waylines und Flight Tasks (read-only)
 - read-only Mission-/Wayline-/Capability-APIs
 
-Noch nicht als V3 freigegeben sind insbesondere:
+Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 
-- Root-`package-lock.json` und reproduzierbarer `npm ci`-Nachweis
-- vollständige lokale Root-Compose-/Restart-/Verify-Abnahme
-- vollständige TimescaleDB-/PostgreSQL-Persistenz für alle V3-Zieldaten
-- reale RC-Pro-Verifikation des MQTT-Sitzungsverhaltens
-- finaler Multispektral-/Media-Vertrag mit realen M3M-Fixtures
-- finale Safety-/Hardware-Abnahme und Direktor-CI
+- M4E/M4T FC3-/DRC-Flugsteuerung ohne reale Hardwareabnahme
+- Dock3/M4D/M4TD
+- Pilot-2-JSBridge
+- vollständige WPML/Pilot-Wayline-Integration aus offenen Drafts
+- produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
+- nicht real belegte M3T/M4T Tele-/Thermal-Medienpfade
 
 ## Sicherheitsmodell
 
