@@ -210,9 +210,22 @@ Details: [LIVESTREAM.md](LIVESTREAM.md).
 
 ### DJI Mobile SDK V5
 
-Vorgesehener Android-/RC-Adapter. SDK-KeyManager- und Gerätewerte werden in
-die Core-Verträge übersetzt. Ein MSDK-Adapter darf keine DJI-Typen in den Core
-durchreichen.
+Implementierter Android-/RC-Adapter auf MSDK 5.18.0. Geräte-, Sensor-, RTK-,
+Pairing-/Control- und KeyManager-Zustände werden als herstellerneutraler
+BridgeSnapshot an die Control API übertragen.
+
+Der KeyManager-Runtimeblock instanziiert konkrete DJI-Keys, erfasst
+`isCanGet/isCanSet/isCanListen/isCanPerformAction`, führt read-only
+Cache-/Hardware-Probes aus und verwaltet Listener über einen eigenen Holder.
+ComponentIndex und bei Kamera-Keys der Lens-Kontext bleiben Teil der
+Key-Identität.
+
+Ein `canSet=true` oder `canPerformAction=true` ist nur Adapterevidenz.
+Es erzeugt keine automatische Core-`control.*`-Capability und umgeht weder
+SafetyGate noch Control Lease/Authority. DJI-Typen werden nicht in den Core
+durchgereicht.
+
+Details: [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md).
 
 ### UgCS
 
