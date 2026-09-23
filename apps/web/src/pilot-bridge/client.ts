@@ -197,16 +197,19 @@ export class DjiPilotBridgeClient {
   }
 
   getIdentity(): DjiPilotIdentity {
-    return {
-      remoteControllerSn: asString(
-        unwrap(
-          runtime().platformGetRemoteControllerSN(),
-          "platformGetRemoteControllerSN"
-        )
-      ),
-      aircraftSn: asString(
-        unwrap(runtime().platformGetAircraftSN(), "platformGetAircraftSN")
+    const remoteControllerSn = asString(
+      unwrap(
+        runtime().platformGetRemoteControllerSN(),
+        "platformGetRemoteControllerSN"
       )
+    );
+    const aircraftSn = asString(
+      unwrap(runtime().platformGetAircraftSN(), "platformGetAircraftSN")
+    );
+
+    return {
+      ...(remoteControllerSn ? { remoteControllerSn } : {}),
+      ...(aircraftSn ? { aircraftSn } : {})
     };
   }
 
