@@ -53,6 +53,8 @@ test("drop-oldest bounds high-volume queues explicitly", async () => {
 
   // enqueue(2) immediately kicks a retry of item 1. Once item 1 is
   // in-flight it must never be dropped; pressure therefore evicts item 2.
+  // Let that deliberately failing retry settle before simulating DB recovery.
+  await new Promise<void>((resolve) => setImmediate(resolve));
   assert.deepEqual(dropped, [2]);
   assert.equal(queue.status.dropped, 1);
 
