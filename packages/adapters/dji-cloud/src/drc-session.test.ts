@@ -16,6 +16,7 @@ class FakeTransport implements DrcSessionTransport {
   neutralCommands = 0;
   exitCalls = 0;
   stickCommands = 0;
+  droneCommands = 0;
   sequenceResets = 0;
 
   resetControlSequence(): void {
@@ -33,6 +34,11 @@ class FakeTransport implements DrcSessionTransport {
   async sendStickControl(): Promise<number> {
     this.stickCommands += 1;
     return this.stickCommands;
+  }
+
+  async sendControl(): Promise<number> {
+    this.droneCommands += 1;
+    return this.droneCommands;
   }
 
   async sendNeutralStickControl(): Promise<number> {
@@ -97,6 +103,7 @@ test("session follows explicit setup -> controlling -> draining -> closed", asyn
     aircraftSn: "M4T-001",
     gatewaySn: "RC-PLUS2-001",
     holder: "operator-a",
+    controlMethods: ["stick", "drone"],
     guards: preAuthorityGuards
   });
   assert.equal(requesting.state, "requesting");
@@ -155,6 +162,7 @@ test("dead-man degrades at 500ms and closes at 2s", async () => {
     aircraftSn: "M4T-002",
     gatewaySn: "RC-PLUS2-002",
     holder: "operator-a",
+    controlMethods: ["stick", "drone"],
     guards: preAuthorityGuards
   });
   await advanceToControlling(manager, "RC-PLUS2-002");
@@ -188,6 +196,7 @@ test("DJI authority loss force-closes without a neutral publish", async () => {
     aircraftSn: "M4T-003",
     gatewaySn: "RC-PLUS2-003",
     holder: "operator-a",
+    controlMethods: ["stick", "drone"],
     guards: preAuthorityGuards
   });
   await advanceToControlling(manager, "RC-PLUS2-003");
@@ -218,6 +227,7 @@ test("loss of FH-Clone lease drains while DJI authority still exists", async () 
     aircraftSn: "M4T-004",
     gatewaySn: "RC-PLUS2-004",
     holder: "operator-a",
+    controlMethods: ["stick", "drone"],
     guards: preAuthorityGuards
   });
   await advanceToControlling(manager, "RC-PLUS2-004");
@@ -285,6 +295,7 @@ test("assigns a unique runtime session id and does not rehydrate it", async () =
     aircraftSn: "M4T-RUNTIME",
     gatewaySn: "RC-RUNTIME",
     holder: "operator-a",
+    controlMethods: ["stick", "drone"],
     guards: preAuthorityGuards
   });
 
@@ -300,4 +311,51 @@ test("assigns a unique runtime session id and does not rehydrate it", async () =
   );
 
   assert.equal(await restarted.get("RC-RUNTIME"), undefined);
+});
+
+
+test("M3-style session accepts drone_control and rejects stick_control", async () => {
+  const transport = new FakeTransport();
+  const store = new InMemoryDrcSessionStore();
+  const manager = new DrcSessionManager(transport, store, {
+    checkIntervalMs: 60_000
+  });
+
+  await manager.request({
+    aircraftSn: "M3T-001",
+    gatewaySn: "RC-PRO-001",
+    holder: "operator-a",
+    controlMethods: ["drone"],
+    guards: preAuthorityGuards
+  });
+  await manager.markAuthorized("RC-PRO-001");
+  await manager.markAuthorityGrabbed("RC-PRO-001");
+  await manager.markDrcModeActive("RC-PRO-001");
+  await manager.setTransportConnected("RC-PRO-001", true);
+  await manager.activate({ gatewaySn: "RC-PRO-001", guards: activeGuards });
+
+  await manager.sendDroneControl(
+    "RC-PRO-001",
+    { x: 0.5, y: -0.5, h: 0, w: 5 },
+    activeGuards
+  );
+  assert.equal(transport.droneCommands, 1);
+
+  await assert.rejects(
+    manager.sendStick(
+      "RC-PRO-001",
+      {
+        roll: DJI_STICK_CENTER,
+        pitch: DJI_STICK_CENTER,
+        throttle: DJI_STICK_CENTER,
+        yaw: DJI_STICK_CENTER
+      },
+      activeGuards
+    ),
+    /does not allow stick_control/
+  );
+
+  await manager.closeGracefully("RC-PRO-001", "operator_release");
+  assert.equal(transport.droneCommands, 2);
+  assert.equal(transport.neutralCommands, 0);
 });
