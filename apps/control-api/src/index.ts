@@ -884,12 +884,15 @@ function getDeviceCapabilityView(deviceId: string) {
           capabilities: msdkDevice.capabilities,
           reportedCapabilities: msdkAgent.snapshot.capabilities,
           networkControlImplemented: false,
+          networkControlArmed:
+            msdkAgent.snapshot.control.networkArmed,
           localVirtualStickState: {
             supported:
               msdkAgent.snapshot.capabilities.virtualStick === true,
-            enabled: msdkAgent.snapshot.control.enabled,
+            enabled:
+              msdkAgent.snapshot.control.virtualStick.enabled,
             authorityOwner:
-              msdkAgent.snapshot.control.authorityOwner
+              msdkAgent.snapshot.control.virtualStick.authorityOwner
           }
         }
       : null,
