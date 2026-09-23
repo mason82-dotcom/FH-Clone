@@ -118,6 +118,7 @@ separaten Hosting-Cleanup-Gates.
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
 - Android MSDK V5 KeyManager-Runtimeinventar mit read-only Hardware-Probes
+- Android-MSDK-MediaManager bereinigt Listener/Cache auch nach fehlgeschlagenem Enable und ist per CI-Regressionstest abgesichert
 - authentifizierter MSDK-Agent-Controltransport ist softwareseitig implementiert; öffentliche Operator-Control-API bleibt deaktiviert
 - Pilot 2 JSBridge read-only Runtime für Verifikation, Identität und Modulstatus
 - zentrale DJI-`ControlCoordinator`-Runtime im Serverprozess
