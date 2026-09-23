@@ -1342,11 +1342,18 @@ function createTopologyPersistenceQueue(
     ? new RetryQueue<TopologyChange>({
         capacity: 1_000,
         retryIntervalMs: 1_000,
+        dropPolicy: "drop-oldest",
         process: (change) => store.save(change),
         onError: (error) => {
           console.error(
             "[Topology] Inventory persistence unavailable; retrying:",
             errorMessage(error)
+          );
+        },
+        onDrop: (change) => {
+          console.warn(
+            "[Topology] Queue-Limit erreicht; älterer vollständiger Snapshot verworfen:",
+            change.current.gatewaySn
           );
         }
       })
