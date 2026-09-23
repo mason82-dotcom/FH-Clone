@@ -13,6 +13,12 @@ data class BridgeCapabilities(
     val virtualStick: Boolean
 )
 
+data class BridgeControlSnapshot(
+    val virtualStick: VirtualStickSnapshot,
+    val networkArmed: Boolean,
+    val networkArmedAt: Long?
+)
+
 data class BridgeSnapshot(
     val schema: String = "fh2.msdk.v1",
     val timestampMs: Long,
@@ -23,7 +29,7 @@ data class BridgeSnapshot(
     val rtk: RtkSnapshot,
     val payloadControl: CameraGimbalControlSnapshot,
     val wayline: WaylineMissionSnapshot,
-    val control: VirtualStickSnapshot,
+    val control: BridgeControlSnapshot,
     val capabilities: BridgeCapabilities
 ) {
     fun toJson(): JSONObject =
@@ -91,7 +97,11 @@ object BridgeSnapshotProvider {
             rtk = RtkTelemetrySource.snapshot,
             payloadControl = CameraGimbalController.snapshot,
             wayline = WaylineMissionController.snapshot,
-            control = VirtualStickController.snapshot,
+            control = BridgeControlSnapshot(
+                virtualStick = VirtualStickController.snapshot,
+                networkArmed = NetworkControlArm.snapshot.armed,
+                networkArmedAt = NetworkControlArm.snapshot.armedAt
+            ),
             capabilities = capabilities
         )
     }
@@ -210,6 +220,13 @@ private fun WaylineMissionSnapshot.toJson() =
         put("uploadProgress", uploadProgress)
         putNullable("uploadedAt", uploadedAt)
         putNullable("lastError", lastError)
+    }
+
+private fun BridgeControlSnapshot.toJson() =
+    JSONObject().apply {
+        put("networkArmed", networkArmed)
+        putNullable("networkArmedAt", networkArmedAt)
+        put("virtualStick", virtualStick.toJson())
     }
 
 private fun VirtualStickSnapshot.toJson() =
