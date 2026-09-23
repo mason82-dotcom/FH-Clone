@@ -219,11 +219,17 @@ durchreichen.
 UgCS ist ein eigenständiger Groundstation-Adapter. DJI-Geräteintegration und
 Groundstation-Missionslogik bleiben getrennte Verantwortungsbereiche.
 
-### Weitere SDKs
+### Weitere SDKs und globale Ausschlüsse
 
-PSDK, OSDK, Edge SDK oder Fremdprotokolle werden erst aufgenommen, wenn ein
-konkreter V3-Release-Gate- oder späterer Projektauftrag dies verlangt. Für den
-aktuellen V3-Abschluss gilt Feature-Freeze.
+PSDK-Payloads sind global deaktiviert. Ebenso werden DJI Dock 1, Dock 2,
+Dock 3 und Multi-Dock nicht in die aktive FH2-Runtime aufgenommen.
+
+Die DJI-Dock-Domain `domain=3` wird fail-closed verworfen. PSDK-spezifische
+Methoden und Felder werden blockiert beziehungsweise vor Persistenz und
+Normalisierung entfernt. Dafür existiert bewusst kein Runtime-Feature-Flag.
+
+OSDK, Edge SDK oder sonstige Fremdprotokolle werden nur nach einem neuen,
+expliziten Projektauftrag aufgenommen.
 
 ## Persistenz
 
