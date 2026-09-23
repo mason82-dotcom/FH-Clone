@@ -76,4 +76,5 @@ jobs:
         run: |
           node --test \
             apps/control-api/dist/msdk-bridge.test.js \
+            apps/control-api/dist/msdk-control.test.js \
             apps/control-api/dist/msdk-normalizer.test.js
