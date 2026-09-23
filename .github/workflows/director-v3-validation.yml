@@ -27,11 +27,6 @@ on:
         options:
           - main
           - all
-      drc_hsi_required:
-        description: "DRC hsi_info_push als Pflichtgate aktivieren"
-        type: boolean
-        required: false
-        default: false
       analyze_drafts:
         description: "Aktive Post-Release-Drafts gegen aktuellen main analysieren"
         type: boolean
@@ -340,7 +335,6 @@ jobs:
       - name: Reale DJI-Hardware-Nachweise prüfen
         env:
           FH2_HARDWARE_SCOPE: ${{ inputs.hardware_scope }}
-          FH2_DRC_HSI_REQUIRED: ${{ inputs.drc_hsi_required }}
         run: node scripts/hardware-evidence-audit.mjs
 
       - name: Evidence-Vertrag muss vorhanden sein
