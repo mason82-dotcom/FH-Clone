@@ -101,6 +101,36 @@ raw.<adapter>.<rawKey>
 Damit gehen neue DJI-Felder nicht verloren, bevor ein stabiler
 Domänenvertrag existiert.
 
+
+### DJI-Telemetrie-Fusion
+
+Mehrere DJI-Adapter dürfen dasselbe Aircraft gleichzeitig beobachten. FH2
+führt deshalb identische Semantik auf identische kanonische Keys zusammen.
+
+Beispiele:
+
+```text
+DJI Cloud latitude
+MSDK latitude
+  -> flight.position.latitude_deg
+
+DJI Cloud attitude_head
+MSDK compass heading
+  -> flight.attitude.yaw_deg
+```
+
+Für RTK bleibt der originale MSDK-`RTKPositioningSolution` zusätzlich unter
+`raw.msdk.rtk.positioning_solution` erhalten. Der gemeinsame FH2-Statusraum
+verwendet `not_started | fixing | fixed | unknown`; `FIXED_POINT` wird
+zusätzlich zu `navigation.rtk.fixed=true`.
+
+Die Fusion verwirft keine Adapterprovenienz: der normale Telemetrieendpunkt
+liefert den aktuellen fusionierten Wert, während `/telemetry/sources` die
+jeweils letzten Adapterwerte zeigt.
+
+MSDK-`CameraIndex` und Cloud-`payload_index` werden ausdrücklich **nicht**
+zusammengelegt, solange keine authoritative Zuordnung existiert.
+
 ## Capability-Modell
 
 Beispiele:
