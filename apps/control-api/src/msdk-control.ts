@@ -306,6 +306,13 @@ export class MsdkControlHub {
   tick(): void {
     const now = this.now();
 
+    for (const [aircraftSn, peerRecord] of this.peers) {
+      if (peerRecord.identity.expiresAt > now) continue;
+
+      peerRecord.peer.close(4003, "agent_token_expired");
+      this.unregisterPeer(aircraftSn, peerRecord.peer);
+    }
+
     for (const [aircraftSn, session] of this.sessions) {
       if (session.state === "closed") continue;
 
