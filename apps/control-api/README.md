@@ -41,12 +41,14 @@ Ohne `DJI_MQTT_URL` bleibt die HTTP-API lauffähig, der DJI-Adapter ist jedoch
 deaktiviert.
 
 Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
-`MissionStore` für automatische Missionssitzungen und den `MediaStore`
-für validierte MediaAssets. Persistierte Assets werden beim Start in den
-MediaOverlay-Registry rehydriert.
+`MissionStore`, den `MediaStore` und den `TelemetryStore`.
+Der TelemetryStore persistiert sanitierte DJI-/MSDK-Rohmeldungen sowie die
+vollständige normalisierte Parameterhistorie mit Adapter-Provenienz.
+Persistierte MediaAssets werden beim Start in den MediaOverlay-Registry
+rehydriert.
 
-Die Readiness prüft beide Stores separat. Ein konfigurierter, aber nicht
-erreichbarer MediaStore macht `/ready` fail-closed.
+Die Readiness prüft die konfigurierten Stores separat. Ein nicht erreichbarer
+Media- oder TelemetryStore macht `/ready` fail-closed.
 
 ## Umgebungsvariablen
 
@@ -91,7 +93,7 @@ Der FH2-Client ist read-only und folgt keinen HTTP-Redirects.
 
 ### TimescaleDB und RTK-Metadaten
 
-- `TIMESCALE_URL` – aktiviert Missionspersistenz
+- `TIMESCALE_URL` – aktiviert Missions-, Medien- und Telemetriehistorie
 - `RTK_SOURCE_LABEL` – optionale nicht-sensitive Bezeichnung der RTK-Quelle
 - `RTK_SOURCE_PROVIDER` – optionaler nicht-sensitiver Anbietername
 
