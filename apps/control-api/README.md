@@ -376,6 +376,7 @@ ControlCoordinator und damit hinter FC3, Control Lease und den
 DRC-Sicherheitsguards.
 
 Für Mavic 3 Enterprise wird das RC-Pro-Cloud-Control-Profil nur bei eindeutig
-erkannter Produkt-/Gateway-Topologie freigegeben. `stick_control` bleibt dort
-aus; `drone_control` und Payload-Control bleiben an die zentrale
-Cloud-Control-Authority- und Safety-Kette gebunden.
+erkannter Produkt-/Gateway-Topologie freigegeben. Es ist auf Payload-Control
+begrenzt: `flightControl=false`, `stick_control=false` und
+`drone_control=false`. Cloud-Control-Authority bleibt für den Payload-Consent
+relevant.
