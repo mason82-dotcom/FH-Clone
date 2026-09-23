@@ -1,0 +1,110 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+}
+
+def fh2MapStyleUrl =
+    (project.findProperty("FH2_MAP_STYLE_URL") ?:
+        "https://demotiles.maplibre.org/style.json").toString()
+def fh2MapStyleBuildConfigValue =
+    "\"" +
+        fh2MapStyleUrl
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"") +
+        "\""
+
+android {
+    namespace "com.fh2.rcbridge"
+    compileSdk Integer.parseInt(project.ANDROID_COMPILE_SDK_VERSION)
+    buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
+
+    defaultConfig {
+        applicationId "com.fh2.rcbridge"
+        minSdk Integer.parseInt(project.ANDROID_MIN_SDK_VERSION)
+        targetSdk Integer.parseInt(project.ANDROID_TARGET_SDK_VERSION)
+        versionCode 1
+        versionName "0.1.0"
+
+        buildConfigField(
+            "String",
+            "FH2_MAP_STYLE_URL",
+            fh2MapStyleBuildConfigValue
+        )
+
+        manifestPlaceholders = [
+            DJI_API_KEY: project.findProperty("AIRCRAFT_API_KEY") ?: ""
+        ]
+
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+        freeCompilerArgs += ["-Xjvm-default=all"]
+    }
+
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ["lib/arm64-v8a/libc++_shared.so"]
+            keepDebugSymbols += [
+                "**/libconstants.so",
+                "**/libdji_innertools.so",
+                "**/libdjibase.so",
+                "**/libDJICSDKCommon.so",
+                "**/libDJIFlySafeCore-CSDK.so",
+                "**/libdjifs_jni-CSDK.so",
+                "**/libDJIRegister.so",
+                "**/libdjisdk_jni.so",
+                "**/libDJIUpgradeCore.so",
+                "**/libDJIUpgradeJNI.so",
+                "**/libDJIWaypointV2Core-CSDK.so",
+                "**/libdjiwpv2-CSDK.so",
+                "**/libFlightRecordEngine.so",
+                "**/libvideo-framing.so",
+                "**/libmrtc_rtsp.so",
+                "**/libmrtc_rtmp.so",
+                "**/libmrtc_onvif.so",
+                "**/libmrtc_log.so",
+                "**/libmrtc_data.so",
+                "**/libmrtc_core_jni.so",
+                "**/libmrtc_core.so",
+                "**/libmrtc_agora.so",
+                "**/libmrtc_28181.so",
+                "**/libc++_shared.so",
+                "**/libc++.so",
+                "**/libagora-rtsa-sdk.so",
+                "**/libwaes.so"
+            ]
+        }
+    }
+}
+
+dependencies {
+    compileOnly "com.dji:dji-sdk-v5-aircraft-provided:${project.DJI_MSDK_VERSION}"
+    implementation "com.dji:dji-sdk-v5-aircraft:${project.DJI_MSDK_VERSION}"
+    implementation "org.maplibre.gl:android-sdk:${project.MAPLIBRE_VERSION}"
+    implementation "com.squareup.okhttp3:okhttp:${project.OKHTTP_VERSION}"
+
+    implementation "androidx.core:core-ktx:${project.ANDROIDX_CORE_VERSION}"
+    implementation "androidx.appcompat:appcompat:${project.ANDROIDX_APPCOMPAT_VERSION}"
+}

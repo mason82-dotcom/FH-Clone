@@ -59,6 +59,96 @@ erfolgreich sind, andernfalls `503`.
 FlightHub 2 OpenAPI ist optional und blockiert die allgemeine Readiness
 nicht, wenn `FH2_ENABLED=false` gesetzt ist.
 
+### POST /api/msdk/pair
+
+Pairing-Endpunkt für die native FH2 RC Bridge auf DJI MSDK V5.
+
+Der erste Request benötigt:
+
+```http
+Authorization: Bearer <MSDK_PAIRING_TOKEN>
+```
+
+Body ist ein vollständiger `fh2.msdk.v1`-BridgeSnapshot mit getrennten
+`gateway`- und `aircraft`-Identitäten. Der Server akzeptiert nur Snapshots
+mit verbundener RC, verbundenem Flight Controller sowie gültiger RC- und
+Aircraft-Seriennummer.
+
+Bei Erfolg wird ein zeitlich begrenztes, HMAC-signiertes Agent-Token
+zurückgegeben. Das Token ist an genau diese `gatewaySn + aircraftSn`-
+Kombination gebunden und enthält keine Flight-Control-Rechte.
+
+### POST /api/msdk/unpair
+
+Widerruft das aktuell präsentierte MSDK-Agent-Token dauerhaft bis zu dessen
+Ablaufzeit und entfernt den zugehörigen Agent aus der Runtime.
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+FH2 speichert dafür nur den SHA-256-Token-Digest in
+`msdk_token_revocations`; der Bearer-Token selbst wird nicht persistiert.
+Eine laufende Control-Session wird zuerst fail-closed beendet und der
+zugehörige WSS-Agent-Transport mit Code `4004` geschlossen.
+
+### POST /api/msdk/heartbeat
+
+Read-only Snapshot-/Heartbeat-Ingest der gepairten Android-App.
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+Der Agent-Token muss zur RC-/Aircraft-Identität im Snapshot passen. Dieser
+Endpunkt nimmt **keine** Flight-Control-Kommandos an.
+
+### GET /api/msdk/agents
+
+Read-only Sicht auf die zuletzt von MSDK-Agents gemeldeten Snapshots und
+`lastSeenAt`.
+
+
+### WS /ws/msdk/control/{aircraftSn}
+
+Authentifizierter Agent-Kanal für die native MSDK-Control-Session.
+
+Upgrade-Header:
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+Das Agent-Token muss zur angeforderten Aircraft-SN passen. Der Socket ist
+**kein Operator-Endpunkt** und vergibt weder FC3 noch Control Lease.
+
+Vor `session_start` prüft der Backend-`MsdkControlHub`:
+
+- frischen MSDK-Agent-Snapshot,
+- lokale Android-`NetworkControlArm`-Freigabe,
+- MSDK-`virtualStick`-Capability,
+- FC3,
+- gültigen Control Lease für den gleichen Holder,
+- gebundene Gateway-/Aircraft-Identität.
+
+Controlframes besitzen monotone Sequenznummern und eine kurze Ablaufzeit.
+Bei Guard-Verlust sendet der Server `neutral` vor `session_stop`.
+
+Ein öffentlicher Operator-/Browser-Schreibendpunkt zum Öffnen der Session
+oder Einspeisen von Sticks ist derzeit absichtlich nicht vorhanden.
+
+Konfiguration:
+
+```text
+MSDK_PAIRING_TOKEN
+MSDK_BRIDGE_TOKEN_SECRET
+MSDK_BRIDGE_TOKEN_TTL_SECONDS   # Standard 86400
+```
+
+Die Token-Signatur ist stateless und dadurch auch bei mehreren
+Control-API-Instanzen konsistent. Die aktuelle Snapshot-Liste selbst ist in
+diesem Entwicklungsstand noch pro Prozess in-memory.
+
 ### GET /api/devices
 
 Liefert die aktuell bekannte Geräte-Registry.
