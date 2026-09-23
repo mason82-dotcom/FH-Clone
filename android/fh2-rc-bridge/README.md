@@ -321,3 +321,20 @@ die KMZ mit `pushKMZFileToAircraft()` auf die Aircraft übertragen.
 
 Ein Missionsstart ist bewusst **nicht** an Pairing/Heartbeat gekoppelt und wird
 derzeit nicht automatisch ausgelöst.
+
+
+## Medienbrowser
+
+**Medien öffnen** aktiviert den DJI `MediaManager` nur für die Dauer des
+Media-Screens. Die Dateiliste wird explizit von der ausgewählten Hauptkamera
+geladen.
+
+Ein Tap auf einen Eintrag lädt die Originaldatei manuell in:
+
+```text
+Android/data/com.fh2.rcbridge/files/media/
+```
+
+Es gibt keinen automatischen Media-Sync und keinen automatischen Upload zum
+FH2-Backend. Beim Verlassen des Screens werden laufende Pulls beendet und der
+MediaManager wieder deaktiviert.
