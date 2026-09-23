@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  type DrcAxes,
   type DrcStickChannels,
   type NormalizedStickInput,
   toDjiStickChannels
@@ -18,6 +19,7 @@ export type DrcSessionState =
   | "closed";
 
 export type DrcSessionHealth = "healthy" | "degraded";
+export type DrcControlMethod = "stick" | "drone";
 
 const DRC_TRANSITIONS: Readonly<Record<DrcSessionState, readonly DrcSessionState[]>> = {
   idle: ["requesting"],
@@ -55,6 +57,8 @@ export interface DrcSessionRecord {
   updatedAt: number;
   lastInputAt?: number;
   lastNeutralAt?: number;
+  lastControlMethod?: DrcControlMethod;
+  controlMethods: DrcControlMethod[];
   /** Runtime DRC data-plane status. Never rehydrated into authorization after restart. */
   transportConnected: boolean;
   /** Last DJI drc_status_notify state observed on the main broker. */
@@ -72,6 +76,7 @@ export interface DrcSessionTransport {
     gatewaySn: string,
     channels: DrcStickChannels
   ): Promise<number>;
+  sendControl(gatewaySn: string, axes: DrcAxes): Promise<number>;
   sendNeutralStickControl(gatewaySn: string): Promise<number>;
   exitDrcMode(gatewaySn: string): Promise<unknown>;
 }
@@ -171,6 +176,7 @@ export interface RequestDrcSession {
   aircraftSn: string;
   gatewaySn: string;
   holder: string;
+  controlMethods: DrcControlMethod[];
   guards: DrcSessionGuards;
 }
 
@@ -285,12 +291,17 @@ export class DrcSessionManager {
       );
     }
 
+    if (input.controlMethods.length === 0) {
+      throw new Error("DRC session requires at least one control method");
+    }
+
     const now = this.now();
     const record: DrcSessionRecord = {
       sessionId: randomUUID(),
       aircraftSn: input.aircraftSn,
       gatewaySn: input.gatewaySn,
       holder: input.holder,
+      controlMethods: [...new Set(input.controlMethods)],
       state: "requesting",
       health: "healthy",
       createdAt: now,
@@ -390,6 +401,9 @@ export class DrcSessionManager {
     this.assertGuards(guards, "send DRC stick input");
 
     const current = await this.require(gatewaySn);
+    if (!current.controlMethods.includes("stick")) {
+      throw new Error(`DRC session for gateway ${gatewaySn} does not allow stick_control`);
+    }
     if (current.state !== "drc_mode_active" && current.state !== "controlling" && current.state !== "degraded") {
       throw new Error(`DRC session for gateway ${gatewaySn} cannot accept stick input (state=${current.state})`);
     }
@@ -404,7 +418,8 @@ export class DrcSessionManager {
       state: "controlling",
       health: "healthy",
       updatedAt: now,
-      lastInputAt: now
+      lastInputAt: now,
+      lastControlMethod: "stick"
     });
 
     await this.persist(record);
@@ -419,6 +434,46 @@ export class DrcSessionManager {
     guards: DrcSessionGuards
   ): Promise<number> {
     return this.sendStick(gatewaySn, toDjiStickChannels(input), guards);
+  }
+
+  async sendDroneControl(
+    gatewaySn: string,
+    axes: DrcAxes,
+    guards: DrcSessionGuards
+  ): Promise<number> {
+    this.assertGuards(guards, "send DRC drone_control input");
+    const current = await this.require(gatewaySn);
+    if (!current.controlMethods.includes("drone")) {
+      throw new Error(`DRC session for gateway ${gatewaySn} does not allow drone_control`);
+    }
+    if (
+      current.state !== "drc_mode_active" &&
+      current.state !== "controlling" &&
+      current.state !== "degraded"
+    ) {
+      throw new Error(
+        `DRC session for gateway ${gatewaySn} cannot accept drone_control input (state=${current.state})`
+      );
+    }
+    if (!current.transportConnected) {
+      throw new Error(`DRC transport for gateway ${gatewaySn} is disconnected`);
+    }
+
+    const seq = await this.controller.sendControl(gatewaySn, axes);
+    const now = this.now();
+    const record = withoutReason({
+      ...current,
+      state: "controlling",
+      health: "healthy",
+      updatedAt: now,
+      lastInputAt: now,
+      lastControlMethod: "drone"
+    });
+
+    await this.persist(record);
+    if (current.state === "drc_mode_active") this.startTimer(gatewaySn);
+    await this.audit(record, "input");
+    return seq;
   }
 
   /**
@@ -491,7 +546,16 @@ export class DrcSessionManager {
     try {
       if (shouldNeutral) {
         try {
-          await this.controller.sendNeutralStickControl(gatewaySn);
+          if (current.lastControlMethod === "drone") {
+            await this.controller.sendControl(gatewaySn, {
+              x: 0,
+              y: 0,
+              h: 0,
+              w: 0
+            });
+          } else {
+            await this.controller.sendNeutralStickControl(gatewaySn);
+          }
           lastNeutralAt = this.now();
           await this.audit(
             {
