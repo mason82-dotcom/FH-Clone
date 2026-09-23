@@ -73,7 +73,7 @@ export function Fh2Workspace() {
     let controller: AbortController | undefined;
 
     const refreshTopology = async () => {
-      controller?.abort();
+      if (controller) return;
       const request = new AbortController();
       controller = request;
 
@@ -98,6 +98,8 @@ export function Fh2Workspace() {
           return;
         }
         // Preserve the last known-good topology across transient HTTP errors.
+      } finally {
+        if (controller === request) controller = undefined;
       }
     };
 

@@ -61,6 +61,8 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - Web-/Proxy-Regressionscheck schützt `/health`, `/ready`, `/api/*`, SPA-Fallback und die Nicht-Exposition von Port 8081
 - Persistenzgrenze verhindert FC-Stufe, Control Lease, DJI-Authority und rehydrierbare DRC-Sessions in PostgreSQL; DRC bleibt in-memory
 - AuthZ erlaubt den Topologie-Bootstrap ausschließlich auf `sys/product/{gateway_sn}/status`; der veraltete `thing/.../status`-Pfad ist deny
+- Frontend-Polling arbeitet single-flight: langsame Requests werden nicht mehr bei jedem Intervall-Tick abgebrochen; Abort bleibt auf Cleanup/Unmount begrenzt
+- RTK-SSE validiert Snapshot-, Status- und Fix-Transition-Strukturen zur Laufzeit und ignoriert syntaktisch gültige, aber strukturell ungültige Events
 
 ## Hardware-Evidence
 
