@@ -272,3 +272,41 @@ test("requires explicit local network-control arm state in snapshot", () => {
   malformedStick.control.virtualStick.enabled = "yes";
   assert.equal(isMsdkBridgeSnapshot(malformedStick), false);
 });
+
+
+test("validates optional KeyManager runtime inventory", () => {
+  const valid = {
+    ...snapshot(),
+    keyManager: {
+      active: true,
+      productConnected: true,
+      probedAt: 10_000,
+      keys: [
+        {
+          identifier: "ControlMode",
+          family: "remote_controller",
+          operations: {
+            canGet: true,
+            canSet: true,
+            canListen: false,
+            canPerformAction: false
+          },
+          probeMode: "cache+hardware_read",
+          runtimeStatus: "supported",
+          valueType: "dji.sdk.keyvalue.value.remotecontroller.ControlMode",
+          lastObservedAt: 10_000
+        }
+      ]
+    }
+  };
+
+  assert.equal(isMsdkBridgeSnapshot(valid), true);
+
+  const invalid = structuredClone(valid) as any;
+  invalid.keyManager.keys[0].operations.canSet = "yes";
+  assert.equal(isMsdkBridgeSnapshot(invalid), false);
+
+  const invalidState = structuredClone(valid) as any;
+  invalidState.keyManager.keys[0].runtimeStatus = "write_granted";
+  assert.equal(isMsdkBridgeSnapshot(invalidState), false);
+});
