@@ -3,6 +3,7 @@ package com.fh2.rcbridge
 import dji.sdk.keyvalue.value.flightcontroller.FlightControlAuthorityChangeReason
 import dji.v5.common.callback.CommonCallbacks
 import dji.v5.common.error.IDJIError
+import dji.v5.manager.aircraft.virtualstick.Stick
 import dji.v5.manager.aircraft.virtualstick.VirtualStickManager
 import dji.v5.manager.aircraft.virtualstick.VirtualStickState
 import dji.v5.manager.aircraft.virtualstick.VirtualStickStateListener
@@ -90,6 +91,35 @@ object VirtualStickController {
         )
     }
 
+    fun sendNormalized(
+        leftHorizontal: Float,
+        leftVertical: Float,
+        rightHorizontal: Float,
+        rightVertical: Float
+    ) {
+        val current = snapshot
+        check(current.enabled) { "virtual_stick_not_enabled" }
+        check(current.authorityOwner == "MSDK") {
+            "flight_control_authority_not_owned_by_msdk"
+        }
+
+        manager.leftStick.horizontalPosition =
+            toStickPosition(leftHorizontal)
+        manager.leftStick.verticalPosition =
+            toStickPosition(leftVertical)
+        manager.rightStick.horizontalPosition =
+            toStickPosition(rightHorizontal)
+        manager.rightStick.verticalPosition =
+            toStickPosition(rightVertical)
+    }
+
+    fun neutral() {
+        manager.leftStick.horizontalPosition = 0
+        manager.leftStick.verticalPosition = 0
+        manager.rightStick.horizontalPosition = 0
+        manager.rightStick.verticalPosition = 0
+    }
+
     fun addListener(listener: (VirtualStickSnapshot) -> Unit) {
         startObserving()
         listeners += listener
@@ -99,6 +129,9 @@ object VirtualStickController {
     fun removeListener(listener: (VirtualStickSnapshot) -> Unit) {
         listeners -= listener
     }
+
+    private fun toStickPosition(value: Float): Int =
+        (value.coerceIn(-1f, 1f) * Stick.MAX_STICK_POSITION_ABS).toInt()
 
     private inline fun update(
         transform: VirtualStickSnapshot.() -> VirtualStickSnapshot
