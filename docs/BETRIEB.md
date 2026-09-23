@@ -312,3 +312,25 @@ Damit wird ein bewusst ohne DJI-MQTT oder Persistenz gestarteter
 Entwicklungsprozess nicht mit einem ausgefallenen Produktionsdienst
 verwechselt. Im Root-Compose sind EMQX und TimescaleDB konfiguriert; dort
 bleiben sie zwingende Readiness-Voraussetzungen.
+
+
+## Shutdown-Verhalten
+
+SIGINT und SIGTERM führen einen idempotenten Shutdown aus.
+
+Dabei werden nacheinander beziehungsweise kontrolliert bereinigt:
+
+- öffentliche und interne HTTP-Server
+- aktive DRC-Sitzungen
+- DJI-MQTT-/DRC-Transport
+- UgCS-Adapter
+- AuthZ-Audit
+- Gateway-Credential-Store
+- Mission-Persistenz
+- Topologie-Persistenzqueue
+- Topologie-Store
+
+Ein Fehler in einem Cleanup-Schritt verhindert die übrigen Cleanup-Schritte
+nicht. Nach Abschluss wird der Gesamtfehler jedoch als fehlerhafter
+Prozess-Shutdown sichtbar; ein teilweise fehlgeschlagener Shutdown wird nicht
+mehr mit Exitcode 0 kaschiert.
