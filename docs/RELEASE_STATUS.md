@@ -88,6 +88,8 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - Media-/Multispektral-Core und NDVI-Vertrag
 - UgCS Groundstation Adapter / Bridge
 - FlightHub-2 OpenAPI V2 read-only
+- zentrale DJI-`ControlCoordinator`-Runtime im Serverprozess
+- read-only Control-Runtime-Status; keine öffentliche Flight-Control-Write-API
 - Weboberfläche und lokale Root-Compose-Runtime
 
 ## Globale Produkt-Policy
