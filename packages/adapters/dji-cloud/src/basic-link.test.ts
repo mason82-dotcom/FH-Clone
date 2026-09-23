@@ -31,9 +31,10 @@ test("initial MQTT wait resolves false instead of hanging forever", async () => 
 });
 
 test("initial MQTT wait resolves true on connect", async () => {
-  const client = new EventEmitter() as unknown as MqttClient;
+  const emitter = new EventEmitter();
+  const client = emitter as unknown as MqttClient;
   const waiting = waitForInitialMqttConnect(client, 100);
-  queueMicrotask(() => client.emit("connect"));
+  queueMicrotask(() => emitter.emit("connect"));
   assert.equal(await waiting, true);
 });
 
