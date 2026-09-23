@@ -176,7 +176,7 @@ Wichtig: Eingebaute DJI-Kameras wie M3T/M4T bleiben davon unberührt. Die
 globale PSDK-Sperre richtet sich gegen PSDK-spezifische Erweiterungspayloads,
 nicht gegen die dokumentierten nativen Kamera-`payload_index`-Werte.
 
-## 5. WPML / Pilot Wayline — REQUIRED_DRAFT für PR #51
+## 5. WPML / Pilot Wayline — REQUIRED_HARDWARE
 
 Erforderlich:
 
