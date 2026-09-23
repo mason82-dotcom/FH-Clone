@@ -360,6 +360,28 @@ Der serverseitige Nachweis, dass ein widerrufener alter Agent-Token mit
 Revocation-Tests belegt; der reale RC-Test muss dafür keinen Bearer-Token
 offenlegen oder exportieren.
 
+Die exportierten Dateien können aus dem Repository-Root automatisch geprüft
+werden:
+
+```bash
+npm run verify:msdk-evidence -- fh2-msdk-evidence-*.json
+```
+
+Für die vollständige Pairing-/Transport-Abnahme über mehrere Prozessläufe:
+
+```bash
+npm run verify:msdk-evidence -- --acceptance \
+  pair-reconnect.json \
+  app-restart.json \
+  unpair.json
+```
+
+Der Acceptance-Modus verlangt die Pflichtmarker, mindestens zwei
+`control: connected`-Transitions in einem Prozesslauf als
+Control-API-Reconnect-Nachweis sowie einen abgeschlossenen Unpair-Zustand.
+Zusätzlich wird rekursiv auf verbotene Secret-Felder und nicht redigierte
+`Bearer ...`-Werte geprüft.
+
 
 ## Android API 36
 
