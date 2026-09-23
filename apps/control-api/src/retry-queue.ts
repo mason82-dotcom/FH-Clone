@@ -1,4 +1,7 @@
-export type RetryQueueDropPolicy = "reject-new" | "drop-oldest";
+export type RetryQueueDropPolicy =
+  | "reject-new"
+  | "drop-oldest"
+  | "retain-all";
 
 export interface RetryQueueOptions<T> {
   process(item: T): Promise<void>;
@@ -55,7 +58,10 @@ export class RetryQueue<T> {
   enqueue(item: T): void {
     if (this.closed) throw new Error("retry_queue_closed");
 
-    if (this.items.length >= this.capacity) {
+    if (
+      this.dropPolicy !== "retain-all" &&
+      this.items.length >= this.capacity
+    ) {
       if (this.dropPolicy === "reject-new") {
         throw new Error("retry_queue_capacity_exceeded");
       }
