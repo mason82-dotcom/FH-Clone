@@ -41,7 +41,12 @@ Ohne `DJI_MQTT_URL` bleibt die HTTP-API lauffähig, der DJI-Adapter ist jedoch
 deaktiviert.
 
 Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
-`MissionStore` für automatische Missionssitzungen.
+`MissionStore` für automatische Missionssitzungen und den `MediaStore`
+für validierte MediaAssets. Persistierte Assets werden beim Start in den
+MediaOverlay-Registry rehydriert.
+
+Die Readiness prüft beide Stores separat. Ein konfigurierter, aber nicht
+erreichbarer MediaStore macht `/ready` fail-closed.
 
 ## Umgebungsvariablen
 
