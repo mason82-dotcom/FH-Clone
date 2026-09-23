@@ -92,6 +92,7 @@ Auf `main` sind unter anderem vorhanden:
 - FlightHub-2-OpenAPI-V2-Client für Waylines und Flight Tasks (read-only)
 - DJI-WPML/KMZ-Parser für `template.kml` und `waylines.wpml` (read-only)
 - DJI-Pilot-Waypoint-Dateikatalog (read-only)
+- Android-MSDK-V5-Bridge mit KeyManager-Runtimeinventar und read-only Hardware-Probes
 - read-only Mission-/Wayline-/Capability-APIs
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
@@ -103,6 +104,7 @@ Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 - schreibende WPML/Pilot-Wayline-Upload-, Collect- und Execution-Pfade
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - nicht real belegte M3T/M4T Tele-/Thermal-Medienpfade
+- vollständige MSDK-KeyManager-Hardwarematrix ohne reales Runtime-Evidence-Fixture
 
 ## Sicherheitsmodell
 
