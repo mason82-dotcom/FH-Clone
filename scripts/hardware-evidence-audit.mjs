@@ -144,7 +144,7 @@ if (realEvidence(m3tMqtt)) {
     (v) =>
       v.method === "update_topo" &&
       typeof v.topic === "string" &&
-      /^(thing|sys)\/product\/[^/]+\/status$/.test(v.topic)
+      /^sys\/product\/[^/]+\/status$/.test(v.topic)
   );
   add(
     "M3T_RC_PRO",
@@ -205,8 +205,8 @@ const m4t = readJson(m4tPath);
 add("M4T_RC_PLUS2", "REQUIRED_MAIN", "reales redigiertes M4T/RC-Plus-2-Evidence", realEvidence(m4t), m4tPath);
 if (realEvidence(m4t)) {
   add("M4T_RC_PLUS2", "REQUIRED_MAIN", "keine Secrets im öffentlichen M4T-Fixture", !sensitiveValueLeaked(m4t));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "RC Plus 2 update_topo auf thing/product/.../status",
-    hasMethod(m4t, "update_topo") && hasTopic(m4t, /^thing\/product\/[^/]+\/status$/));
+  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "RC Plus 2 update_topo auf sys/product/.../status",
+    hasMethod(m4t, "update_topo") && hasTopic(m4t, /^sys\/product\/[^/]+\/status$/));
   add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Produktidentität RC Plus 2 174/0",
     Boolean(findRecord(m4t, (v) => Number(v.type) === 174 && Number(v.sub_type ?? v.subType) === 0)));
   add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Produktidentität M4T 99/1",

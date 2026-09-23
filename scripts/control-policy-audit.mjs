@@ -66,6 +66,30 @@ for (const [pattern, message] of [
   if (!pattern.test(rcPro)) fail(message);
 }
 
+const hardwareEvidenceAudit = read("scripts/hardware-evidence-audit.mjs");
+if (hardwareEvidenceAudit.includes("/^(thing|sys)\\/product\\/[^/]+\\/status$/")) {
+  fail("hardware evidence must not accept legacy thing/product topology bootstrap");
+}
+if (
+  !hardwareEvidenceAudit.includes(
+    'hasTopic(m4t, /^sys\\/product\\/[^/]+\\/status$/)'
+  )
+) {
+  fail("M4 hardware evidence must require canonical sys/product status topology");
+}
+
+const hardwareEvidenceDoc = read("docs/HARDWARE_EVIDENCE.md");
+if (
+  !hardwareEvidenceDoc.includes(
+    "`sys/product/{gateway_sn}/status`"
+  ) ||
+  hardwareEvidenceDoc.includes(
+    "beiden exakten Upstream-Varianten"
+  )
+) {
+  fail("hardware evidence documentation must use canonical sys/product topology");
+}
+
 const m3tFixtureManifestPath = "docs/fixtures/m3t/media-manifest.json";
 const m3tFixtureManifest = read(m3tFixtureManifestPath);
 for (const [pattern, message] of [

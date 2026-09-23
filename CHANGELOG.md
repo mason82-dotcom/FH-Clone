@@ -26,6 +26,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - Veraltete Vor-Release-Abnahmecheckliste durch den tatsächlichen post-release Software-Regressionsvertrag ersetzt.
 - Öffentliche M3T-Fixture-Metadaten veröffentlichen keine historischen Git-Commit-/Blob-IDs oder entfernten Rohdateipfade mehr; der verpflichtende Control-Policy-Audit verhindert Regressionen.
 - Android-MSDK-Medienmanager räumt nach fehlgeschlagenem `enable` registrierte DJI-Media-Listener und den File-Cache auf; ein eigener CI-Regressionstest verhindert doppelte Listener bei späteren Retries.
+- DJI-Hardware-Evidence-Vertrag auf den kanonischen Pilot-to-Cloud-Topologiepfad `sys/product/{gateway_sn}/status` vereinheitlicht; die frühere permissive `thing/.../status`-Ausnahme ist entfernt.
 
 ## 3.0.0 – 2026-09-23
 
