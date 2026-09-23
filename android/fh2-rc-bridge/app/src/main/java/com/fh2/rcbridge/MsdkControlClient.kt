@@ -25,6 +25,12 @@ data class MsdkControlChannelSnapshot(
     val lastError: String? = null
 )
 
+private data class MsdkControlEndpoint(
+    val baseUrl: String,
+    val agentToken: String,
+    val aircraftSn: String
+)
+
 object MsdkControlClient {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val listeners =
@@ -48,6 +54,18 @@ object MsdkControlClient {
     @Volatile
     private var lastSeq = 0L
 
+    @Volatile
+    private var desiredEndpoint: MsdkControlEndpoint? = null
+
+    @Volatile
+    private var connectionGeneration = 0L
+
+    @Volatile
+    private var reconnectAttempt = 0
+
+    @Volatile
+    private var reconnectScheduledGeneration: Long? = null
+
     private var armListenerRegistered = false
 
     private val armListener: (NetworkControlArmSnapshot) -> Unit = { arm ->
@@ -68,18 +86,66 @@ object MsdkControlClient {
             armListenerRegistered = true
         }
 
-        val wsUrl = controlWebSocketUrl(baseUrl, aircraftSn)
+        val target =
+            MsdkControlEndpoint(
+                baseUrl = baseUrl,
+                agentToken = agentToken,
+                aircraftSn = aircraftSn
+            )
+
+        desiredEndpoint = target
+        connectionGeneration += 1
+        reconnectAttempt = 0
+        reconnectScheduledGeneration = null
+        openSocket(target, connectionGeneration)
+    }
+
+    fun disconnect(reason: String = "operator_disconnect") {
+        desiredEndpoint = null
+        connectionGeneration += 1
+        reconnectAttempt = 0
+        reconnectScheduledGeneration = null
+
+        val current = socket
+        failClosed(reason, notifyServer = current != null)
+        socket = null
+        current?.close(1000, reason)
+        update { MsdkControlChannelSnapshot() }
+    }
+
+    private fun openSocket(
+        target: MsdkControlEndpoint,
+        generation: Long
+    ) {
+        if (
+            desiredEndpoint != target ||
+            generation != connectionGeneration
+        ) {
+            return
+        }
+
+        val wsUrl =
+            controlWebSocketUrl(
+                target.baseUrl,
+                target.aircraftSn
+            )
         val request =
             Request.Builder()
                 .url(wsUrl)
-                .header("Authorization", "Bearer $agentToken")
+                .header(
+                    "Authorization",
+                    "Bearer ${target.agentToken}"
+                )
                 .build()
 
         update {
-            MsdkControlChannelSnapshot(status = "connecting")
+            copy(
+                status = "connecting",
+                lastError = null
+            )
         }
 
-        socket =
+        val createdSocket =
             http.newWebSocket(
                 request,
                 object : WebSocketListener() {
@@ -87,10 +153,25 @@ object MsdkControlClient {
                         webSocket: WebSocket,
                         response: Response
                     ) {
+                        if (
+                            desiredEndpoint != target ||
+                            generation != connectionGeneration
+                        ) {
+                            webSocket.close(
+                                1000,
+                                "stale_connection"
+                            )
+                            return
+                        }
+
+                        socket = webSocket
+                        reconnectAttempt = 0
+                        reconnectScheduledGeneration = null
                         update {
                             copy(
                                 status = "connected",
-                                connectedAt = System.currentTimeMillis(),
+                                connectedAt =
+                                    System.currentTimeMillis(),
                                 lastError = null
                             )
                         }
@@ -100,8 +181,18 @@ object MsdkControlClient {
                         webSocket: WebSocket,
                         text: String
                     ) {
+                        if (
+                            desiredEndpoint != target ||
+                            generation != connectionGeneration
+                        ) {
+                            return
+                        }
+
                         update {
-                            copy(lastMessageAt = System.currentTimeMillis())
+                            copy(
+                                lastMessageAt =
+                                    System.currentTimeMillis()
+                            )
                         }
                         runCatching {
                             handleMessage(text)
@@ -109,7 +200,8 @@ object MsdkControlClient {
                             update {
                                 copy(
                                     lastError =
-                                        error.message ?: error.toString()
+                                        error.message
+                                            ?: error.toString()
                                 )
                             }
                         }
@@ -121,13 +213,27 @@ object MsdkControlClient {
                         reason: String
                     ) {
                         if (socket === webSocket) socket = null
+                        if (
+                            desiredEndpoint != target ||
+                            generation != connectionGeneration
+                        ) {
+                            return
+                        }
+
+                        val closeReason =
+                            "socket_closed_$code:$reason"
                         failClosed(
-                            "socket_closed_$code:$reason",
+                            closeReason,
                             notifyServer = false
                         )
                         update {
                             copy(status = "disconnected")
                         }
+                        scheduleReconnect(
+                            target,
+                            generation,
+                            closeReason
+                        )
                     }
 
                     override fun onFailure(
@@ -136,6 +242,36 @@ object MsdkControlClient {
                         response: Response?
                     ) {
                         if (socket === webSocket) socket = null
+                        if (
+                            desiredEndpoint != target ||
+                            generation != connectionGeneration
+                        ) {
+                            return
+                        }
+
+                        if (
+                            response?.code == 401 ||
+                            response?.code == 403
+                        ) {
+                            desiredEndpoint = null
+                            connectionGeneration += 1
+                            reconnectScheduledGeneration = null
+                            failClosed(
+                                "socket_unauthorized",
+                                notifyServer = false
+                            )
+                            update {
+                                copy(
+                                    status = "unauthorized",
+                                    lastError =
+                                        "http_${response.code}"
+                                )
+                            }
+                            return
+                        }
+
+                        val failure =
+                            t.message ?: t.toString()
                         failClosed(
                             "socket_failure",
                             notifyServer = false
@@ -143,20 +279,71 @@ object MsdkControlClient {
                         update {
                             copy(
                                 status = "error",
-                                lastError = t.message ?: t.toString()
+                                lastError = failure
                             )
                         }
+                        scheduleReconnect(
+                            target,
+                            generation,
+                            failure
+                        )
                     }
                 }
             )
+
+        socket = createdSocket
     }
 
-    fun disconnect(reason: String = "operator_disconnect") {
-        val current = socket
-        failClosed(reason, notifyServer = current != null)
-        socket = null
-        current?.close(1000, reason)
-        update { MsdkControlChannelSnapshot() }
+    private fun scheduleReconnect(
+        target: MsdkControlEndpoint,
+        generation: Long,
+        reason: String
+    ) {
+        if (
+            desiredEndpoint != target ||
+            generation != connectionGeneration ||
+            reconnectScheduledGeneration == generation
+        ) {
+            return
+        }
+
+        reconnectScheduledGeneration = generation
+        val delayMs =
+            when (reconnectAttempt.coerceAtMost(3)) {
+                0 -> 1_000L
+                1 -> 2_000L
+                2 -> 5_000L
+                else -> 10_000L
+            }
+        reconnectAttempt += 1
+
+        update {
+            copy(
+                status = "reconnecting",
+                lastError = reason
+            )
+        }
+
+        mainHandler.postDelayed(
+            {
+                if (
+                    reconnectScheduledGeneration == generation
+                ) {
+                    reconnectScheduledGeneration = null
+                }
+
+                if (
+                    desiredEndpoint != target ||
+                    generation != connectionGeneration ||
+                    socket != null
+                ) {
+                    return@postDelayed
+                }
+
+                openSocket(target, generation)
+            },
+            delayMs
+        )
     }
 
     fun addListener(
