@@ -94,6 +94,35 @@ Endpunkt nimmt **keine** Flight-Control-Kommandos an.
 Read-only Sicht auf die zuletzt von MSDK-Agents gemeldeten Snapshots und
 `lastSeenAt`.
 
+
+### WS /ws/msdk/control/{aircraftSn}
+
+Authentifizierter Agent-Kanal für die native MSDK-Control-Session.
+
+Upgrade-Header:
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+Das Agent-Token muss zur angeforderten Aircraft-SN passen. Der Socket ist
+**kein Operator-Endpunkt** und vergibt weder FC3 noch Control Lease.
+
+Vor `session_start` prüft der Backend-`MsdkControlHub`:
+
+- frischen MSDK-Agent-Snapshot,
+- lokale Android-`NetworkControlArm`-Freigabe,
+- MSDK-`virtualStick`-Capability,
+- FC3,
+- gültigen Control Lease für den gleichen Holder,
+- gebundene Gateway-/Aircraft-Identität.
+
+Controlframes besitzen monotone Sequenznummern und eine kurze Ablaufzeit.
+Bei Guard-Verlust sendet der Server `neutral` vor `session_stop`.
+
+Ein öffentlicher Operator-/Browser-Schreibendpunkt zum Öffnen der Session
+oder Einspeisen von Sticks ist derzeit absichtlich nicht vorhanden.
+
 Konfiguration:
 
 ```text
