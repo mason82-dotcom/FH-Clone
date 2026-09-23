@@ -56,8 +56,26 @@ invalid
 unknown
 ```
 
-Die aktuelle `ParameterRegistry` hält pro Gerät und Key nur den neuesten
-Sample.
+Die `ParameterRegistry` hält pro Gerät und kanonischem Key einen
+fusionierten aktuellen Sample und zusätzlich den neuesten Sample je Adapter.
+
+Fusion:
+
+```text
+deviceId + canonical key
+  -> dji-cloud latest
+  -> msdk-v5 latest
+  -> ...
+  -> fused current
+```
+
+Primär entscheidet `sampledAt`. Bei gleichem Zeitstempel folgt die
+Qualitätsreihenfolge `good > unknown > stale > invalid`; danach sorgt die
+Adapter-ID nur für einen deterministischen Tie-Break.
+
+Die adapterbezogenen Werte bleiben über
+`snapshotSources(deviceId)` beziehungsweise den öffentlichen
+`/telemetry/sources`-Endpunkt sichtbar.
 
 ## RawMessage
 
