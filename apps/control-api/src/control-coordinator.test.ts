@@ -23,12 +23,16 @@ function fixture(authorized = true) {
       return 2;
     },
     async setTransportConnected() { calls.push("session.transportConnected"); return {} as never; },
+    async sendStick() { calls.push("session.sendStick"); return 1; },
+    async sendDroneControl() { calls.push("session.sendDrone"); return 1; },
     async closeGracefully() { calls.push("session.close"); return { state: "closed" } as never; },
     async forceClose() { calls.push("session.forceClose"); return { state: "closed" } as never; }
   };
   const dji = {
     resolveGatewaySn: () => "RC-PLUS2-001",
     supportsFlightControl: () => true,
+    supportsStickControl: () => true,
+    supportsDroneControl: () => true,
     async connectDrcTransport() { calls.push("transport.connect"); },
     async disconnectDrcTransport() { calls.push("transport.disconnect"); },
     pilotAuthority: {
@@ -184,4 +188,34 @@ test("rejects a second gateway while the singleton DRC transport is in use", asy
     /drc_session_already_active/
   );
   assert.deepEqual(f.calls, []);
+});
+
+
+test("M3 RC Pro routes drone_control but rejects stick_control", async () => {
+  const f = fixture(true);
+  f.dji.resolveGatewaySn = () => "RC-PRO-001";
+  f.dji.supportsStickControl = () => false;
+  f.dji.supportsDroneControl = () => true;
+
+  const coordinator = new ControlCoordinator(
+    f.dji,
+    f.sessions as never,
+    () => ({ ...f.guards, djiAuthority: true })
+  );
+
+  await coordinator.sendDroneControl(
+    "M3T-001",
+    "operator-a",
+    { x: 0, y: 0, h: 0, w: 0 }
+  );
+  assert.deepEqual(f.calls, ["session.sendDrone"]);
+
+  await assert.rejects(
+    coordinator.sendStick(
+      "M3T-001",
+      "operator-a",
+      { roll: 1024, pitch: 1024, throttle: 1024, yaw: 1024 }
+    ),
+    /stick_control_not_supported/
+  );
 });
