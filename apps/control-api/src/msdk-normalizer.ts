@@ -237,6 +237,53 @@ export function normalizeMsdkBridgeSnapshot(
     );
   }
 
+
+  if (snapshot.wayline) {
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.wayline.supported",
+      snapshot.wayline.supported,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.wayline.selected_file_name",
+      snapshot.wayline.selectedFileName,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.wayline.available_ids",
+      snapshot.wayline.availableWaylineIds,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.wayline.upload_state",
+      snapshot.wayline.uploadState,
+      sampledAt
+    );
+    pushNumber(
+      samples,
+      deviceId,
+      "raw.msdk.wayline.upload_progress",
+      snapshot.wayline.uploadProgress,
+      sampledAt,
+      "raw"
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.wayline.uploaded_at",
+      snapshot.wayline.uploadedAt,
+      sampledAt
+    );
+  }
+
   return {
     device: {
       identity: {
