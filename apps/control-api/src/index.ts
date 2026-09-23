@@ -62,6 +62,7 @@ import { attachMsdkControlWebSocket } from "./msdk-control-ws.js";
 import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
 import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
 import { queryInt } from "./http-query.js";
+import { markAllDrcTransportsLost } from "./drc-runtime.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -89,8 +90,8 @@ let drcSessions: DrcSessionManager | undefined;
 const djiOptions = getDjiOptions(topologyPersistence, async (gatewaySn, drcState) => {
   await drcSessions?.applyDrcStatus(gatewaySn, drcState);
 }, async (reason) => {
-  const open = await drcSessions?.listOpenSessions() ?? [];
-  await Promise.allSettled(open.map((session) => drcSessions?.markTransportLost(session.gatewaySn, reason)));
+  if (!drcSessions) return;
+  await markAllDrcTransportsLost(drcSessions, reason);
 });
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const controlGuards = new RuntimeControlGuardRegistry();
