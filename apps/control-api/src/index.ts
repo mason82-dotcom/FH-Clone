@@ -40,6 +40,7 @@ import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 import { ControlCoordinator } from "./control-coordinator.js";
 import { evaluateControlApiReadiness } from "./readiness.js";
+import { closeHttpServer, onceAsync, runShutdownSteps } from "./shutdown.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -677,22 +678,69 @@ if (dji) {
 }
 
 
-async function shutdown(): Promise<void> {
+const shutdown = onceAsync(async () => {
   clearInterval(missionSweepTimer);
-  publicServer.close();
-  internalServer.close();
-  await drcSessions?.shutdown();
-  await dji?.stop();
-  await ugcs?.stop();
-  await authzAudit.shutdown();
-  await gatewayCredentials?.close();
-  await missionStore.close();
-  await topologyPersistence.flush();
-  await topologyStore?.close();
+
+  await runShutdownSteps([
+    {
+      name: "public_http",
+      run: () => closeHttpServer(publicServer)
+    },
+    {
+      name: "internal_http",
+      run: () => closeHttpServer(internalServer)
+    },
+    {
+      name: "drc_sessions",
+      run: () => drcSessions?.shutdown()
+    },
+    {
+      name: "dji_adapter",
+      run: () => dji?.stop()
+    },
+    {
+      name: "ugcs_adapter",
+      run: () => ugcs?.stop()
+    },
+    {
+      name: "authz_audit",
+      run: () => authzAudit.shutdown()
+    },
+    {
+      name: "gateway_credentials",
+      run: () => gatewayCredentials?.close()
+    },
+    {
+      name: "mission_store",
+      run: () => missionStore.close()
+    },
+    {
+      name: "topology_queue",
+      run: () => topologyPersistence.flush()
+    },
+    {
+      name: "topology_store",
+      run: () => topologyStore?.close()
+    }
+  ]);
+});
+
+function handleShutdownSignal(signal: "SIGINT" | "SIGTERM"): void {
+  console.info(`[Shutdown] ${signal} empfangen.`);
+
+  void shutdown()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(
+        "[Shutdown] Bereinigung unvollständig:",
+        errorMessage(error)
+      );
+      process.exit(1);
+    });
 }
 
-process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
-process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
+process.once("SIGINT", () => handleShutdownSignal("SIGINT"));
+process.once("SIGTERM", () => handleShutdownSignal("SIGTERM"));
 
 function getDjiOptions(
   topologyPersistence: TopologyPersistenceQueue,
