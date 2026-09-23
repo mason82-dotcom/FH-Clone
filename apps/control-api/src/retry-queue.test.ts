@@ -51,12 +51,14 @@ test("drop-oldest bounds high-volume queues explicitly", async () => {
   queue.enqueue(2);
   queue.enqueue(3);
 
-  assert.deepEqual(dropped, [1]);
+  // enqueue(2) immediately kicks a retry of item 1. Once item 1 is
+  // in-flight it must never be dropped; pressure therefore evicts item 2.
+  assert.deepEqual(dropped, [2]);
   assert.equal(queue.status.dropped, 1);
 
   available = true;
   await queue.flush();
-  assert.deepEqual(persisted, [2, 3]);
+  assert.deepEqual(persisted, [1, 3]);
   await queue.shutdown();
 });
 
