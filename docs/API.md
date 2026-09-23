@@ -87,6 +87,15 @@ verwendet weiterhin ausschließlich die Runtime-Topologie.
 
 Ohne aktivierte Topologie-Persistenz liefert der Endpunkt `503`.
 
+### GET /api/dji/gateways/{gateway_sn}/authority
+
+Liefert den aktuellen DJI Pilot Cloud-Control-Authority-Zustand eines
+Gateways read-only. Der Endpunkt aktiviert selbst keine Flugsteuerung und
+fordert keine Authority an.
+
+Zusätzlich wird `cloudControlEnabled` aus der kanonischen globalen
+Cloud-Control-Policy ausgegeben.
+
 ### GET /api/devices/{device_sn}/telemetry
 
 Liefert den aktuellen normalisierten Parametersnapshot eines Geräts.
