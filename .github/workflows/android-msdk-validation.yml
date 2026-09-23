@@ -43,6 +43,19 @@ jobs:
         with:
           gradle-version: "8.13"
 
+      - name: Configure optional DJI MSDK app key
+        shell: bash
+        env:
+          DJI_MSDK_APP_KEY: ${{ secrets.DJI_MSDK_APP_KEY }}
+        run: |
+          mkdir -p ~/.gradle
+          if [ -n "$DJI_MSDK_APP_KEY" ]; then
+            printf 'AIRCRAFT_API_KEY=%s\n' "$DJI_MSDK_APP_KEY" >> ~/.gradle/gradle.properties
+            echo "DJI_APP_KEY_CONFIGURED=true" >> "$GITHUB_ENV"
+          else
+            echo "DJI_APP_KEY_CONFIGURED=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Assemble debug
         run: |
           gradle :app:assembleDebug --stacktrace --no-daemon
@@ -50,6 +63,35 @@ jobs:
       - name: Lint debug
         run: |
           gradle :app:lintDebug --stacktrace --no-daemon
+
+      - name: Package hardware-test APK
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+
+          SHA256="$(sha256sum "$APK" | awk '{print $1}')"
+          mkdir -p app/build/fh2-artifact
+          cp "$APK" app/build/fh2-artifact/fh2-rc-bridge-debug.apk
+          printf '%s  %s\n' "$SHA256" "fh2-rc-bridge-debug.apk"             > app/build/fh2-artifact/fh2-rc-bridge-debug.apk.sha256
+
+          cat > app/build/fh2-artifact/BUILD_INFO.txt <<EOF
+          repository=${GITHUB_REPOSITORY}
+          commit=${GITHUB_SHA}
+          branch=${GITHUB_REF_NAME}
+          msdk=5.18.0
+          application_id=com.fh2.rcbridge
+          dji_app_key_configured=${DJI_APP_KEY_CONFIGURED}
+          sha256=${SHA256}
+          EOF
+
+      - name: Upload RC Bridge debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fh2-rc-bridge-debug-${{ github.sha }}
+          path: android/fh2-rc-bridge/app/build/fh2-artifact/
+          if-no-files-found: error
+          retention-days: 14
 
 
   node-msdk:
