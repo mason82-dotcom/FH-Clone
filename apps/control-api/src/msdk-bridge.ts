@@ -189,6 +189,19 @@ export class MsdkBridgeService {
       }));
   }
 
+  getByAircraftSn(aircraftSn: string): MsdkAgentRecord | undefined {
+    const record = [...this.agents.values()]
+      .filter((entry) => entry.aircraftSn === aircraftSn)
+      .sort((a, b) => b.lastSeenAt - a.lastSeenAt)[0];
+
+    return record
+      ? {
+          ...record,
+          snapshot: structuredClone(record.snapshot)
+        }
+      : undefined;
+  }
+
   private sign(payload: MsdkTokenPayload): string {
     if (!this.signingSecret) {
       throw new Error("msdk_bridge_not_configured");
