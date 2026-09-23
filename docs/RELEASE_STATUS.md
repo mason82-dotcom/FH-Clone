@@ -48,6 +48,7 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - Readiness unterscheidet optionale `disabled`-Abhängigkeiten von konfiguriertem `unavailable`
 - Compose-Regressionscheck schützt `control-api -> emqx/timescaledb: service_healthy` und den internen Port 8081
 - Verify-Cleanup bewahrt Fehlerstatus, läuft bei INT/TERM über den EXIT-Pfad und macht Cleanup-Fehler bei sonst erfolgreichem Lauf sichtbar
+- Shutdown ist idempotent, wartet beide HTTP-Server ab und führt verbleibende Cleanup-Schritte auch nach Teilfehlern weiter aus
 
 ## Hardware-Evidence
 
