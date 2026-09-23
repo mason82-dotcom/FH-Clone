@@ -1,5 +1,6 @@
 package com.fh2.rcbridge
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
@@ -22,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var enableButton: Button
     private lateinit var disableButton: Button
     private lateinit var evidenceButton: Button
+    private lateinit var mapButton: Button
     private lateinit var bridgeText: TextView
     private lateinit var baseUrlInput: EditText
     private lateinit var pairingTokenInput: EditText
@@ -260,6 +262,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        mapButton = Button(this).apply {
+            text = "Karte öffnen"
+            setOnClickListener {
+                startActivity(
+                    Intent(this@MainActivity, MapActivity::class.java)
+                )
+            }
+        }
+
         pairButton = Button(this).apply {
             text = "Mit FH2 pairen"
             setOnClickListener {
@@ -316,6 +327,7 @@ class MainActivity : AppCompatActivity() {
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
             addView(evidenceButton, matchWidth(top = 24))
+            addView(mapButton, matchWidth(top = 12))
         }
 
         setContentView(
