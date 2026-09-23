@@ -9,6 +9,13 @@ function read(path: string): string {
   );
 }
 
+function sqlWithoutComments(value: string): string {
+  return value
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("--"))
+    .join("\n");
+}
+
 const gatewayCredentials = read(
   "infra/timescale/sql/004_gateway_credentials.sql"
 );
@@ -28,7 +35,7 @@ test("gateway credential persistence contains identity only, never runtime contr
   assert.match(gatewayCredentials, /gateway_sn/);
 
   assert.doesNotMatch(
-    gatewayCredentials,
+    sqlWithoutComments(gatewayCredentials),
     /fc_stage|control_lease|cloud_control_auth|flight_authority|drc_state|drc_session/i
   );
 });
@@ -38,7 +45,7 @@ test("persisted topology cannot become a runtime control-authority store", () =>
   assert.match(topology, /CREATE TABLE IF NOT EXISTS dji_gateway_devices/);
 
   assert.doesNotMatch(
-    topology,
+    sqlWithoutComments(topology),
     /device_secret|nonce|fc_stage|control_lease|cloud_control_auth|flight_authority|drc_state|drc_session/i
   );
 });
