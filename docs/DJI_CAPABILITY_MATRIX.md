@@ -88,6 +88,7 @@ Es gibt keinen Environment- oder Runtime-Schalter zur Reaktivierung.
 | Kamera-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.camera`-Werbung |
 | Gimbal-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.gimbal`-Werbung |
 | Payload-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `payload.control`-Werbung |
+| Cloud-Control-Authority | DJI Pilot-to-Cloud | DJI dokumentiert | M3 + RC Pro und M4 + RC Plus 2: an; Consent/State muss positiv bestätigt sein |
 | Stick-Control | für M3/RC Pro nicht verwendet | DJI dokumentiert | M3: aus; M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
 | `drone_control` | DJI Pilot-to-Cloud dokumentiert | DJI dokumentiert | M3 + RC Pro und M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
 | Return-to-Home | nicht freigegeben | DJI dokumentiert `return_home` / `return_home_cancel` | nicht implementiert |
@@ -118,6 +119,7 @@ Gimbal-Kommandos dokumentiert.
 FH2 aktiviert hinter RC Pro Enterprise:
 
 ```text
+cloudControl   = true
 flightControl  = true
 stickControl   = false
 droneControl   = true
@@ -145,9 +147,11 @@ DJI beschreibt hinter RC Plus 2:
 FH2 trennt für M4E/M4T die beiden DRC-Steuerpfade ausdrücklich:
 
 ```text
+Cloud-Control / cloud_control = ENABLED (M4 + RC Plus 2)
 Stick-Control / stick_control = ENABLED (M4 + RC Plus 2)
 drone_control                 = ENABLED (M4 + RC Plus 2)
 DrcProfile                    = pilot-m4-stick
+cloudControl                  = true
 flightControl                 = true
 droneControl                  = true
 
@@ -414,7 +418,8 @@ Telemetrie-Capabilities und nur dann schreibende Capabilities, wenn
 ### 2. DJI-Produkt-/Control-Profil
 
 `controlProfile` beschreibt den bekannten DJI-Produktsupport hinter dem
-erkannten Gateway. Dazu gehören beispielsweise `flightControl`, `flyTo`,
+erkannten Gateway. Dazu gehören beispielsweise `cloudControl`,
+`flightControl`, `flyTo`,
 `pointingFlight`, `orbitFlight`, `payloadControl`, `drcProfile` und
 `requiresCloudControlAuthority`.
 
