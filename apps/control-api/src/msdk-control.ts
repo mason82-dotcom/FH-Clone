@@ -72,6 +72,7 @@ export class MsdkControlHub {
   ): void {
     const previous = this.peers.get(identity.aircraftSn);
     if (previous && previous.peer !== peer) {
+      this.closeSession(identity.aircraftSn, "agent_transport_replaced");
       previous.peer.close(4001, "replaced_by_new_agent_connection");
     }
 
@@ -106,8 +107,7 @@ export class MsdkControlHub {
   openSession(aircraftSn: string, holder: string): MsdkControlSession {
     if (!holder.trim()) throw new Error("msdk_control_holder_required");
 
-    const peerRecord = this.peers.get(aircraftSn);
-    if (!peerRecord) throw new Error("msdk_agent_socket_not_connected");
+    const peerRecord = this.requireLivePeer(aircraftSn);
 
     const agent = this.requireControllableAgent(aircraftSn, holder);
     if (agent.gatewaySn !== peerRecord.identity.gatewaySn) {
@@ -163,8 +163,7 @@ export class MsdkControlHub {
     }
 
     this.requireControllableAgent(aircraftSn, holder);
-    const peer = this.peers.get(aircraftSn)?.peer;
-    if (!peer) throw new Error("msdk_agent_socket_not_connected");
+    const peer = this.requireLivePeer(aircraftSn).peer;
 
     const seq = session.lastSeq + 1;
     const now = this.now();
@@ -227,6 +226,8 @@ export class MsdkControlHub {
   }
 
   handleAgentMessage(aircraftSn: string, text: string): void {
+    this.requireLivePeer(aircraftSn);
+
     let message: unknown;
     try {
       message = JSON.parse(text);
@@ -306,6 +307,12 @@ export class MsdkControlHub {
   tick(): void {
     const now = this.now();
 
+    for (const [aircraftSn, current] of [...this.peers]) {
+      if (current.identity.expiresAt <= now) {
+        this.expirePeer(aircraftSn, current);
+      }
+    }
+
     for (const [aircraftSn, session] of this.sessions) {
       if (session.state === "closed") continue;
 
@@ -335,6 +342,34 @@ export class MsdkControlHub {
 
   listSessions(): MsdkControlSession[] {
     return [...this.sessions.values()].map((entry) => ({ ...entry }));
+  }
+
+  private requireLivePeer(aircraftSn: string): PeerRecord {
+    const current = this.peers.get(aircraftSn);
+    if (!current) throw new Error("msdk_agent_socket_not_connected");
+
+    if (current.identity.expiresAt <= this.now()) {
+      this.expirePeer(aircraftSn, current);
+      throw new Error("msdk_agent_token_expired");
+    }
+
+    return current;
+  }
+
+  private expirePeer(
+    aircraftSn: string,
+    current: PeerRecord
+  ): void {
+    if (this.peers.get(aircraftSn)?.peer !== current.peer) return;
+
+    this.closeSession(aircraftSn, "agent_token_expired");
+    this.peers.delete(aircraftSn);
+    current.peer.close(4003, "agent_token_expired");
+    this.audit("peer_closed", {
+      aircraftSn,
+      gatewaySn: current.identity.gatewaySn,
+      reason: "agent_token_expired"
+    });
   }
 
   private requireControllableAgent(

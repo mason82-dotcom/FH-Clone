@@ -251,11 +251,12 @@ export class MsdkBridgeService {
     const token = this.verify(agentToken);
     if (!token) return undefined;
 
-    const record = this.agents.get(
-      agentKey(token.gatewaySn, token.aircraftSn)
-    );
-    if (!record) return undefined;
-
+    // The signed token is the transport credential. The in-memory agent
+    // snapshot is deliberately not required here so a valid paired RC can
+    // reconnect its WSS transport after a Control-API process restart.
+    // Flight-control remains fail-closed because MsdkControlHub separately
+    // requires a fresh heartbeat-backed agent record before opening or using
+    // a session.
     return {
       gatewaySn: token.gatewaySn,
       aircraftSn: token.aircraftSn,

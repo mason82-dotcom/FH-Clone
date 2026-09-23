@@ -103,6 +103,47 @@ test("rejects wrong bootstrap token and identity switching", () => {
   );
 });
 
+test("valid signed token re-authenticates transport after service restart", () => {
+  const issuer = new MsdkBridgeService({
+    pairingToken: "pair-secret",
+    signingSecret: "sign-secret",
+    tokenTtlMs: 60_000,
+    now: () => 10_000
+  });
+
+  const paired = issuer.pair("pair-secret", snapshot());
+  assert.ok(paired);
+
+  const restarted = new MsdkBridgeService({
+    pairingToken: "pair-secret",
+    signingSecret: "sign-secret",
+    tokenTtlMs: 60_000,
+    now: () => 10_000
+  });
+
+  assert.equal(restarted.listAgents().length, 0);
+  assert.deepEqual(
+    restarted.authenticateAgent(paired.agentToken),
+    {
+      gatewaySn: "RC-PRO-001",
+      aircraftSn: "M3T-001",
+      expiresAt: 70_000
+    }
+  );
+
+  // A transport may reconnect from the signed credential, but control stays
+  // blocked until a fresh heartbeat reconstructs the runtime agent record.
+  assert.equal(restarted.getByAircraftSn("M3T-001"), undefined);
+  assert.equal(
+    restarted.heartbeat(paired.agentToken, snapshot()),
+    true
+  );
+  assert.equal(
+    restarted.getByAircraftSn("M3T-001")?.lastSeenAt,
+    10_000
+  );
+});
+
 test("rejects expired agent tokens", () => {
   let now = 10_000;
   const service = new MsdkBridgeService({

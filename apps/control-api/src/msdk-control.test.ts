@@ -60,7 +60,7 @@ class FakePeer implements MsdkControlPeer {
   }
 }
 
-function fixture() {
+function fixture(expiresAt = 60_000) {
   let now = 10_000;
   let fc3 = true;
   let lease = true;
@@ -86,7 +86,7 @@ function fixture() {
     {
       gatewaySn: "RC-PRO-001",
       aircraftSn: "M3T-001",
-      expiresAt: 60_000
+      expiresAt
     },
     peer
   );
@@ -223,6 +223,77 @@ test("stale heartbeat closes an active session fail-closed", () => {
   assert.deepEqual(
     f.peer.sent.slice(-2).map((entry) => entry.type),
     ["neutral", "session_stop"]
+  );
+});
+
+test("replacing the agent socket closes an active session fail-closed", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  const replacement = new FakePeer();
+  f.hub.registerPeer(
+    {
+      gatewaySn: "RC-PRO-001",
+      aircraftSn: "M3T-001",
+      expiresAt: 60_000
+    },
+    replacement
+  );
+
+  assert.deepEqual(
+    f.peer.sent.slice(-2).map((entry) => entry.type),
+    ["neutral", "session_stop"]
+  );
+  assert.deepEqual(
+    f.peer.closed,
+    { code: 4001, reason: "replaced_by_new_agent_connection" }
+  );
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "agent_transport_replaced"
+  );
+});
+
+test("expired transport token closes session and socket", () => {
+  const f = fixture(10_100);
+  const session = f.hub.openSession("M3T-001", "operator-a");
+
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.setNow(10_101);
+  f.hub.tick();
+
+  assert.deepEqual(
+    f.peer.sent.slice(-2).map((entry) => entry.type),
+    ["neutral", "session_stop"]
+  );
+  assert.deepEqual(
+    f.peer.closed,
+    { code: 4003, reason: "agent_token_expired" }
+  );
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "agent_token_expired"
+  );
+  assert.throws(
+    () => f.hub.openSession("M3T-001", "operator-a"),
+    /msdk_agent_socket_not_connected/
   );
 });
 
