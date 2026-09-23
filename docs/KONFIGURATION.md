@@ -211,7 +211,7 @@ deaktiviert.
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
 | `MSDK_PAIRING_TOKEN` | leer | Bootstrap-Secret für `POST /api/msdk/pair` |
-| `MSDK_BRIDGE_TOKEN_SECRET` | leer | HMAC-Secret für stateless Agent-Tokens |
+| `MSDK_BRIDGE_TOKEN_SECRET` | leer | HMAC-Secret für signierte Agent-Tokens |
 | `MSDK_BRIDGE_TOKEN_TTL_SECONDS` | `86400` | Lebensdauer eines gepairten Agent-Tokens |
 
 Nur wenn `MSDK_PAIRING_TOKEN` und `MSDK_BRIDGE_TOKEN_SECRET` gesetzt sind,
@@ -220,6 +220,12 @@ Flight-Control-Kommandos.
 
 Der Bootstrap-Token wird von der Android-App nur zur Pairing-Anfrage
 verwendet. Das daraus erzeugte Agent-Token ist an `gatewaySn + aircraftSn`
+gebunden. Explizites Unpair schreibt ausschließlich den SHA-256-Digest des
+Agent-Tokens mit seiner Ablaufzeit nach `msdk_token_revocations`. Dadurch
+bleibt der Widerruf über Control-API-Neustarts erhalten, ohne eine zweite
+Gateway-/Aircraft-Identity oder Runtime-Control-Rechte zu persistieren.
+
+Das Agent-Token ist an `gatewaySn + aircraftSn`
 gebunden.
 
 ## Media-Ingest
