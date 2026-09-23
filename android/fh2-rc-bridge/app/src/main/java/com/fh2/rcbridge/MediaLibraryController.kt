@@ -104,6 +104,10 @@ object MediaLibraryController {
                 }
 
                 override fun onFailure(error: IDJIError) {
+                    runCatching {
+                        manager.removeAllMediaFileListStateListener()
+                    }
+                    filesByIndex.clear()
                     active.set(false)
                     update {
                         copy(
