@@ -1,5 +1,6 @@
 package com.fh2.rcbridge
 
+import android.content.Context
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -32,7 +33,106 @@ object Fh2BridgeClient {
     @Volatile
     private var agentToken: String? = null
 
+    @Volatile
+    private var storedPairing: StoredPairing? = null
+
+    @Volatile
+    private var resumeInProgress = false
+
+    private var secureStore: SecurePairingStore? = null
     private var heartbeatTask: ScheduledFuture<*>? = null
+
+    fun initialize(context: Context) {
+        val store = SecurePairingStore(context)
+        secureStore = store
+        val stored = store.load()
+        storedPairing = stored
+
+        if (stored != null) {
+            update {
+                Fh2BridgeConnectionSnapshot(
+                    status = "stored",
+                    baseUrl = stored.baseUrl,
+                    gatewaySn = stored.gatewaySn,
+                    aircraftSn = stored.aircraftSn,
+                    expiresAt = stored.expiresAt
+                )
+            }
+        }
+    }
+
+    fun tryResume() {
+        if (resumeInProgress || agentToken != null) return
+
+        val store = secureStore ?: return
+        val stored = storedPairing ?: store.load() ?: return
+        if (stored.expiresAt <= System.currentTimeMillis()) {
+            clearStoredPairing()
+            return
+        }
+
+        val sdk = DjiSdkRuntime.snapshot
+        val gateway = RemoteControllerIdentitySource.snapshot
+        val aircraft = AircraftTelemetrySource.snapshot
+        if (!sdk.registered || !sdk.productConnected) return
+        if (!gateway.connected || !aircraft.flightControllerConnected) return
+        val gatewaySn = gateway.serialNumber ?: return
+        val aircraftSn = aircraft.flightControllerSerial ?: return
+
+        if (
+            gatewaySn != stored.gatewaySn ||
+            aircraftSn != stored.aircraftSn
+        ) {
+            update {
+                copy(
+                    status = "identity_mismatch",
+                    baseUrl = stored.baseUrl,
+                    gatewaySn = stored.gatewaySn,
+                    aircraftSn = stored.aircraftSn,
+                    expiresAt = stored.expiresAt,
+                    lastError =
+                        "stored_pairing_identity_mismatch:" +
+                            "current=$gatewaySn/$aircraftSn"
+                )
+            }
+            return
+        }
+
+        resumeInProgress = true
+        executor.execute {
+            try {
+                val baseUrl = normalizeBaseUrl(stored.baseUrl)
+                agentToken = stored.agentToken
+                storedPairing = stored
+                update {
+                    Fh2BridgeConnectionSnapshot(
+                        status = "paired",
+                        baseUrl = baseUrl,
+                        gatewaySn = stored.gatewaySn,
+                        aircraftSn = stored.aircraftSn,
+                        expiresAt = stored.expiresAt
+                    )
+                }
+                MsdkControlClient.connect(
+                    baseUrl = baseUrl,
+                    agentToken = stored.agentToken,
+                    aircraftSn = stored.aircraftSn
+                )
+                startHeartbeat()
+            } catch (error: Throwable) {
+                agentToken = null
+                update {
+                    copy(
+                        status = "error",
+                        lastError =
+                            error.message ?: error.toString()
+                    )
+                }
+            } finally {
+                resumeInProgress = false
+            }
+        }
+    }
 
     fun pair(
         baseUrlInput: String,
@@ -66,6 +166,15 @@ object Fh2BridgeClient {
                 val aircraftSn = response.getString("aircraftSn")
                 val expiresAt = response.getLong("expiresAt")
 
+                val pairing = StoredPairing(
+                    baseUrl = baseUrl,
+                    agentToken = token,
+                    gatewaySn = gatewaySn,
+                    aircraftSn = aircraftSn,
+                    expiresAt = expiresAt
+                )
+                secureStore?.save(pairing)
+                storedPairing = pairing
                 agentToken = token
                 update {
                     Fh2BridgeConnectionSnapshot(
@@ -105,6 +214,7 @@ object Fh2BridgeClient {
             MsdkControlClient.disconnect("bridge_disconnect")
             NetworkControlArm.disarm()
             agentToken = null
+            clearStoredPairing()
             update { Fh2BridgeConnectionSnapshot() }
         }
     }
@@ -162,6 +272,7 @@ object Fh2BridgeClient {
                             message.startsWith("http_403")
                         ) {
                             agentToken = null
+                            clearStoredPairing()
                             stopHeartbeat()
                             MsdkControlClient.disconnect("agent_token_expired")
                             NetworkControlArm.disarm()
@@ -183,6 +294,11 @@ object Fh2BridgeClient {
     private fun stopHeartbeat() {
         heartbeatTask?.cancel(false)
         heartbeatTask = null
+    }
+
+    private fun clearStoredPairing() {
+        storedPairing = null
+        secureStore?.clear()
     }
 
     private fun normalizeBaseUrl(input: String): String {
