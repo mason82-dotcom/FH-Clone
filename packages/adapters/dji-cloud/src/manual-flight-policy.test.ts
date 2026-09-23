@@ -50,3 +50,33 @@ test("global policy allows both drone_control and stick_control", async () => {
   assert.equal(publications[1]?.payload?.method, "stick_control");
   assert.equal(publications.length, 2);
 });
+
+
+test("heartbeat publish failure is contained and reported", async () => {
+  const services: DjiServiceRequester = {
+    async requestService() {
+      throw new Error("service path must not be used");
+    }
+  };
+  let publishes = 0;
+  const publisher: DjiMqttPublisher = {
+    async publish() {
+      publishes += 1;
+      throw new Error("heartbeat_publish_failed");
+    }
+  };
+  const errors: string[] = [];
+  const controller = new DrcController(services, publisher, {
+    heartbeatIntervalMs: 60_000,
+    onHeartbeatError: (error) => {
+      errors.push(error.message);
+    }
+  });
+
+  controller.startHeartbeat("RC-FAIL");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  controller.stopHeartbeat();
+
+  assert.equal(publishes, 1);
+  assert.deepEqual(errors, ["heartbeat_publish_failed"]);
+});
