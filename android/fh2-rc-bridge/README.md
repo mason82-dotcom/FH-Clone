@@ -284,3 +284,40 @@ Die Struktur ist vorbereitet für:
 
 Die Karte berechnet keine erfundenen Positionen oder Footprints. Fehlt ein
 MSDK-/Backend-Datensatz, wird der entsprechende Layer nicht gezeichnet.
+
+
+## Livevideo
+
+Die App verwendet den aktuellen MSDK-V5-`CameraStreamManager` und bindet den
+DJI-Videostream direkt an eine lokale Android-`Surface`.
+
+Der Screen **Livevideo öffnen** unterstützt die von MSDK für die gewählte
+Kamera gemeldeten Streamquellen, darunter je nach Aircraft/Sensor:
+
+```text
+WIDE_CAMERA
+ZOOM_CAMERA
+INFRARED_CAMERA
+RGB_CAMERA
+NDVI_CAMERA
+MS_G_CAMERA
+MS_R_CAMERA
+MS_RE_CAMERA
+MS_NIR_CAMERA
+```
+
+Die Quelle wird ausschließlich aus
+`CameraKey.KeyCameraVideoStreamSourceRange` angeboten. Eine Thermal- oder
+Multispektralquelle wird nicht anhand des Modellnamens erfunden.
+
+Das Video bleibt aktuell lokal auf der RC. Es wird weder automatisch ins FH2-
+Backend gestreamt noch als versteckter RTSP/WebRTC-Pfad veröffentlicht.
+
+## Wayline / WPML
+
+Die App kann eine DJI-WPML-KMZ lokal auswählen, die darin verfügbaren
+Wayline-IDs über `WaypointMissionManager.getAvailableWaylineIDs()` lesen und
+die KMZ mit `pushKMZFileToAircraft()` auf die Aircraft übertragen.
+
+Ein Missionsstart ist bewusst **nicht** an Pairing/Heartbeat gekoppelt und wird
+derzeit nicht automatisch ausgelöst.
