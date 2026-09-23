@@ -322,6 +322,9 @@ jobs:
             }
           done
 
+      - name: DJI Control-Policy konsistent halten
+        run: node scripts/control-policy-audit.mjs
+
 
   hardware-evidence:
     name: DJI Hardware Evidence
