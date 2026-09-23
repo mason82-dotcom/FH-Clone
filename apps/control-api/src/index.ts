@@ -607,6 +607,20 @@ const publicServer = createServer(async (request, response) => {
         : json(response, 404, { error: "rtk_status_not_available", deviceId });
     }
 
+    const telemetrySourcesMatch = url.pathname.match(
+      /^\/api\/devices\/([^/]+)\/telemetry\/sources$/
+    );
+    if (request.method === "GET" && telemetrySourcesMatch) {
+      const deviceId = decodeURIComponent(
+        telemetrySourcesMatch[1] ?? ""
+      );
+      return json(
+        response,
+        200,
+        parameters.snapshotSources(deviceId)
+      );
+    }
+
     const telemetryMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/telemetry$/);
     if (request.method === "GET" && telemetryMatch) {
       const deviceId = decodeURIComponent(telemetryMatch[1] ?? "");

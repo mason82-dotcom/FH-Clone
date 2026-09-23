@@ -56,8 +56,26 @@ invalid
 unknown
 ```
 
-Die aktuelle `ParameterRegistry` hält pro Gerät und Key nur den neuesten
-Sample.
+Die `ParameterRegistry` hält pro Gerät und kanonischem Key einen
+fusionierten aktuellen Sample und zusätzlich den neuesten Sample je Adapter.
+
+Fusion:
+
+```text
+deviceId + canonical key
+  -> dji-cloud latest
+  -> msdk-v5 latest
+  -> ...
+  -> fused current
+```
+
+Primär entscheidet `sampledAt`. Bei gleichem Zeitstempel folgt die
+Qualitätsreihenfolge `good > unknown > stale > invalid`; danach sorgt die
+Adapter-ID nur für einen deterministischen Tie-Break.
+
+Die adapterbezogenen Werte bleiben über
+`snapshotSources(deviceId)` beziehungsweise den öffentlichen
+`/telemetry/sources`-Endpunkt sichtbar.
 
 ## RawMessage
 
@@ -399,3 +417,23 @@ Wichtig:
 - DJI-`mode_code == 5` erzeugt keine Wayline-ID,
 - FH2-Task-ID und DJI-Wayline-ID bleiben getrennte Referenzarten,
 - jede Korrelation muss ihre Quelle und Vertrauensstufe behalten.
+
+
+## MediaStore und Telemetrie-Fusion
+
+Die adapterübergreifende Live-Telemetrie und die MediaAsset-Persistenz sind
+getrennte Datenebenen:
+
+```text
+Live-Telemetrie
+  -> ParameterRegistry
+  -> fused current + per-adapter provenance
+
+MediaAsset
+  -> MediaStore / TimescaleDB
+  -> MediaOverlayRegistry rehydration
+```
+
+Ein MediaStore-Ausfall beeinflusst die Readiness, erzeugt aber keine
+alternative Telemetriequelle. Umgekehrt ersetzt die Telemetrie-Fusion keine
+MediaAsset-Persistenz.

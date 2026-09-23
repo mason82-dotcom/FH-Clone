@@ -41,7 +41,12 @@ Ohne `DJI_MQTT_URL` bleibt die HTTP-API lauffähig, der DJI-Adapter ist jedoch
 deaktiviert.
 
 Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
-`MissionStore` für automatische Missionssitzungen.
+`MissionStore` für automatische Missionssitzungen und den `MediaStore`
+für validierte MediaAssets. Persistierte Assets werden beim Start in den
+MediaOverlay-Registry rehydriert.
+
+Die Readiness prüft beide Stores separat. Ein konfigurierter, aber nicht
+erreichbarer MediaStore macht `/ready` fail-closed.
 
 ## Umgebungsvariablen
 
@@ -141,9 +146,14 @@ Er aktiviert keine Safety-Stufe, erzeugt keinen Lease und bietet **keinen**
 
 ```http
 GET /api/devices/{device_sn}/telemetry
+GET /api/devices/{device_sn}/telemetry/sources
 ```
 
-Liefert den aktuellen normalisierten Parametersnapshot.
+Der erste Endpunkt liefert den fusionierten kanonischen Parametersnapshot.
+Der zweite erhält die neuesten Samples pro Adapter als Provenienzansicht.
+
+DJI Cloud und MSDK dürfen denselben kanonischen Key für dasselbe Aircraft
+liefern. Die Fusion ist read-only und erzeugt keine Control-Rechte.
 
 ### DJI Pilot Waypoint-Dateien – read-only
 

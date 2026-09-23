@@ -59,6 +59,11 @@ erfolgreich sind, andernfalls `503`.
 FlightHub 2 OpenAPI ist optional und blockiert die allgemeine Readiness
 nicht, wenn `FH2_ENABLED=false` gesetzt ist.
 
+Die Readiness prüft außerdem den konfigurierten MediaStore. Wenn
+`TIMESCALE_URL` gesetzt ist, muss die Tabelle `media_assets` erreichbar
+sein; andernfalls meldet `/ready` den Check `mediaStore=unavailable` und
+liefert HTTP 503.
+
 ### POST /api/msdk/pair
 
 Pairing-Endpunkt für die native FH2 RC Bridge auf DJI MSDK V5.
@@ -242,10 +247,41 @@ nicht ausgegeben.
 
 ### GET /api/devices/{device_sn}/telemetry
 
-Liefert den aktuellen normalisierten Parametersnapshot eines Geräts.
+Liefert den **fusionierten** aktuellen normalisierten Parametersnapshot eines
+Geräts.
 
-Unbekannte Herstellerfelder bleiben über die Rohdatenebene erhalten, werden
-aber nicht automatisch als kanonische Parameter ausgegeben.
+Wenn mehrere Adapter denselben kanonischen Key für dieselbe `device_sn`
+melden, gewinnt der neueste Sample. Bei identischem Zeitstempel entscheidet
+deterministisch die Sample-Qualität und danach die Adapter-ID.
+
+Dadurch können DJI Cloud API und MSDK V5 dieselben kanonischen Flug-/RTK-Keys
+speisen, ohne die öffentliche API zu duplizieren.
+
+Unbekannte Herstellerfelder bleiben über die Rohdatenebene erhalten.
+
+### GET /api/devices/{device_sn}/telemetry/sources
+
+Liefert die neuesten normalisierten Samples **je Adapter und kanonischem Key**.
+
+Beispielstruktur:
+
+```json
+{
+  "flight.position.latitude_deg": {
+    "dji-cloud": {
+      "adapterId": "dji-cloud",
+      "value": 49.12
+    },
+    "msdk-v5": {
+      "adapterId": "msdk-v5",
+      "value": 49.1201
+    }
+  }
+}
+```
+
+Dieser Endpunkt dient Provenienz, Diagnose und Plausibilitätsvergleich. Er
+vergibt keine Control Authority und verändert keine Safety-Stufe.
 
 ### GET /api/devices/{device_sn}/capabilities
 
