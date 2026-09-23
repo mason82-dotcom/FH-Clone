@@ -35,12 +35,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android 36 SDK
+      - name: Install Android 35 SDK
         shell: bash
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
@@ -64,17 +64,20 @@ jobs:
         run: |
           gradle :app:assembleDebug --stacktrace --no-daemon
 
-      - name: Verify packaged DJI runtime classes
+      - name: Verify DJI dependency scopes
         shell: bash
         run: |
-          APK="app/build/outputs/apk/debug/app-debug.apk"
-          APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
-          test -f "$APK"
-          test -x "$APKANALYZER"
-          "$APKANALYZER" dex packages --defined-only "$APK" > /tmp/fh2-dex-packages.txt
-          grep -F "dji.sdk.keyvalue.value.common.ComponentIndexType" /tmp/fh2-dex-packages.txt
-          grep -F "dji.v5.manager.SDKManager" /tmp/fh2-dex-packages.txt
-          grep -F "dji.sdk.keyvalue.key.CameraKey" /tmp/fh2-dex-packages.txt
+          gradle :app:dependencies --configuration debugCompileClasspath --no-daemon > /tmp/fh2-compile-deps.txt
+          gradle :app:dependencies --configuration debugRuntimeClasspath --no-daemon > /tmp/fh2-runtime-deps.txt
+
+          grep -F "com.dji:dji-sdk-v5-aircraft-provided:5.18.0" /tmp/fh2-compile-deps.txt
+          grep -F "com.dji:dji-sdk-v5-aircraft:5.18.0" /tmp/fh2-runtime-deps.txt
+          grep -F "com.dji:dji-sdk-v5-networkImp:5.18.0" /tmp/fh2-runtime-deps.txt
+
+          if grep -F "com.dji:dji-sdk-v5-aircraft-provided:5.18.0" /tmp/fh2-runtime-deps.txt; then
+            echo "aircraft-provided must not be packaged at runtime" >&2
+            exit 1
+          fi
 
       - name: Lint debug
         run: |
