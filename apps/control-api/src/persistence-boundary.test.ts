@@ -68,3 +68,19 @@ test("control-api uses an in-memory DRC session store and never rehydrates one f
     /PostgresDrcSessionStore|recoverDrc|rehydrateDrc/i
   );
 });
+
+
+test("MSDK capability view distinguishes implemented agent transport from public operator API", () => {
+  assert.match(
+    controlApi,
+    /networkControlImplemented:\s*true/
+  );
+  assert.match(
+    controlApi,
+    /publicOperatorControlApiEnabled:\s*false/
+  );
+  assert.match(
+    controlApi,
+    /attachMsdkControlWebSocket/
+  );
+});
