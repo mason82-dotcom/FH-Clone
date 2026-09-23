@@ -1,6 +1,7 @@
 import type { Capability } from "@fh-clone/aircraft-core";
 import type { DjiGatewayTopology, DjiProductRef } from "./topology.js";
 
+export const DJI_CLOUD_CONTROL_ENABLED = true as const;
 export const DJI_CLOUD_STICK_CONTROL_ENABLED = true as const;
 export const DJI_DRONE_CONTROL_ENABLED = true as const;
 
@@ -14,6 +15,8 @@ export type DjiDrcProfile =
   | "pilot-m4-stick";
 
 export interface DjiCloudControlProfile {
+  /** DJI Pilot Cloud-control authority path is enabled for this product/gateway pair. */
+  cloudControl: boolean;
   /** Any executable cloud flight-control path after product/gateway gates. */
   flightControl: boolean;
   /** DJI DRC method stick_control. */
@@ -77,17 +80,19 @@ export function getDjiCloudControlProfile(
 ): DjiCloudControlProfile {
   if (isMavic3Enterprise(aircraft)) {
     const supportedGateway = isRcProEnterprise(gateway);
+    const cloudControl = supportedGateway && DJI_CLOUD_CONTROL_ENABLED;
     return {
-      flightControl: supportedGateway && DJI_DRONE_CONTROL_ENABLED,
+      cloudControl,
+      flightControl: cloudControl && DJI_DRONE_CONTROL_ENABLED,
       stickControl: false,
-      droneControl: supportedGateway && DJI_DRONE_CONTROL_ENABLED,
+      droneControl: cloudControl && DJI_DRONE_CONTROL_ENABLED,
       flyTo: false,
       pointingFlight: false,
       orbitFlight: false,
-      payloadControl: supportedGateway,
-      requiresCloudControlAuthority: supportedGateway,
+      payloadControl: cloudControl,
+      requiresCloudControlAuthority: cloudControl,
       drcProfile:
-        supportedGateway && DJI_DRONE_CONTROL_ENABLED
+        cloudControl && DJI_DRONE_CONTROL_ENABLED
           ? "pilot-m3-drone"
           : "none",
       capabilities: [],
@@ -99,19 +104,21 @@ export function getDjiCloudControlProfile(
 
   if (isMatrice4Enterprise(aircraft)) {
     const supportedGateway = isRcPlus2(gateway);
+    const cloudControl = supportedGateway && DJI_CLOUD_CONTROL_ENABLED;
     return {
+      cloudControl,
       flightControl:
-        supportedGateway &&
+        cloudControl &&
         (DJI_CLOUD_STICK_CONTROL_ENABLED || DJI_DRONE_CONTROL_ENABLED),
-      stickControl: supportedGateway && DJI_CLOUD_STICK_CONTROL_ENABLED,
-      droneControl: supportedGateway && DJI_DRONE_CONTROL_ENABLED,
-      flyTo: supportedGateway,
+      stickControl: cloudControl && DJI_CLOUD_STICK_CONTROL_ENABLED,
+      droneControl: cloudControl && DJI_DRONE_CONTROL_ENABLED,
+      flyTo: cloudControl,
       pointingFlight: false,
       orbitFlight: false,
       payloadControl: false,
-      requiresCloudControlAuthority: supportedGateway,
+      requiresCloudControlAuthority: cloudControl,
       drcProfile:
-        supportedGateway && DJI_CLOUD_STICK_CONTROL_ENABLED
+        cloudControl && DJI_CLOUD_STICK_CONTROL_ENABLED
           ? "pilot-m4-stick"
           : "none",
       // DJI documents M4 cloud flight control. FH2 enables stick_control only
@@ -126,6 +133,7 @@ export function getDjiCloudControlProfile(
   }
 
   return {
+    cloudControl: false,
     flightControl: false,
     stickControl: false,
     droneControl: false,
