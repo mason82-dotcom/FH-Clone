@@ -96,6 +96,25 @@ fordert keine Authority an.
 Zusätzlich wird `cloudControlEnabled` aus der kanonischen globalen
 Cloud-Control-Policy ausgegeben.
 
+### GET /api/dji/control/runtime
+
+Read-only Sicht auf die zentrale DJI-Control-Runtime.
+
+Die Antwort enthält ausschließlich nicht-sensitive Laufzeitinformationen:
+
+```json
+{
+  "configured": true,
+  "publicWriteApiEnabled": false,
+  "fc3Default": false,
+  "activeSessions": []
+}
+```
+
+Der Endpunkt setzt weder FC3 noch einen Control Lease, fordert keine DJI
+Authority an und sendet keine DRC-Steuerframes. DRC-Broker-Credentials werden
+nicht ausgegeben.
+
 ### GET /api/devices/{device_sn}/telemetry
 
 Liefert den aktuellen normalisierten Parametersnapshot eines Geräts.
