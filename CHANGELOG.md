@@ -15,6 +15,8 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - MediaStore-/Readiness-Integration aus #69 bleibt vollständig erhalten: Persistenz, Startup-Rehydration, `mediaStore.ping()` und Shutdown-Cleanup.
 - Persistente Telemetriehistorie ergänzt: sanitierte Raw-Messages und vollständige normalisierte Parameter werden mit Adapter-Provenienz in TimescaleDB gespeichert; ausgewählte fusionierte Flug-/RTK-Werte werden zusätzlich missionsbezogen in `telemetry` projiziert.
 - TelemetryStore ist fail-closed an `/ready`, Root-Compose-Migration, Upgrade-Test und deterministischen Shutdown angebunden.
+- MSDK-Capability-Status präzisiert: der authentifizierte Agent-Controltransport ist implementiert, während eine öffentliche Operator-/Browser-Control-API weiterhin ausdrücklich deaktiviert bleibt.
+- Veraltete Vor-Release-Abnahmecheckliste durch den tatsächlichen post-release Software-Regressionsvertrag ersetzt.
 
 ## 3.0.0 – 2026-09-23
 
