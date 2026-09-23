@@ -235,3 +235,215 @@ test("DJI attitude_pitch and attitude_roll map to canonical aircraft attitude", 
     false
   );
 });
+
+
+test("normalizes documented DJI camera array fields by exact payload_index and retains raw array", () => {
+  const cameras = [
+    {
+      payload_index: "77-1-0",
+      camera_mode: 1,
+      photo_state: 0,
+      recording_state: 1,
+      remain_photo_num: 321,
+      remain_record_duration: 600,
+      record_time: 42,
+      zoom_factor: 7.5,
+      ir_zoom_factor: 4,
+      future_field: "kept-raw"
+    }
+  ];
+
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    { data: { cameras } },
+    1_000
+  );
+
+  const values = new Map(
+    result.samples.map((entry) => [entry.key, entry])
+  );
+
+  assert.equal(
+    values.get("camera.77-1-0.payload_index")?.value,
+    "77-1-0"
+  );
+  assert.equal(
+    values.get("camera.77-1-0.mode.code")?.value,
+    1
+  );
+  assert.equal(
+    values.get("camera.77-1-0.capture.photo_state_code")?.value,
+    0
+  );
+  assert.equal(
+    values.get("camera.77-1-0.recording.state_code")?.value,
+    1
+  );
+  assert.equal(
+    values.get("camera.77-1-0.storage.remaining_photos")?.value,
+    321
+  );
+  assert.equal(
+    values.get(
+      "camera.77-1-0.storage.remaining_record_seconds"
+    )?.unit,
+    "s"
+  );
+  assert.equal(
+    values.get("camera.77-1-0.recording.elapsed_seconds")?.value,
+    42
+  );
+  assert.equal(
+    values.get("camera.77-1-0.zoom.factor")?.value,
+    7.5
+  );
+  assert.equal(
+    values.get("camera.77-1-0.thermal.zoom_factor")?.value,
+    4
+  );
+
+  const raw = values.get("raw.dji-cloud.cameras");
+  assert.deepEqual(raw?.value, cameras);
+  assert.equal(
+    result.capabilities.includes("telemetry.camera"),
+    true
+  );
+  assert.equal(result.capabilities.includes("media.read"), false);
+});
+
+test("does not invent camera identity when payload_index is missing or malformed", () => {
+  const cameras = [
+    { camera_mode: 0, recording_state: 0 },
+    {
+      payload_index: "../../camera",
+      camera_mode: 1,
+      recording_state: 1
+    }
+  ];
+
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    { data: { cameras } },
+    1_000
+  );
+
+  assert.equal(
+    result.samples.some((entry) =>
+      entry.key.startsWith("camera.")
+    ),
+    false
+  );
+  assert.deepEqual(
+    result.samples.find(
+      (entry) => entry.key === "raw.dji-cloud.cameras"
+    )?.value,
+    cameras
+  );
+});
+
+test("normalizes documented payload-scoped gimbal axes in degrees and keeps raw fields", () => {
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    {
+      data: {
+        "77-1-0": {
+          gimbal_pitch: -45.5,
+          gimbal_roll: 1.25,
+          gimbal_yaw: 123.4,
+          unknown_payload_state: 9
+        }
+      }
+    },
+    1_000
+  );
+
+  const values = new Map(
+    result.samples.map((entry) => [entry.key, entry])
+  );
+
+  assert.equal(
+    values.get("gimbal.77-1-0.pitch_deg")?.value,
+    -45.5
+  );
+  assert.equal(
+    values.get("gimbal.77-1-0.roll_deg")?.unit,
+    "deg"
+  );
+  assert.equal(
+    values.get("gimbal.77-1-0.yaw_deg")?.value,
+    123.4
+  );
+  assert.equal(
+    values.get("raw.dji-cloud.77-1-0.gimbal_pitch")?.value,
+    -45.5
+  );
+  assert.equal(
+    values.get(
+      "raw.dji-cloud.77-1-0.unknown_payload_state"
+    )?.value,
+    9
+  );
+  assert.equal(
+    result.capabilities.includes("telemetry.gimbal"),
+    true
+  );
+  assert.equal(
+    result.capabilities.some((capability) =>
+      capability.startsWith("control.")
+    ),
+    false
+  );
+});
+
+
+test("malformed numeric camera and gimbal values stay raw-only", () => {
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    {
+      data: {
+        cameras: [
+          {
+            payload_index: "77-1-0",
+            camera_mode: "recording",
+            zoom_factor: "7.5"
+          }
+        ],
+        "77-1-0": {
+          gimbal_pitch: "-45"
+        }
+      }
+    },
+    1_000
+  );
+
+  assert.equal(
+    result.samples.some(
+      (entry) => entry.key === "camera.77-1-0.mode.code"
+    ),
+    false
+  );
+  assert.equal(
+    result.samples.some(
+      (entry) => entry.key === "camera.77-1-0.zoom.factor"
+    ),
+    false
+  );
+  assert.equal(
+    result.samples.some(
+      (entry) => entry.key === "gimbal.77-1-0.pitch_deg"
+    ),
+    false
+  );
+  assert.ok(
+    result.samples.some(
+      (entry) => entry.key === "raw.dji-cloud.cameras"
+    )
+  );
+  assert.equal(
+    result.samples.find(
+      (entry) =>
+        entry.key === "raw.dji-cloud.77-1-0.gimbal_pitch"
+    )?.value,
+    "-45"
+  );
+});

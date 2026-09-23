@@ -93,6 +93,7 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - PostgreSQL/TimescaleDB-Persistenz
 - AuthZ-Audit
 - Media-/Multispektral-Core und NDVI-Vertrag
+- kanonische DJI-Kamera-/Gimbal-Telemetrie nach gültigem `payload_index`, bei vollständiger Raw-Retention
 - UgCS Groundstation Adapter / Bridge
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
