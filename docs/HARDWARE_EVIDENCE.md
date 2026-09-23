@@ -238,15 +238,34 @@ geprüft:
 Damit wird weder eine schwächere Feature-Anleitung noch eine einzelne
 JSBridge-Note isoliert als vollständiger Modulvertrag interpretiert.
 
-## 7. MSDK KeyManager — kein Hardware-Gate für PR #44
+## 7. MSDK KeyManager — REQUIRED_HARDWARE
 
-PR #44 ist aktuell ein Dokumentations-/Vertrags-PR und enthält keinen
-Android-MSDK-Runtime-Adapter. Deshalb wäre ein Hardware-Fixture-Gate hier
-künstlich.
+Der KeyManager-Vertrag ist als Android-MSDK-Runtime implementiert. Die
+Software-CI prüft Build, Snapshot-Vertrag und die Trennung von Key-Metadaten
+und FH2-Control-Capabilities. Eine Hardware-Supportzusage benötigt zusätzlich
+einen realen, redigierten Capture unter
+`docs/fixtures/msdk/keymanager-evidence.json`.
 
-Erst bei einem späteren Runtime-Adapter werden reale Key-Probes pro
-Produkt/Firmware für Get/Set/Listen/Action, Component-/Lens-Indizes,
-Callback-/Error-Mapping und Listener-Cleanup verpflichtend.
+Der reale Capture muss mindestens zeigen:
+
+1. registrierte und verbundene MSDK-Runtime,
+2. nicht leeres `keyManager.keys[]`-Inventar,
+3. mindestens einen erfolgreich beobachteten Key mit
+   `runtimeStatus=supported`,
+4. mindestens einen Key mit `canSet=true` oder
+   `canPerformAction=true` als **Metadatenbeleg**, ohne automatische
+   FH2-Control-Freigabe,
+5. mindestens einen kamera-linsengebundenen Key mit `cameraLensType`,
+6. Component-/Lens-Kontext und Callback-/Fehlerstatus,
+7. Listener-Cleanup nach Disconnect/Refresh.
+
+Die App-Ausgabe kann zusätzlich lokal geprüft werden mit:
+
+```bash
+node scripts/verify-msdk-evidence.mjs --keymanager <evidence.json>
+```
+
+Synthetische Inventare zählen nicht als reale Hardwareevidenz.
 
 ## CI-Regel
 
