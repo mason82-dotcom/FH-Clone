@@ -155,10 +155,12 @@ Zuständigkeit in FH2:
 - Produkt-/Komponentenverhalten auf Android
 - Payload-, Kamera-, Gimbal-, FlightController- und RTK-Integration
 - Beispielcode für gerätenahe Funktionen
-- Abgleich der späteren MSDK-V5-Bridge
+- Abgleich der laufenden MSDK-V5-Bridge und ihres KeyManager-Runtimeinventars
 
 Der Sample-Code ist Referenz für SDK-Verwendung, aber kein automatisches
-Sicherheits- oder Architekturmodell für den FH2-Server.
+Sicherheits- oder Architekturmodell für den FH2-Server. FH2 verwendet die
+offiziellen Key-Operationsflags als Adaptermetadaten; Runtime-Probes und
+Core-Capabilities bleiben davon getrennte Ebenen.
 
 ### DJI Mobile SDK V5 – API-Dokumentation
 
