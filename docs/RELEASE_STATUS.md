@@ -18,8 +18,9 @@ Hardware-Evidence gegatet.
 ## Versionsstand
 
 ```text
-Software-Baseline: 3.0.0
-Baseline-Commit: 58b82f907391b8444883aa6040190fae8690e596
+Software-Version: 3.0.0
+Historische Software-Baseline: 58b82f907391b8444883aa6040190fae8690e596
+Finale Tag-Grenze: aktueller grüner main nach Abschluss des Hosting-Cleanup-Gates
 Git-Tag v3.0.0: noch nicht angelegt
 GitHub Release 3.0.0: noch nicht veröffentlicht
 Node.js: 22.23.2 in der Direktor-CI
@@ -28,10 +29,12 @@ Root package-lock.json: vorhanden
 ```
 
 Die Versionsnummer 3.0.0 ist für Root, Node-Workspaces, Lockfile und
-UgCS-Maven-Modul vereinheitlicht. Änderungen nach dem Baseline-Commit werden
-bis zu einer ausdrücklich angelegten Tag-/Release-Grenze im Changelog unter
-`Unreleased` geführt. Dadurch ist „Software-Baseline freigegeben“ nicht mit
-„GitHub Release veröffentlicht“ gleichzusetzen.
+UgCS-Maven-Modul vereinheitlicht. Der frühere Baseline-Commit bleibt ein
+historischer Meilenstein, ist aber **nicht** das geplante Ziel des späteren
+`v3.0.0`-Tags. Die finale Artefaktgrenze soll auf dem dann aktuellen,
+vollständig validierten `main` nach Abschluss des separaten
+Repository-/Hosting-Cleanup-Gates liegen. Bis dahin bleiben die nach der
+Baseline integrierten Änderungen unter `Unreleased`.
 
 ## Automatische Release-Gates
 
@@ -84,12 +87,13 @@ Noch nicht vollständig real belegt:
 Diese fehlenden Nachweise werden in der CI als Hardwarestatus sichtbar
 geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 
-## Aktueller 3.0.0-Softwarestand
+## Aktueller 3.0.0-Softwarekandidat
 
-Der folgende Stand umfasst die freigegebene 3.0.0-Software-Baseline plus die
-seitdem auf `main` integrierte, weiterhin unter `Unreleased` geführte
-Härtung. Erst ein späterer Tag/Release fixiert die veröffentlichte
-Artefaktgrenze.
+Der folgende Stand umfasst die historische 3.0.0-Software-Baseline plus alle
+seitdem auf `main` integrierten und softwareseitig abgenommenen
+3.0.0-Erweiterungen/Härtungen. Dieser Gesamtstand ist der Kandidat für die
+spätere `v3.0.0`-Artefaktgrenze; getaggt wird erst nach Abschluss des
+separaten Hosting-Cleanup-Gates.
 
 - SDK-neutraler Aircraft Core
 - SafetyGate FC0..FC3 mit FC0 als Standard
@@ -142,11 +146,14 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 - M3T/M4T Thermal-Auswertung ohne passendes reales Thermal-Fixture
 - MSDK-KeyManager-Hardwarematrix ohne reales Runtime-Evidence-Fixture
 
-## Offene Draft-PRs
+## Release-Vorbereitung
 
-Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
+Die vollständigen vorbereiteten Release Notes stehen in
+`docs/RELEASE_NOTES_3.0.0.md`.
 
-WPML/Pilot-Waylines aus #51 sind als read-only Softwarepfad integriert. Die älteren WPML-Drafts #45/#47/#49 wurden darin konsolidiert. Die reale Pilot-2-WPML-/Workspace-Hardwarefreigabe bleibt separat offen.
+Aktuell existieren keine offenen Merge-Kandidaten für den 3.0.0-Softwarestand.
+WPML/Pilot-Waylines sind als read-only Softwarepfad integriert; reale
+Pilot-2-WPML-/Workspace-Hardwarefreigabe bleibt separat offen.
 
 ## Release-Regel
 
