@@ -127,12 +127,40 @@ aircraft
 sensors[]
 rtk
 control
+keyManager
 capabilities
 ```
 
 Die Capability-Ableitung verwendet ausschließlich von MSDK gemeldete
 CameraType-/Component-Werte. Es wird nicht aus frei formulierten Produktnamen
 oder Android-Gerätenamen geraten.
+
+
+### KeyManager-Runtime
+
+`keyManager.keys[]` enthält das konkrete MSDK-Key-Inventar der laufenden
+Android-Bridge. Pro Key werden unter anderem exportiert:
+
+```text
+identifier
+family
+componentIndex
+cameraLensType
+canGet / canSet / canListen / canPerformAction
+probeMode
+runtimeStatus
+valueType
+lastObservedAt
+lastError
+```
+
+Die Runtime verwendet `KeyTools`, liest Cache-/Hardwarewerte nur read-only und
+bindet Listener an einen eigenen Holder. Bei Disconnect, Refresh oder Stop
+werden diese Listener über `cancelListen(holder)` beendet.
+
+`canSet=true` und `canPerformAction=true` sind ausschließlich
+Operationsmetadaten des DJI-Keys. Daraus entsteht weder automatisch
+`control.camera` noch `control.gimbal` oder `control.flight`.
 
 Beispiele:
 
@@ -157,6 +185,7 @@ Android/data/com.fh2.rcbridge/files/evidence/
 Enthalten sind:
 
 - der aktuelle MSDK-/Aircraft-/Sensor-/RTK-/Control-Snapshot
+- das aktuelle KeyManager-Runtimeinventar inklusive Component-/Lens-Kontext
 - der aktuelle FH2-Bridge-Zustand
 - der aktuelle Agent-Control-WebSocket-Zustand
 - ein auf 256 Einträge begrenzter Pairing-/Transport-Trace seit App-Start
@@ -179,6 +208,17 @@ evidence.events[]
 
 Diese Datei dient als reale RC-Pro/M3-Hardware-Fixture und wird nicht
 automatisch hochgeladen.
+
+
+Für die KeyManager-Hardwareabnahme:
+
+```bash
+node scripts/verify-msdk-evidence.mjs --keymanager fh2-msdk-evidence-<timestamp>.json
+```
+
+Die zentrale Hardware-Evidence erwartet für die produktbezogene Freigabe
+zusätzlich einen redigierten realen Capture. Synthetische Key-Inventare zählen
+nicht als Hardwarebeleg.
 
 
 ## FH2 Pairing
