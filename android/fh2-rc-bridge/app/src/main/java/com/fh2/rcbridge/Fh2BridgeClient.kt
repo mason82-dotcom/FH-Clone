@@ -214,6 +214,45 @@ object Fh2BridgeClient {
             stopHeartbeat()
             MsdkControlClient.disconnect("bridge_disconnect")
             NetworkControlArm.disarm()
+
+            val pairing = storedPairing
+            val token = agentToken ?: pairing?.agentToken
+            val baseUrl = snapshot.baseUrl ?: pairing?.baseUrl
+
+            update {
+                copy(
+                    status = "unpairing",
+                    lastError = null
+                )
+            }
+
+            if (token != null && baseUrl != null) {
+                val unpair =
+                    runCatching {
+                        postJson(
+                            "$baseUrl/api/msdk/unpair",
+                            token,
+                            JSONObject()
+                        )
+                    }
+
+                val error = unpair.exceptionOrNull()
+                if (
+                    error != null &&
+                    !isAlreadyUnauthorized(error)
+                ) {
+                    agentToken = token
+                    update {
+                        copy(
+                            status = "unpair_failed",
+                            lastError =
+                                error.message ?: error.toString()
+                        )
+                    }
+                    return@execute
+                }
+            }
+
             agentToken = null
             clearStoredPairing()
             update { Fh2BridgeConnectionSnapshot() }
@@ -320,6 +359,14 @@ object Fh2BridgeClient {
     private fun clearStoredPairing() {
         storedPairing = null
         secureStore?.clear()
+    }
+
+    private fun isAlreadyUnauthorized(error: Throwable): Boolean {
+        val message = error.message ?: return false
+        return (
+            message.startsWith("http_401") ||
+                message.startsWith("http_403")
+        )
     }
 
     private fun normalizeBaseUrl(input: String): String {
