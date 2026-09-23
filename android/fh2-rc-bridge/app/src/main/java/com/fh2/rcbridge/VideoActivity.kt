@@ -17,7 +17,9 @@ import dji.sdk.keyvalue.key.CameraKey
 import dji.sdk.keyvalue.value.camera.CameraVideoStreamSourceType
 import dji.sdk.keyvalue.value.common.ComponentIndexType
 import dji.v5.et.create
-import dji.v5.et.set
+import dji.v5.common.callback.CommonCallbacks
+import dji.v5.common.error.IDJIError
+import dji.v5.manager.KeyManager
 import dji.v5.manager.datacenter.MediaDataCenter
 import dji.v5.manager.interfaces.ICameraStreamManager
 
@@ -261,24 +263,31 @@ class VideoActivity : AppCompatActivity(), SurfaceHolder.Callback {
             sourceOptions.getOrNull(sourceSpinner.selectedItemPosition)
                 ?: CameraVideoStreamSourceType.DEFAULT_CAMERA
 
-        CameraKey.KeyCameraVideoStreamSource
-            .create(selectedCamera)
-            .set(
-                selectedSource,
-                {
-                    bindSurface(
-                        ICameraStreamManager.ScaleType.CENTER_INSIDE
-                    )
-                    updateStatus()
-                },
-                { error ->
-                    Toast.makeText(
-                        this,
-                        "Videoquelle fehlgeschlagen: $error",
-                        Toast.LENGTH_LONG
-                    ).show()
+        KeyManager.getInstance().setValue(
+            CameraKey.KeyCameraVideoStreamSource
+                .create(selectedCamera),
+            selectedSource,
+            object : CommonCallbacks.CompletionCallback {
+                override fun onSuccess() {
+                    runOnUiThread {
+                        bindSurface(
+                            ICameraStreamManager.ScaleType.CENTER_INSIDE
+                        )
+                        updateStatus()
+                    }
                 }
-            )
+
+                override fun onFailure(error: IDJIError) {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@VideoActivity,
+                            "Videoquelle fehlgeschlagen: $error",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        )
     }
 
     private fun bindSurface(
