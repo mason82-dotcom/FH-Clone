@@ -1116,7 +1116,8 @@ function ingestParameterSample(
   parameters.update(sample);
   telemetryStore.enqueueParameter(
     sample,
-    missions.getActive(sample.deviceId)?.missionId
+    missions.getActive(sample.deviceId)?.missionId,
+    parameters.snapshot(sample.deviceId)[sample.key] ?? sample
   );
 }
 
