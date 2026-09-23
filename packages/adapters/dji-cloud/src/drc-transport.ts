@@ -44,7 +44,10 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
     const lose = (reason: DrcTransportLossReason) => {
       if (generation !== this.generation) return;
       this.connected = false;
-      void this.options.onLost?.(reason);
+      this.invokeHook(
+        () => this.options.onLost?.(reason),
+        "onLost"
+      );
     };
     client.on("close", () => lose("mqtt_close"));
     client.on("offline", () => lose("mqtt_offline"));
@@ -58,7 +61,10 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
         cleanup();
         if (generation !== this.generation) return reject(new Error("DRC transport superseded"));
         this.connected = true;
-        void this.options.onConnected?.();
+        this.invokeHook(
+          () => this.options.onConnected?.(),
+          "onConnected"
+        );
         resolve();
       };
       const onError = (error: Error) => {
@@ -78,6 +84,20 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
       client.once("connect", onConnect);
       client.once("error", onError);
     });
+  }
+
+  private invokeHook(
+    hook: () => void | Promise<void> | undefined,
+    name: string
+  ): void {
+    void Promise.resolve()
+      .then(hook)
+      .catch((error: unknown) => {
+        console.error(
+          `DJI DRC transport ${name} callback failed`,
+          error instanceof Error ? error.message : String(error)
+        );
+      });
   }
 
   async disconnect(): Promise<void> {
