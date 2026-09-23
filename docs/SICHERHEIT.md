@@ -76,7 +76,7 @@ Das `SafetyGate` besitzt einen globalen Kill Switch.
 Ist er aktiv, werden Commands blockiert, unabhängig von der sonstigen
 Safety-Stufe.
 
-Vor V3-Freigabe muss dieses Verhalten automatisiert getestet sein.
+Dieses Verhalten ist durch die automatisierte Safety-Suite abgesichert.
 
 ## MQTT-Sicherheitsidentität
 
@@ -88,7 +88,7 @@ clientid -> gateway_sn
 
 als alleinige Vertrauensableitung.
 
-V3-Ziel:
+Implementierter V3-Vertrag:
 
 ```text
 Credential
@@ -107,7 +107,7 @@ Verbindlich:
 - statische Fallback-ACL
 - dynamische Gateway-Autorisierung
 - interner AuthZ-Endpunkt nicht öffentlich
-- V3: zusätzlicher AuthN-Endpunkt
+- HTTP-AuthN-Endpunkt mit Credential-Bindung
 - DRC nicht dauerhaft in Basic-Link-ACL
 
 ## DRC
