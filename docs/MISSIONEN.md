@@ -214,8 +214,21 @@ Der aktuelle Stand meldet daher aus diesem Zustand keine:
 mission.wayline
 ```
 
-DJI Pilot Wayline Management ist ein eigener JSBridge-/HTTPS-/Dateipfad und
-muss als separate Integration implementiert und abgenommen werden.
+DJI Pilot Wayline Management ist ein eigener HTTPS-/Dateipfad.
+
+FH2 implementiert jetzt read-only:
+
+- DJI-WPML-`template.kml`-/`waylines.wpml`-Parsing,
+- KMZ-Strukturprüfung,
+- den Pilot-to-Cloud-Waypoint-Dateikatalog,
+- authoritative `MissionExternalReference`-Korrelation aus einer echten
+  Pilot-Wayline-Datei-ID.
+
+Weiterhin **nicht** implementiert sind Upload, Collect, Download-Proxy und
+Missionsausführung. Deshalb erzeugt der read-only Pfad weiterhin keine
+`mission.wayline`-Capability.
+
+Details: [WPML](WPML.md).
 
 ## Verhältnis zu UgCS und FlightHub 2
 
@@ -295,7 +308,8 @@ Der aktuelle DJI-Cloud-Pfad liefert keine authoritative Wayline-ID. Deshalb blei
 }
 ```
 
-solange kein eigener Pilot-Wayline-/WPML-/FH2-Task-Vertrag diese Identität liefert.
+solange keine konkrete Pilot-Wayline-Datei-ID, WPML-Dateireferenz oder
+FH2-Task-Referenz ausdrücklich mit der Flugsitzung korreliert wurde.
 
 Wichtig:
 
