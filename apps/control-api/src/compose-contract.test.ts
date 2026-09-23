@@ -8,13 +8,18 @@ const compose = readFileSync(
 );
 
 function serviceBlock(name: string): string {
-  const marker = `  ${name}:\n`;
-  const start = compose.indexOf(marker);
+  const lines = compose.split("\n");
+  const start = lines.findIndex((line) => line === `  ${name}:`);
   assert.notEqual(start, -1, `service ${name} missing`);
 
-  const rest = compose.slice(start + marker.length);
-  const next = rest.search(/^  [a-zA-Z0-9_-]+:\n/m);
-  return next === -1 ? rest : rest.slice(0, next);
+  const block: string[] = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (/^  [a-zA-Z0-9_-]+:$/.test(line)) break;
+    block.push(line);
+  }
+
+  return block.join("\n");
 }
 
 test("control-api waits for TimescaleDB and EMQX health", () => {
