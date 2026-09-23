@@ -844,68 +844,6 @@ const internalServer = createServer(async (request, response) => {
   }
 });
 
-await listenServer(publicServer, publicPort, bind);
-console.log(`FH-Clone control API listening on ${bind}:${publicPort}`);
-
-await listenServer(internalServer, internalPort, internalBind);
-console.log(`FH-Clone internal API listening on ${internalBind}:${internalPort}`);
-
-if (ugcs) {
-  try {
-    await ugcs.start();
-    console.log("FH-Clone UgCS adapter connected.");
-  } catch (error) {
-    console.warn(
-      "[UgCS] Bridge nicht erreichbar; Groundstation bleibt read-only offline:",
-      errorMessage(error)
-    );
-  }
-}
-
-if (dji) {
-  await dji.start({
-    onDevice(device) {
-      devices.upsert(device);
-    },
-    onParameter(sample) {
-      ingestParameterSample(sample);
-    },
-    async onRawMessage(message) {
-      const previousMissionId = message.deviceId
-        ? missions.getActive(message.deviceId)?.missionId
-        : undefined;
-      const session = missions.observe(message);
-
-      if (session && session.endedAt !== undefined) {
-        missionPersistence.close(session);
-      } else if (
-        session &&
-        session.missionId !== previousMissionId
-      ) {
-        missionPersistence.open(session, {
-          ...(message.deviceId
-            ? getMissionProduct(message.deviceId)
-            : {})
-        });
-      }
-
-      telemetryStore.enqueueRaw(
-        message,
-        session?.missionId ??
-          (message.deviceId
-            ? missions.getActive(message.deviceId)?.missionId
-            : undefined)
-      );
-
-      rtk.observe(message);
-      if (process.env.LOG_RAW_DJI === "1") {
-        console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
-      }
-    }
-  });
-}
-
-
 const shutdown = onceAsync(async () => {
   clearInterval(missionSweepTimer);
   clearInterval(msdkControlSweepTimer);
@@ -990,6 +928,70 @@ function handleShutdownSignal(signal: "SIGINT" | "SIGTERM"): void {
 
 process.once("SIGINT", () => handleShutdownSignal("SIGINT"));
 process.once("SIGTERM", () => handleShutdownSignal("SIGTERM"));
+
+await listenServer(publicServer, publicPort, bind);
+console.log(`FH-Clone control API listening on ${bind}:${publicPort}`);
+
+await listenServer(internalServer, internalPort, internalBind);
+console.log(`FH-Clone internal API listening on ${internalBind}:${internalPort}`);
+
+if (ugcs) {
+  try {
+    await ugcs.start();
+    console.log("FH-Clone UgCS adapter connected.");
+  } catch (error) {
+    console.warn(
+      "[UgCS] Bridge nicht erreichbar; Groundstation bleibt read-only offline:",
+      errorMessage(error)
+    );
+  }
+}
+
+if (dji) {
+  await dji.start({
+    onDevice(device) {
+      devices.upsert(device);
+    },
+    onParameter(sample) {
+      ingestParameterSample(sample);
+    },
+    async onRawMessage(message) {
+      const previousMissionId = message.deviceId
+        ? missions.getActive(message.deviceId)?.missionId
+        : undefined;
+      const session = missions.observe(message);
+
+      if (session && session.endedAt !== undefined) {
+        missionPersistence.close(session);
+      } else if (
+        session &&
+        session.missionId !== previousMissionId
+      ) {
+        missionPersistence.open(session, {
+          ...(message.deviceId
+            ? getMissionProduct(message.deviceId)
+            : {})
+        });
+      }
+
+      telemetryStore.enqueueRaw(
+        message,
+        session?.missionId ??
+          (message.deviceId
+            ? missions.getActive(message.deviceId)?.missionId
+            : undefined)
+      );
+
+      rtk.observe(message);
+      if (process.env.LOG_RAW_DJI === "1") {
+        console.debug("[DJI RAW]", message.channel, message.deviceId ?? "-", message.payload);
+      }
+    }
+  });
+}
+
+
+
 
 function getDjiOptions(
   topologyPersistence: TopologyPersistenceQueue,
