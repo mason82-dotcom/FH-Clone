@@ -25,6 +25,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - MSDK-Capability-Status präzisiert: der authentifizierte Agent-Controltransport ist implementiert, während eine öffentliche Operator-/Browser-Control-API weiterhin ausdrücklich deaktiviert bleibt.
 - Veraltete Vor-Release-Abnahmecheckliste durch den tatsächlichen post-release Software-Regressionsvertrag ersetzt.
 - Öffentliche M3T-Fixture-Metadaten veröffentlichen keine historischen Git-Commit-/Blob-IDs oder entfernten Rohdateipfade mehr; der verpflichtende Control-Policy-Audit verhindert Regressionen.
+- Android-MSDK-Medienmanager räumt nach fehlgeschlagenem `enable` registrierte DJI-Media-Listener und den File-Cache auf; ein eigener CI-Regressionstest verhindert doppelte Listener bei späteren Retries.
 
 ## 3.0.0 – 2026-09-23
 
