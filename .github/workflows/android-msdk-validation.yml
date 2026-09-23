@@ -69,8 +69,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build control API
-        run: npm run build --workspace @fh-clone/control-api
+      - name: Build workspaces
+        run: npm run build
 
       - name: MSDK bridge tests
         run: |
