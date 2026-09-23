@@ -90,7 +90,7 @@ test("validates the EMQX authorization request schema", () => {
   );
 });
 
-test("allows topology bootstrap from trusted gateway attributes", async () => {
+test("allows topology bootstrap only on canonical sys status topic", async () => {
   assert.equal(
     await authorizeDjiGateway(topology(), request(), gatewayPolicy()),
     "allow"
@@ -102,7 +102,7 @@ test("allows topology bootstrap from trusted gateway attributes", async () => {
       request({ topic: "thing/product/RC-PRO-001/status" }),
       gatewayPolicy()
     ),
-    "allow"
+    "deny"
   );
 });
 
