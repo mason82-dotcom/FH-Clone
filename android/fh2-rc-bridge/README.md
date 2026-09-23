@@ -26,6 +26,7 @@ Implementiert:
 - RTKCenter System State und RTK-Location
 - RTK Solution, Source, Standardabweichungen und Satellitenzahlen
 - kanonischer FH2 BridgeSnapshot als JSON
+- lokaler Hardware-Evidence-Export in den App-Dateibereich
 - Capability-Ableitung nur aus MSDK CameraType/Component-State
 - Virtual-Stick-State und Flight-Control-Authority
 - explizites Enable / Disable
@@ -130,3 +131,19 @@ Beispiele:
 
 Der JSON-Snapshot ist die Grundlage für das spätere HTTPS/WSS-Pairing mit der
 FH2 Control API.
+
+
+## Hardware Evidence
+
+Über **Hardware-Evidence speichern** erzeugt die App lokal:
+
+```text
+Android/data/com.fh2.rcbridge/files/evidence/
+  fh2-msdk-evidence-<timestamp>.json
+```
+
+Enthalten ist der aktuelle MSDK-/Aircraft-/Sensor-/RTK-/Control-Snapshot.
+Der DJI-App-Key und andere lokale Secrets werden nicht exportiert.
+
+Diese Datei dient als reale RC-Pro/M3-Hardware-Fixture und wird nicht
+automatisch hochgeladen.
