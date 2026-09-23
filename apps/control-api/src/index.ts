@@ -6,6 +6,7 @@ import {
 } from "@fh-clone/aircraft-core";
 import {
   DjiCloudAdapter,
+  DJI_CLOUD_CONTROL_ENABLED,
   DrcSessionManager,
   InMemoryDrcSessionStore,
   isDjiM3mMediaInput,
@@ -43,6 +44,9 @@ import {
 } from "./dji-pilot-waylines.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
+import { ControlCoordinator } from "./control-coordinator.js";
+import { evaluateControlApiReadiness } from "./readiness.js";
+import { closeHttpServer, onceAsync, runShutdownSteps } from "./shutdown.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -83,6 +87,9 @@ drcSessions = dji
       onAudit: (event) => console.info("[DRC]", event)
     })
   : undefined;
+
+let controlCoordinator: ControlCoordinator | undefined;
+
 function getDrcGuards(aircraftSn: string, holder?: string) {
   return resolveRuntimeDrcGuards({
     hasFc3: (sn) => controlGuards.hasFc3(sn),
@@ -91,6 +98,11 @@ function getDrcGuards(aircraftSn: string, holder?: string) {
     isCloudControlAuthorized: (sn) => dji?.isCloudControlAuthorized(sn) ?? false
   }, aircraftSn, holder);
 }
+
+controlCoordinator =
+  dji && drcSessions
+    ? new ControlCoordinator(dji, drcSessions, getDrcGuards)
+    : undefined;
 
 const missions = new MissionSessionTracker({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId)
@@ -179,7 +191,10 @@ const publicServer = createServer(async (request, response) => {
         mediaOverlays: {
           assets: mediaOverlays.size()
         },
-        djiPilotWaylines: djiPilotWaylines.status()
+        controlRuntime: {
+          configured: Boolean(controlCoordinator),
+          activeSessions: drcRuntimeContext.size
+        }
       });
     }
 
@@ -195,20 +210,34 @@ const publicServer = createServer(async (request, response) => {
         gatewayCredentials
           ? gatewayCredentials.assertReady().then(() => true).catch(() => false)
           : Promise.resolve(false),
-        missionStore.ping()
+        missionStore.enabled
+          ? missionStore.ping()
+          : Promise.resolve(false)
       ]);
 
-      const checks = {
-        mqttBackendConnected: dji?.isConnected ?? false,
-        topologyStoreReady,
-        gatewayCredentialStoreReady,
-        missionStoreReady
-      };
-      const ready = Object.values(checks).every(Boolean);
-      return json(response, ready ? 200 : 503, {
-        status: ready ? "ready" : "not_ready",
+      const readiness = evaluateControlApiReadiness({
+        mqttBackend: {
+          configured: Boolean(dji),
+          ready: dji?.isConnected ?? false
+        },
+        topologyStore: {
+          configured: Boolean(topologyStore),
+          ready: topologyStoreReady
+        },
+        gatewayCredentialStore: {
+          configured: Boolean(gatewayCredentials),
+          ready: gatewayCredentialStoreReady
+        },
+        missionStore: {
+          configured: missionStore.enabled,
+          ready: missionStoreReady
+        }
+      });
+
+      return json(response, readiness.ready ? 200 : 503, {
+        status: readiness.ready ? "ready" : "not_ready",
         service: "control-api",
-        checks
+        checks: readiness.checks
       });
     }
 
@@ -225,6 +254,42 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, await topologyStore.list());
     }
 
+    const authorityMatch = url.pathname.match(
+      /^\/api\/dji\/gateways\/([^/]+)\/authority$/
+    );
+    if (request.method === "GET" && authorityMatch) {
+      const gatewaySn = decodeURIComponent(authorityMatch[1] ?? "");
+      if (!dji) return json(response, 503, { error: "dji_not_configured" });
+      const state = dji.getCloudControlAuthority(gatewaySn);
+      return json(response, 200, {
+        gatewaySn,
+        cloudControlEnabled: DJI_CLOUD_CONTROL_ENABLED,
+        state: state ?? {
+          gatewaySn,
+          status: "unknown",
+          authorized: false,
+          updatedAt: null,
+          source: "local"
+        }
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/dji/control/runtime") {
+      return json(response, 200, {
+        configured: Boolean(controlCoordinator),
+        publicWriteApiEnabled: false,
+        fc3Default: false,
+        activeSessions: [...drcRuntimeContext.entries()].map(
+          ([gatewaySn, session]) => ({
+            gatewaySn,
+            sessionId: session.sessionId,
+            aircraftSn: session.aircraftSn,
+            state: session.state
+          })
+        )
+      });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/missions/active") {
       return json(response, 200, missions.listActive());
     }
@@ -232,7 +297,6 @@ const publicServer = createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/fh2/status") {
       return json(response, 200, fh2.status());
     }
-
 
     if (request.method === "GET" && url.pathname === "/api/dji/pilot/waylines/status") {
       return json(response, 200, djiPilotWaylines.status());
@@ -243,14 +307,21 @@ const publicServer = createServer(async (request, response) => {
         return json(
           response,
           200,
-          await djiPilotWaylines.listWaylines(parseDjiPilotWaylineListQuery(url))
+          await djiPilotWaylines.listWaylines(
+            parseDjiPilotWaylineListQuery(url)
+          )
         );
       } catch (error) {
         if (error instanceof DjiPilotWaylineCatalogNotConfigured) {
-          return json(response, 503, { error: "dji_pilot_waylines_not_configured" });
+          return json(response, 503, {
+            error: "dji_pilot_waylines_not_configured"
+          });
         }
         if (error instanceof DjiPilotWaylineCatalogError) {
-          console.warn("[DJI Pilot Waylines] Upstream-Fehler:", error.message);
+          console.warn(
+            "[DJI Pilot Waylines] Upstream-Fehler:",
+            error.message
+          );
           return json(response, 502, {
             error: "dji_pilot_waylines_upstream_error"
           });
@@ -646,22 +717,69 @@ if (dji) {
 }
 
 
-async function shutdown(): Promise<void> {
+const shutdown = onceAsync(async () => {
   clearInterval(missionSweepTimer);
-  publicServer.close();
-  internalServer.close();
-  await drcSessions?.shutdown();
-  await dji?.stop();
-  await ugcs?.stop();
-  await authzAudit.shutdown();
-  await gatewayCredentials?.close();
-  await missionStore.close();
-  await topologyPersistence.flush();
-  await topologyStore?.close();
+
+  await runShutdownSteps([
+    {
+      name: "public_http",
+      run: () => closeHttpServer(publicServer)
+    },
+    {
+      name: "internal_http",
+      run: () => closeHttpServer(internalServer)
+    },
+    {
+      name: "drc_sessions",
+      run: () => drcSessions?.shutdown()
+    },
+    {
+      name: "dji_adapter",
+      run: () => dji?.stop()
+    },
+    {
+      name: "ugcs_adapter",
+      run: () => ugcs?.stop()
+    },
+    {
+      name: "authz_audit",
+      run: () => authzAudit.shutdown()
+    },
+    {
+      name: "gateway_credentials",
+      run: () => gatewayCredentials?.close()
+    },
+    {
+      name: "mission_store",
+      run: () => missionStore.close()
+    },
+    {
+      name: "topology_queue",
+      run: () => topologyPersistence.flush()
+    },
+    {
+      name: "topology_store",
+      run: () => topologyStore?.close()
+    }
+  ]);
+});
+
+function handleShutdownSignal(signal: "SIGINT" | "SIGTERM"): void {
+  console.info(`[Shutdown] ${signal} empfangen.`);
+
+  void shutdown()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(
+        "[Shutdown] Bereinigung unvollständig:",
+        errorMessage(error)
+      );
+      process.exit(1);
+    });
 }
 
-process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
-process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
+process.once("SIGINT", () => handleShutdownSignal("SIGINT"));
+process.once("SIGTERM", () => handleShutdownSignal("SIGTERM"));
 
 function getDjiOptions(
   topologyPersistence: TopologyPersistenceQueue,
@@ -837,7 +955,10 @@ function getDeviceCapabilityView(deviceId: string) {
       genericAdapterCapabilities: adapterCapabilities,
       specializedRuntime: controlProfile
         ? {
+            cloudControl: controlProfile.cloudControl,
             flightControl: controlProfile.flightControl,
+            stickControl: controlProfile.stickControl,
+            droneControl: controlProfile.droneControl,
             flyTo: controlProfile.flyTo,
             pointingFlight: controlProfile.pointingFlight,
             orbitFlight: controlProfile.orbitFlight,
@@ -927,32 +1048,19 @@ async function createGatewayCredentialStore(): Promise<
     process.env.DATABASE_URL ?? process.env.TIMESCALE_URL;
   if (!connectionString) return undefined;
 
-  const store = new PostgresGatewayCredentialStore(connectionString);
-  try {
-    await store.assertReady();
-    return store;
-  } catch (error) {
-    console.error(
-      "[AuthN] Gateway-Credential-Store nicht verfügbar; Gateway-Authentifizierung bleibt gesperrt:",
-      errorMessage(error)
-    );
-    await store.close();
-    return undefined;
-  }
+  // Keep the configured store present even during a transient database
+  // outage. Readiness and AuthN remain fail-closed until PostgreSQL returns,
+  // while pg.Pool can reconnect on the next query.
+  return new PostgresGatewayCredentialStore(connectionString);
 }
 
 async function createTopologyStore(): Promise<PostgresGatewayRegistryStore | undefined> {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) return undefined;
-  const store = new PostgresGatewayRegistryStore(connectionString);
-  try {
-    await store.assertReady();
-    return store;
-  } catch (error) {
-    console.error("[Topology] PostgreSQL registry unavailable; inventory persistence disabled:", errorMessage(error));
-    await store.close();
-    return undefined;
-  }
+
+  // Do not permanently disable persistence because PostgreSQL is momentarily
+  // unavailable. /ready remains false until assertReady succeeds again.
+  return new PostgresGatewayRegistryStore(connectionString);
 }
 
 
