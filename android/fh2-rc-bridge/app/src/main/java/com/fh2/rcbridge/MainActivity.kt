@@ -13,6 +13,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sdkText: TextView
     private lateinit var controlText: TextView
     private lateinit var telemetryText: TextView
+    private lateinit var sensorText: TextView
+    private lateinit var rtkText: TextView
     private lateinit var enableButton: Button
     private lateinit var disableButton: Button
 
@@ -49,6 +51,65 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val sensorListener: (SensorInventorySnapshot) -> Unit = { state ->
+        runOnUiThread {
+            sensorText.text = buildString {
+                appendLine("Sensorik")
+                state.components.forEach { component ->
+                    appendLine(
+                        "${component.index}: camera=${component.cameraConnected} " +
+                            "type=${component.cameraType ?: "-"} " +
+                            "gimbal=${component.gimbalConnected}"
+                    )
+                    if (component.cameraSerial != null) {
+                        appendLine("  cameraSn=${component.cameraSerial}")
+                    }
+                    if (component.streamSources.isNotEmpty()) {
+                        appendLine(
+                            "  sources=${component.streamSources.joinToString()}"
+                        )
+                    }
+                    if (component.payloadConnected) {
+                        appendLine(
+                            "  payload=${component.payloadProductName ?: "connected"}"
+                        )
+                    }
+                }
+            }.trimEnd()
+        }
+    }
+
+    private val rtkListener: (RtkSnapshot) -> Unit = { state ->
+        runOnUiThread {
+            rtkText.text = buildString {
+                appendLine("RTK")
+                appendLine("Enabled: ${state.enabled}")
+                appendLine("Healthy: ${state.healthy}")
+                appendLine("Solution: ${state.positioningSolution ?: "-"}")
+                appendLine("Source: ${state.referenceStationSource ?: "-"}")
+                appendLine(
+                    "Mobile: ${state.mobileLatitude ?: "-"}, " +
+                        "${state.mobileLongitude ?: "-"}, " +
+                        "${state.mobileAltitudeM ?: "-"}"
+                )
+                appendLine(
+                    "Std: lon=${state.stdLongitude ?: "-"} " +
+                        "lat=${state.stdLatitude ?: "-"} " +
+                        "alt=${state.stdAltitude ?: "-"}"
+                )
+                if (state.satelliteCounts.isNotEmpty()) {
+                    appendLine(
+                        "Satelliten: " +
+                            state.satelliteCounts.entries.joinToString {
+                                "${it.key}=${it.value}"
+                            }
+                    )
+                }
+                state.error?.let { append("Fehler: $it") }
+            }.trimEnd()
+        }
+    }
+
     private val controlListener: (VirtualStickSnapshot) -> Unit = { state ->
         runOnUiThread {
             controlText.text = buildString {
@@ -76,6 +137,12 @@ class MainActivity : AppCompatActivity() {
             textSize = 18f
         }
         telemetryText = TextView(this).apply {
+            textSize = 18f
+        }
+        sensorText = TextView(this).apply {
+            textSize = 18f
+        }
+        rtkText = TextView(this).apply {
             textSize = 18f
         }
 
@@ -126,6 +193,8 @@ class MainActivity : AppCompatActivity() {
             addView(notice, matchWidth())
             addView(sdkText, matchWidth(top = 24))
             addView(telemetryText, matchWidth(top = 24))
+            addView(sensorText, matchWidth(top = 24))
+            addView(rtkText, matchWidth(top = 24))
             addView(controlText, matchWidth(top = 24))
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
@@ -145,12 +214,16 @@ class MainActivity : AppCompatActivity() {
 
         DjiSdkRuntime.addListener(sdkListener)
         AircraftTelemetrySource.addListener(telemetryListener)
+        SensorInventorySource.addListener(sensorListener)
+        RtkTelemetrySource.addListener(rtkListener)
         VirtualStickController.addListener(controlListener)
     }
 
     override fun onDestroy() {
         DjiSdkRuntime.removeListener(sdkListener)
         AircraftTelemetrySource.removeListener(telemetryListener)
+        SensorInventorySource.removeListener(sensorListener)
+        RtkTelemetrySource.removeListener(rtkListener)
         VirtualStickController.removeListener(controlListener)
         super.onDestroy()
     }

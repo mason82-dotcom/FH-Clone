@@ -19,6 +19,12 @@ Implementiert:
 - authoritative MSDK-Geräteidentität über ProductKey
 - Product Type, Firmware, Flight-Controller-SN
 - Aircraft Location 3D (raw MSDK)
+- Camera-/Gimbal-Inventar je ComponentIndex
+- CameraType + Camera Serial
+- verfügbare Video-/Lens-Source-Enums
+- Payload-Port-Verbindungen + ProductName
+- RTKCenter System State und RTK-Location
+- RTK Solution, Source, Standardabweichungen und Satellitenzahlen
 - Virtual-Stick-State und Flight-Control-Authority
 - explizites Enable / Disable
 - normalisierte Stick-Eingabe `[-1, 1]`

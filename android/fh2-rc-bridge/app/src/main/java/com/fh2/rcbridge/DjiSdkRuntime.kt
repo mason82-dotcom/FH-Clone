@@ -42,6 +42,8 @@ object DjiSdkRuntime {
                         )
                     }
                     AircraftTelemetrySource.start()
+                    SensorInventorySource.start()
+                    RtkTelemetrySource.start()
                 }
 
                 override fun onRegisterFailure(error: IDJIError) {
