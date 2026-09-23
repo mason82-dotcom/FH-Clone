@@ -210,6 +210,7 @@ const publicServer = createServer(async (request, response) => {
       const [
         topologyStoreReady,
         gatewayCredentialStoreReady,
+        msdkTokenRevocationStoreReady,
         missionStoreReady
       ] = await Promise.all([
         topologyStore
@@ -218,6 +219,10 @@ const publicServer = createServer(async (request, response) => {
         gatewayCredentials
           ? gatewayCredentials.assertReady().then(() => true).catch(() => false)
           : Promise.resolve(false),
+        msdkTokenRevocations
+          .assertReady()
+          .then(() => true)
+          .catch(() => false),
         missionStore.ping()
       ]);
 
@@ -225,6 +230,7 @@ const publicServer = createServer(async (request, response) => {
         mqttBackendConnected: dji?.isConnected ?? false,
         topologyStoreReady,
         gatewayCredentialStoreReady,
+        msdkTokenRevocationStoreReady,
         missionStoreReady
       };
       const ready = Object.values(checks).every(Boolean);
