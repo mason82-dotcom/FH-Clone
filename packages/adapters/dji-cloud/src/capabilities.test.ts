@@ -6,7 +6,7 @@ import { getDjiCloudControlProfile } from "./capabilities.js";
 const rcPro = { domain: 2, type: 144, subType: 0 };
 const rcPlus2 = { domain: 2, type: 174, subType: 0 };
 
-test("M3E/M3T/M3TA behind RC Pro expose drone_control and payload control", () => {
+test("M3E/M3T/M3TA behind RC Pro expose payload-only cloud control", () => {
   for (const subType of [0, 1, 3]) {
     const profile = getDjiCloudControlProfile(
       { domain: 0, type: 77, subType },
@@ -14,13 +14,13 @@ test("M3E/M3T/M3TA behind RC Pro expose drone_control and payload control", () =
     );
 
     assert.equal(profile.cloudControl, true);
-    assert.equal(profile.flightControl, true);
+    assert.equal(profile.flightControl, false);
     assert.equal(profile.stickControl, false);
-    assert.equal(profile.droneControl, true);
+    assert.equal(profile.droneControl, false);
     assert.equal(profile.flyTo, false);
     assert.equal(profile.payloadControl, true);
     assert.equal(profile.requiresCloudControlAuthority, true);
-    assert.equal(profile.drcProfile, "pilot-m3-drone");
+    assert.equal(profile.drcProfile, "none");
     assert.deepEqual(profile.capabilities, []);
   }
 });
@@ -74,7 +74,9 @@ test("specialized product controls do not become generic execute capabilities", 
 
   assert.equal(m3.cloudControl, true);
   assert.equal(m3.payloadControl, true);
-  assert.equal(m3.drcProfile, "pilot-m3-drone");
+  assert.equal(m3.flightControl, false);
+  assert.equal(m3.droneControl, false);
+  assert.equal(m3.drcProfile, "none");
   assert.equal(m4.cloudControl, true);
   assert.equal(m4.drcProfile, "pilot-m4-stick");
   assert.deepEqual(m3.capabilities, []);

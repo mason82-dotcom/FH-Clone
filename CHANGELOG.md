@@ -4,7 +4,8 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
-Keine Änderungen nach der V3.0.0-Freigabe.
+- M3E/M3T/M3TA + RC Pro auf den offiziell dokumentierten Cloud-Payload-Control-Vertrag korrigiert; Cloud-Flugsteuerung (`stick_control`/`drone_control`) bleibt für M3 aus.
+- M4E/M4T + RC Plus 2 bleibt das separate Cloud-Flight-Control-Profil.
 
 ## 3.0.0 – 2026-09-23
 
@@ -22,7 +23,8 @@ Keine Änderungen nach der V3.0.0-Freigabe.
 
 - DJI `cloud_control` explizit aktiviert und als eigenes Produktprofil ausgewiesen
 - DJI `stick_control` für unterstützte M4-/RC-Plus-2-Profile aktiviert
-- DJI `drone_control` für unterstützte M3-/RC-Pro- und M4-/RC-Plus-2-Profile aktiviert
+- DJI `drone_control` für das unterstützte M4-/RC-Plus-2-Flugsteuerungsprofil aktiviert
+- M3-/RC-Pro-Cloud-Control auf Payload-Control begrenzt; keine M3-Cloud-Flugsteuerung
 - alle Flugsteuerpfade bleiben hinter FC3/Lease/DJI-Authority/DRC-Session/Dead-Man-Guards
 - DJI Dock 1–3, Multi-Dock und PSDK-Payload-/Widget-/DRC-Pfade global deaktiviert
 - keine Runtime-/Environment-Schalter zur Aufhebung der globalen Dock-/Multi-Dock-/PSDK-Sperren
@@ -69,7 +71,8 @@ Keine Änderungen nach der V3.0.0-Freigabe.
 
 ### Nicht im V3.0.0-Hardware-Supportumfang
 
-- M3/RC-Pro- und M4/RC-Plus-2-Cloud-Control ohne reale DRC-/Authority-Hardwareabnahme
+- M3/RC-Pro-Cloud-Payload-Control ohne reale Payload-/RC-Abnahme
+- M4/RC-Plus-2-Cloud-Flight-Control ohne reale DRC-/Authority-Hardwareabnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK: global deaktiviert
 - Pilot-2-JSBridge
 - vollständige WPML/Pilot-Wayline-Integration

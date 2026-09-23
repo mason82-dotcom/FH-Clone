@@ -8,8 +8,10 @@ FH2 V3.0.0 ist als **Software-/FC0-Basisrelease freigegeben**.
 
 Der freigegebene Basisumfang ist fail-closed: Standardstufe ist FC0.
 Cloud-Control ist für explizit unterstützte Pilot-to-Cloud-Produktprofile
-wieder aktiviert. `cloud_control`, `stick_control` und `drone_control`
-heben die lokalen Safety-Gates nicht auf: Flugsteuerung bleibt hinter FC3,
+aktiviert. Für M3E/M3T/M3TA + RC Pro ist es auf Payload-Control begrenzt;
+`flightControl`, `stick_control` und `drone_control` bleiben dort aus.
+M4E/M4T + RC Plus 2 besitzt das separate Cloud-Flight-Control-Profil.
+Flugsteuerung hebt die lokalen Safety-Gates nicht auf und bleibt hinter FC3,
 Control Lease, DJI Control Authority, aktiver DRC-Sitzung, Dead-Man und
 Hardware-Evidence gegatet.
 
@@ -91,16 +93,18 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 ## Globale Produkt-Policy
 
 Seit dem Policy-Update sind **DJI Dock 1, Dock 2, Dock 3, Multi-Dock und
-PSDK-Payloads projektweit deaktiviert**. Cloud-Control selbst ist dagegen für
-die explizit unterstützten RC-Pro-/RC-Plus-2-Produktprofile aktiviert.
-`stick_control` und `drone_control` bleiben produktabhängig und werden nur
-innerhalb der bestehenden Safety-/Authority-/DRC-Kette verwendet.
+PSDK-Payloads projektweit deaktiviert**. Cloud-Control selbst bleibt
+produktabhängig: M3 + RC Pro erlaubt nur Payload-Control; M4 + RC Plus 2
+erlaubt das separate Cloud-Flight-Control-Profil. `stick_control` und
+`drone_control` werden nur im M4-Profil und innerhalb der bestehenden
+Safety-/Authority-/DRC-Kette verwendet.
 
 ## Nicht als Hardwarefunktion freigegeben
 
 Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
-- M3E/M3T/M3TA- und M4E/M4T-Cloud-Control ohne reale RC-/DRC-/Authority-Abnahme
+- M3E/M3T/M3TA Cloud-Payload-Control ohne reale RC-Pro-/Payload-Abnahme
+- M4E/M4T Cloud-Flight-Control ohne reale RC-Plus-2-/DRC-/Authority-Abnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: **global deaktiviert**
 - Pilot-2-JSBridge
 - WPML/Pilot-Wayline-Integration aus den offenen Drafts
