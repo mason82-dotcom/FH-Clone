@@ -225,9 +225,6 @@ Agent-Tokens mit seiner Ablaufzeit nach `msdk_token_revocations`. Dadurch
 bleibt der Widerruf über Control-API-Neustarts erhalten, ohne eine zweite
 Gateway-/Aircraft-Identity oder Runtime-Control-Rechte zu persistieren.
 
-Das Agent-Token ist an `gatewaySn + aircraftSn`
-gebunden.
-
 ## Media-Ingest
 
 | Variable | Standard | Bedeutung |
