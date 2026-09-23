@@ -544,6 +544,7 @@ export class DrcSessionManager {
     await this.audit(draining, "draining", reason);
 
     let lastNeutralAt = draining.lastNeutralAt;
+    const cleanupFailures: Error[] = [];
     const shouldNeutral =
       current.transportConnected &&
       (current.state === "controlling" || current.state === "degraded");
@@ -570,8 +571,10 @@ export class DrcSessionManager {
             "neutral_sent",
             reason
           );
-        } catch {
-          // Cleanup must continue even if the data-plane is already unavailable.
+        } catch (error) {
+          cleanupFailures.push(
+            error instanceof Error ? error : new Error(String(error))
+          );
         }
       }
     } finally {
@@ -587,11 +590,27 @@ export class DrcSessionManager {
       ) {
         await this.controller.exitDrcMode(gatewaySn);
       }
-    } catch {
-      // The session still closes locally; runtime authorization must fail closed.
-    } finally {
-      return this.finishClosed(draining, reason, lastNeutralAt, false);
+    } catch (error) {
+      cleanupFailures.push(
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
+
+    const closed = await this.finishClosed(
+      draining,
+      reason,
+      lastNeutralAt,
+      false
+    );
+
+    if (cleanupFailures.length > 0) {
+      throw new AggregateError(
+        cleanupFailures,
+        `DRC cleanup failed for gateway ${gatewaySn}`
+      );
+    }
+
+    return closed;
   }
 
   /**
@@ -744,7 +763,16 @@ export class DrcSessionManager {
     error: Error
   ): void {
     if (this.onRuntimeError) {
-      this.onRuntimeError(gatewaySn, error);
+      try {
+        this.onRuntimeError(gatewaySn, error);
+      } catch (callbackError) {
+        console.error(
+          `[DRC] Runtime error callback failed for gateway ${gatewaySn}:`,
+          callbackError instanceof Error
+            ? callbackError.message
+            : String(callbackError)
+        );
+      }
       return;
     }
     console.error(
