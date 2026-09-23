@@ -1,0 +1,74 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+}
+
+android {
+    namespace "com.fh2.rcbridge"
+    compileSdk Integer.parseInt(project.ANDROID_COMPILE_SDK_VERSION)
+
+    defaultConfig {
+        applicationId "com.fh2.rcbridge"
+        minSdk Integer.parseInt(project.ANDROID_MIN_SDK_VERSION)
+        targetSdk Integer.parseInt(project.ANDROID_TARGET_SDK_VERSION)
+        versionCode 1
+        versionName "0.1.0"
+
+        manifestPlaceholders = [
+            DJI_API_KEY: project.findProperty("AIRCRAFT_API_KEY") ?: ""
+        ]
+
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += ["-Xjvm-default=all"]
+    }
+
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ["lib/arm64-v8a/libc++_shared.so"]
+            keepDebugSymbols += [
+                "**/libconstants.so",
+                "**/libdji_innertools.so",
+                "**/libdjibase.so",
+                "**/libDJICSDKCommon.so",
+                "**/libDJIFlySafeCore-CSDK.so",
+                "**/libdjifs_jni-CSDK.so",
+                "**/libDJIRegister.so",
+                "**/libdjisdk_jni.so",
+                "**/libDJIUpgradeCore.so",
+                "**/libDJIUpgradeJNI.so",
+                "**/libDJIWaypointV2Core-CSDK.so",
+                "**/libdjiwpv2-CSDK.so",
+                "**/libFlightRecordEngine.so",
+                "**/libvideo-framing.so"
+            ]
+        }
+    }
+}
+
+dependencies {
+    compileOnly "com.dji:dji-sdk-v5-aircraft-provided:5.18.0"
+    implementation "com.dji:dji-sdk-v5-aircraft:5.18.0"
+
+    implementation "androidx.core:core-ktx:1.15.0"
+    implementation "androidx.appcompat:appcompat:1.7.0"
+}
