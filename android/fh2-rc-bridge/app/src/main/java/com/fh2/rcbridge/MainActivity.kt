@@ -514,7 +514,8 @@ class MainActivity : AppCompatActivity() {
             isEnabled = false
             setOnClickListener {
                 NetworkControlArm.disarm()
-                RemoteControlSessionRegistry.stopAll()
+                VirtualStickController.neutral()
+                VirtualStickController.disable { }
             }
         }
 
