@@ -52,13 +52,21 @@ object BridgeSnapshotProvider {
         val capabilities = BridgeCapabilities(
             camera = sensors.components.any { it.cameraConnected },
             gimbal = sensors.components.any { it.gimbalConnected },
-            thermal = "M3T" in cameraTypes,
+            thermal =
+                "M3T" in cameraTypes ||
+                    "M3TA" in cameraTypes,
             multispectral = "M3M" in cameraTypes,
             rtk =
                 RtkTelemetrySource.snapshot.enabled != null ||
                     RtkTelemetrySource.snapshot.healthy != null ||
                     RtkTelemetrySource.snapshot.positioningSolution != null,
-            virtualStick = true
+            virtualStick =
+                cameraTypes.any {
+                    it == "M3E" ||
+                        it == "M3T" ||
+                        it == "M3TA" ||
+                        it == "M3M"
+                }
         )
 
         return BridgeSnapshot(
