@@ -63,7 +63,7 @@ Die Runtime-Auswahl für den Stick-Pfad ist wieder produktabhängig:
 
 ```text
 M4E/M4T + RC Plus 2   -> DjiDrcProfile = pilot-m4-stick
-M3E/M3T/M3TA + RC Pro -> DjiDrcProfile = pilot-m3-drone
+M3E/M3T/M3TA + RC Pro -> DjiDrcProfile = none (Payload-Control only)
 unbekannt/falsch      -> DjiDrcProfile = none
 ```
 
@@ -71,22 +71,21 @@ unbekannt/falsch      -> DjiDrcProfile = none
 
 ### Mavic 3 Enterprise + RC Pro Enterprise
 
-FH2 aktiviert hinter einer bestätigten RC Pro Enterprise das spezialisierte
-Pilot-to-Cloud-Profil für M3E/M3T/M3TA:
+FH2 aktiviert hinter einer bestätigten RC Pro Enterprise das von DJI
+dokumentierte Cloud-Payload-Control-Profil für M3E/M3T/M3TA:
 
 ```text
 cloudControl   = true
-flightControl  = true
+flightControl  = false
 stickControl   = false
-droneControl   = true
+droneControl   = false
 payloadControl = true
-DjiDrcProfile  = pilot-m3-drone
+DjiDrcProfile  = none
 ```
 
-Der spezialisierte Pfad bleibt von generischen
-`AircraftAdapter.execute()`-Capabilities getrennt und benötigt für
-Flugsteuerung FC3, Control Lease, DJI Cloud-Control-Authority, aktive
-DRC-Sitzung und Dead-Man.
+Die Cloud-Control-Authority bleibt für den Payload-Consent relevant. FH2
+startet für M3E/M3T/M3TA jedoch keine Flug-DRC-Sitzung und leitet aus
+vorhandenen DRC-Topics keine Cloud-Flugsteuerungsfreigabe ab.
 
 ### Matrice 4 + RC Plus 2
 
@@ -145,7 +144,7 @@ primäre Pilot-Cloud-Authority-Flow für Matrice 4 + RC Plus 2.
 
 DJI-Authority und FH2-Steuerhoheit sind getrennte Ebenen.
 
-Aktive M3-/M4-Flug-DRC-Sitzungen benötigen weiterhin folgende Guards:
+Aktive M4-Flug-DRC-Sitzungen benötigen weiterhin folgende Guards:
 
 ```text
 Produkt-Capability
@@ -485,23 +484,19 @@ hebt diese Guards nicht auf.
 ## M3 Enterprise + RC Pro Enterprise
 
 FH2 aktiviert für M3E, M3T und M3TA hinter einer bestätigten DJI RC Pro
-Enterprise den Pilot-to-Cloud-Control-Pfad:
+Enterprise ausschließlich den Cloud-Payload-Control-Vertrag:
 
 ```text
-flightControl  = true
+cloudControl   = true
+flightControl  = false
 stickControl   = false
-droneControl   = true
+droneControl   = false
 payloadControl = true
-drcProfile     = pilot-m3-drone
+drcProfile     = none
 flyTo          = false
 ```
 
-Der Flugsteuerpfad verwendet `drone_control` auf
-`thing/product/{gateway_sn}/drc/down`. Das RC-Plus-2-Verfahren
-`stick_control` wird für diese Gerätefamilie nicht verwendet.
-
-Für `drone_control` bleiben FC3, Control Lease, DJI
-Cloud-Control-Authority, aktive DRC-Sitzung und Dead-Man Pflicht.
-Payload-/Kamera-/Gimbal-Support wird im spezialisierten DJI-Control-Profil
-ausgewiesen; generische `AircraftAdapter.execute()`-Capabilities bleiben
-davon getrennt.
+`stick_control` und `drone_control` werden für diese Gerätefamilie nicht
+als Cloud-Flugsteuerung verwendet. Die Cloud-Control-Authority bleibt für den
+Payload-Consent relevant. Ein späterer schreibender Kamera-/Gimbal-Pfad muss
+separat implementiert und real abgenommen werden.
