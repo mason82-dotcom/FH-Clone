@@ -60,6 +60,12 @@ export class PostgresGatewayCredentialStore
       max: 4,
       idleTimeoutMillis: 30_000
     });
+    this.pool.on("error", (error) => {
+      console.warn(
+        "[AuthN] PostgreSQL pool connection lost; next query will reconnect:",
+        error.message
+      );
+    });
   }
 
   async assertReady(): Promise<void> {
