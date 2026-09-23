@@ -25,6 +25,7 @@ import {
   isMediaAsset
 } from "./media-overlay.js";
 import { MediaStore } from "./media-store.js";
+import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest
@@ -148,6 +149,11 @@ const mediaStore = new MediaStore({
     ? { connectionString: process.env.TIMESCALE_URL }
     : {})
 });
+const telemetryStore = new TelemetryStore({
+  ...(process.env.TIMESCALE_URL
+    ? { connectionString: process.env.TIMESCALE_URL }
+    : {})
+});
 const rtk = new RtkTelemetryService({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId),
   resolveMissionId: (deviceId) => missions.getActive(deviceId)?.missionId
@@ -239,6 +245,9 @@ const publicServer = createServer(async (request, response) => {
           assets: mediaOverlays.size(),
           persistenceEnabled: mediaStore.enabled
         },
+        telemetryPersistence: {
+          enabled: telemetryStore.enabled
+        },
         controlRuntime: {
           configured: Boolean(controlCoordinator),
           activeSessions: drcRuntimeContext.size
@@ -260,7 +269,8 @@ const publicServer = createServer(async (request, response) => {
         gatewayCredentialStoreReady,
         msdkTokenRevocationStoreReady,
         missionStoreReady,
-        mediaStoreReady
+        mediaStoreReady,
+        telemetryStoreReady
       ] = await Promise.all([
         topologyStore
           ? topologyStore.assertReady().then(() => true).catch(() => false)
@@ -276,6 +286,9 @@ const publicServer = createServer(async (request, response) => {
           : Promise.resolve(false),
         mediaStore.enabled
           ? mediaStore.ping()
+          : Promise.resolve(false),
+        telemetryStore.enabled
+          ? telemetryStore.ping()
           : Promise.resolve(false)
       ]);
 
@@ -299,6 +312,10 @@ const publicServer = createServer(async (request, response) => {
         mediaStore: {
           configured: mediaStore.enabled,
           ready: mediaStoreReady
+        },
+        telemetryStore: {
+          configured: telemetryStore.enabled,
+          ready: telemetryStoreReady
         }
       });
       const msdkTokenRevocationStore = {
@@ -850,7 +867,7 @@ if (dji) {
       devices.upsert(device);
     },
     onParameter(sample) {
-      parameters.update(sample);
+      ingestParameterSample(sample);
     },
     async onRawMessage(message) {
       const previousMissionId = message.deviceId
@@ -886,6 +903,14 @@ if (dji) {
           );
         }
       }
+
+      telemetryStore.enqueueRaw(
+        message,
+        session?.missionId ??
+          (message.deviceId
+            ? missions.getActive(message.deviceId)?.missionId
+            : undefined)
+      );
 
       rtk.observe(message);
       if (process.env.LOG_RAW_DJI === "1") {
@@ -944,6 +969,10 @@ const shutdown = onceAsync(async () => {
     {
       name: "media_store",
       run: () => mediaStore.close()
+    },
+    {
+      name: "telemetry_store",
+      run: () => telemetryStore.close()
     },
     {
       name: "topology_queue",
@@ -1062,8 +1091,34 @@ function ingestMsdkSnapshot(
   receivedAt: number
 ): void {
   const normalized = normalizeMsdkBridgeSnapshot(snapshot, receivedAt);
+  const missionId = missions.getActive(snapshot.aircraft.flightControllerSerial)?.missionId;
+
+  telemetryStore.enqueueRaw(
+    {
+      adapterId: "msdk-v5",
+      deviceId: snapshot.aircraft.flightControllerSerial,
+      receivedAt,
+      channel: "fh2.msdk.v1",
+      payload: snapshot
+    },
+    missionId
+  );
+
   devices.upsert(normalized.device);
-  normalized.samples.forEach((sample) => parameters.update(sample));
+  normalized.samples.forEach((sample) =>
+    ingestParameterSample(sample)
+  );
+}
+
+function ingestParameterSample(
+  sample: import("@fh-clone/aircraft-core").ParameterSample
+): void {
+  parameters.update(sample);
+  telemetryStore.enqueueParameter(
+    sample,
+    missions.getActive(sample.deviceId)?.missionId,
+    parameters.snapshot(sample.deviceId)[sample.key] ?? sample
+  );
 }
 
 function readBearerToken(request: IncomingMessage): string | undefined {

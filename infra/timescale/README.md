@@ -33,6 +33,8 @@ Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. De
 - Rohdaten-Retention nach 24 Monaten
 - Continuous Aggregate `telemetry_1m`
 - `002_rtk_fix_enum.sql` erzwingt für `is_fixed` ausschließlich `0/1/2/3` oder `NULL`
+- `007_telemetry_history.sql` legt `raw_messages` und `normalized_parameters` als 1-Tages-Hypertables mit 24-Monats-Retention an
+- bestehende Volumes erhalten neue Tabellen über den idempotenten `db-migrations`-One-Shot
 
 ## Produktkennung
 
@@ -105,6 +107,11 @@ TIMESCALE_URL=postgres://fhclone:<passwort>@timescaledb:5432/fhclone
 ```
 
 Ohne `TIMESCALE_URL` arbeitet die Live-Telemetrie vollständig ohne Datenbank weiter.
+
+Mit `TIMESCALE_URL` persistiert der TelemetryStore sowohl sanitierte
+Adapter-Rohmeldungen als auch sämtliche normalisierten ParameterSamples.
+Ausgewählte kanonische Flug-/RTK-Werte werden während aktiver Missionen
+zusätzlich in die bestehende `telemetry`-Hypertable projiziert.
 
 
 ## Weiterführende Dokumentation

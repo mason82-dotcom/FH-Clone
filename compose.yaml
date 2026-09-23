@@ -16,6 +16,7 @@ services:
       - ./infra/postgres/migrations/001_dji_gateway_registry.sql:/docker-entrypoint-initdb.d/005_dji_gateway_registry.sql:ro
       - ./infra/timescale/sql/005_msdk_token_revocations.sql:/docker-entrypoint-initdb.d/006_msdk_token_revocations.sql:ro
       - ./infra/timescale/sql/006_media_assets.sql:/docker-entrypoint-initdb.d/007_media_assets.sql:ro
+      - ./infra/timescale/sql/007_telemetry_history.sql:/docker-entrypoint-initdb.d/008_telemetry_history.sql:ro
     healthcheck:
       test:
         [
@@ -38,6 +39,7 @@ services:
         condition: service_healthy
     volumes:
       - ./infra/timescale/sql/006_media_assets.sql:/migrations/006_media_assets.sql:ro
+      - ./infra/timescale/sql/007_telemetry_history.sql:/migrations/007_telemetry_history.sql:ro
     command:
       [
         "psql",
@@ -50,7 +52,9 @@ services:
         "-v",
         "ON_ERROR_STOP=1",
         "-f",
-        "/migrations/006_media_assets.sql"
+        "/migrations/006_media_assets.sql",
+        "-f",
+        "/migrations/007_telemetry_history.sql"
       ]
     restart: "no"
     networks:

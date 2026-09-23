@@ -20,6 +20,7 @@ export interface ControlApiReadinessInput {
   gatewayCredentialStore: ReadinessDependencyInput;
   missionStore: ReadinessDependencyInput;
   mediaStore: ReadinessDependencyInput;
+  telemetryStore: ReadinessDependencyInput;
 }
 
 export interface ControlApiReadiness {
@@ -30,6 +31,7 @@ export interface ControlApiReadiness {
     gatewayCredentialStore: ReadinessDependencyView;
     missionStore: ReadinessDependencyView;
     mediaStore: ReadinessDependencyView;
+    telemetryStore: ReadinessDependencyView;
   };
 }
 
@@ -41,7 +43,8 @@ export function evaluateControlApiReadiness(
     topologyStore: dependencyView(input.topologyStore),
     gatewayCredentialStore: dependencyView(input.gatewayCredentialStore),
     missionStore: dependencyView(input.missionStore),
-    mediaStore: dependencyView(input.mediaStore)
+    mediaStore: dependencyView(input.mediaStore),
+    telemetryStore: dependencyView(input.telemetryStore)
   };
 
   return {

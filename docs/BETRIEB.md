@@ -158,8 +158,10 @@ RTK_SOURCE_LABEL=...
 RTK_SOURCE_PROVIDER=...
 ```
 
-Ohne `TIMESCALE_URL` läuft die automatische Missionssitzung weiterhin
-In-Memory. Mit Datenbankverbindung werden Missionsstart und -ende gespeichert.
+Ohne `TIMESCALE_URL` laufen Missions-, Medien- und Telemetrie-Livepfade
+weiterhin In-Memory. Mit Datenbankverbindung werden Missionsstart/-ende,
+validierte MediaAssets, sanitierte Raw-Messages und normalisierte
+ParameterSamples gespeichert.
 Beim Dienstneustart werden noch offene automatische Missionen mit
 `service_restart` abgeschlossen, bevor neuer DJI-Ingest beginnt.
 
