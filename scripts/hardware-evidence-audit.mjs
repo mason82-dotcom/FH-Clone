@@ -377,9 +377,51 @@ if (realEvidence(js)) {
 }
 
 // ---------------------------------------------------------------------------
-// MSDK PR #44: contract only
+// MSDK KeyManager runtime
 // ---------------------------------------------------------------------------
-add("MSDK_KEYMANAGER", "INFORMATIONAL", "PR #44 benötigt ohne Android-Runtime kein Hardware-Fixture", true);
+const msdkKeyManagerPath = "docs/fixtures/msdk/keymanager-evidence.json";
+const msdkKeyManager = readJson(msdkKeyManagerPath);
+const msdkKeyRuntime = msdkKeyManager?.keyManager;
+const msdkKeyDescriptors = arr(msdkKeyRuntime?.keys);
+add(
+  "MSDK_KEYMANAGER",
+  "REQUIRED_HARDWARE",
+  "reales redigiertes MSDK-KeyManager-Runtime-Evidence",
+  realEvidence(msdkKeyManager) &&
+    msdkKeyManager?.schema === "fh2.msdk.v1" &&
+    msdkKeyRuntime?.active === true &&
+    msdkKeyRuntime?.productConnected === true &&
+    msdkKeyDescriptors.length > 0,
+  msdkKeyManagerPath
+);
+if (realEvidence(msdkKeyManager) && record(msdkKeyRuntime)) {
+  add(
+    "MSDK_KEYMANAGER",
+    "REQUIRED_HARDWARE",
+    "mindestens ein Runtime-Key erfolgreich beobachtet",
+    msdkKeyDescriptors.some((entry) => entry?.runtimeStatus === "supported")
+  );
+  add(
+    "MSDK_KEYMANAGER",
+    "REQUIRED_HARDWARE",
+    "Write-/Action-Metadaten ohne automatische Control-Freigabe beobachtet",
+    msdkKeyDescriptors.some(
+      (entry) =>
+        entry?.operations?.canSet === true ||
+        entry?.operations?.canPerformAction === true
+    )
+  );
+  add(
+    "MSDK_KEYMANAGER",
+    "REQUIRED_HARDWARE",
+    "kamera-linsengebundener Key-Kontext beobachtet",
+    msdkKeyDescriptors.some(
+      (entry) =>
+        typeof entry?.cameraLensType === "string" &&
+        entry.cameraLensType.length > 0
+    )
+  );
+}
 
 const activeFailures = results.filter((r) => requiredFor(r.level) && !r.ok);
 const lines = [
