@@ -917,32 +917,19 @@ async function createGatewayCredentialStore(): Promise<
     process.env.DATABASE_URL ?? process.env.TIMESCALE_URL;
   if (!connectionString) return undefined;
 
-  const store = new PostgresGatewayCredentialStore(connectionString);
-  try {
-    await store.assertReady();
-    return store;
-  } catch (error) {
-    console.error(
-      "[AuthN] Gateway-Credential-Store nicht verfügbar; Gateway-Authentifizierung bleibt gesperrt:",
-      errorMessage(error)
-    );
-    await store.close();
-    return undefined;
-  }
+  // Keep the configured store present even during a transient database
+  // outage. Readiness and AuthN remain fail-closed until PostgreSQL returns,
+  // while pg.Pool can reconnect on the next query.
+  return new PostgresGatewayCredentialStore(connectionString);
 }
 
 async function createTopologyStore(): Promise<PostgresGatewayRegistryStore | undefined> {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) return undefined;
-  const store = new PostgresGatewayRegistryStore(connectionString);
-  try {
-    await store.assertReady();
-    return store;
-  } catch (error) {
-    console.error("[Topology] PostgreSQL registry unavailable; inventory persistence disabled:", errorMessage(error));
-    await store.close();
-    return undefined;
-  }
+
+  // Do not permanently disable persistence because PostgreSQL is momentarily
+  // unavailable. /ready remains false until assertReady succeeds again.
+  return new PostgresGatewayRegistryStore(connectionString);
 }
 
 
