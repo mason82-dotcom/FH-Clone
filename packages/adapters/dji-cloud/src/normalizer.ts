@@ -218,12 +218,16 @@ function normalizeCameraTelemetry(
 
     for (const [rawField, spec] of Object.entries(CAMERA_FIELDS)) {
       if (!(rawField in camera)) continue;
+      const value = camera[rawField];
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        continue;
+      }
       samples.push(
         sample(
           deviceId,
           `camera.${payloadIndex}.${spec.key}`,
           `cameras[].${rawField}`,
-          camera[rawField],
+          value,
           sampledAt,
           spec.unit
         )
@@ -248,12 +252,19 @@ function normalizeGimbalTelemetry(
 
     for (const [rawField, spec] of Object.entries(GIMBAL_FIELDS)) {
       if (!(rawField in value)) continue;
+      const axisValue = value[rawField];
+      if (
+        typeof axisValue !== "number" ||
+        !Number.isFinite(axisValue)
+      ) {
+        continue;
+      }
       samples.push(
         sample(
           deviceId,
           `gimbal.${payloadIndex}.${spec.key}`,
           `${payloadIndex}.${rawField}`,
-          value[rawField],
+          axisValue,
           sampledAt,
           spec.unit
         )
