@@ -27,6 +27,12 @@ import {
   type DjiCloudControlProfile,
   type DjiDrcProfile
 } from "./capabilities.js";
+import {
+  getGloballyDisabledServiceReason,
+  isGloballyDisabledDockProduct,
+  isGloballyDisabledPsdkMethod,
+  sanitizeGloballyDisabledDjiFields
+} from "./feature-policy.js";
 
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
@@ -86,6 +92,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   private readonly devices = new Map<string, AdapterDevice>();
   private readonly capabilities = new Map<string, Set<Capability>>();
   private readonly pendingServices = new Map<string, PendingServiceRequest>();
+  private readonly globallyDisabledDeviceIds = new Set<string>();
   readonly topology = new DjiTopologyRegistry();
   readonly cloudAuthority = new DjiCloudControlAuthorityRegistry();
   readonly pilotAuthority = new DjiPilotCloudAuthorityCoordinator(this, this.cloudAuthority);
@@ -238,6 +245,15 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     data: unknown,
     timeoutMs = this.options.serviceTimeoutMs ?? 10_000
   ): Promise<DjiServiceReply> {
+    if (this.globallyDisabledDeviceIds.has(gatewaySn)) {
+      throw new Error("DJI Dock gateways are globally disabled");
+    }
+
+    const disabledReason = getGloballyDisabledServiceReason(method, data);
+    if (disabledReason) {
+      throw new Error(disabledReason);
+    }
+
     const client = this.client;
     if (!client || !this.connected) {
       throw new Error("DJI Cloud MQTT adapter is not connected");
@@ -302,19 +318,29 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       payload = { raw: bytes.toString("utf8"), parseError: true };
     }
 
-    if (topic.endsWith("/services_reply")) {
-      this.resolveServiceReply(payload);
-    }
-
     const deviceId = deviceFromTopic(topic);
 
+    if (isRecord(payload) && isGloballyDisabledPsdkMethod(payload.method)) {
+      return;
+    }
+
+    if (deviceId && this.globallyDisabledDeviceIds.has(deviceId)) {
+      return;
+    }
+
+    const sanitizedPayload = sanitizeGloballyDisabledDjiFields(payload);
+
+    if (topic.endsWith("/services_reply")) {
+      this.resolveServiceReply(sanitizedPayload);
+    }
+
     if (deviceId && topic.endsWith("/state")) {
-      this.cloudAuthority.applyState(deviceId, payload, receivedAt);
+      this.cloudAuthority.applyState(deviceId, sanitizedPayload, receivedAt);
     }
 
     if (deviceId && topic.endsWith("/events")) {
-      this.cloudAuthority.applyEvent(deviceId, payload, receivedAt);
-      const drcState = parseDrcStatusNotify(payload);
+      this.cloudAuthority.applyEvent(deviceId, sanitizedPayload, receivedAt);
+      const drcState = parseDrcStatusNotify(sanitizedPayload);
       if (drcState !== undefined) await this.options.onDrcStatus?.(deviceId, drcState, receivedAt);
     }
 
@@ -324,11 +350,20 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     const topology =
       deviceId && isTopologyStatusTopic
-        ? parseDjiTopologyUpdate(deviceId, payload, receivedAt)
+        ? parseDjiTopologyUpdate(deviceId, sanitizedPayload, receivedAt)
         : undefined;
 
+    if (topology && isGloballyDisabledDockProduct(topology.product)) {
+      this.globallyDisabledDeviceIds.add(topology.gatewaySn);
+      for (const subDevice of topology.subDevices) {
+        this.globallyDisabledDeviceIds.add(subDevice.sn);
+      }
+      await this.replyToTopologyUpdate(topology.gatewaySn, sanitizedPayload);
+      return;
+    }
+
     if (topology) {
-      await this.applyTopology(topology, payload);
+      await this.applyTopology(topology, sanitizedPayload);
     }
 
     const raw: RawMessage = {
@@ -336,7 +371,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       ...(deviceId ? { deviceId } : {}),
       receivedAt,
       channel: topic,
-      payload: topology ? toPublicDjiTopologyPayload(topology) : payload
+      payload: topology ? toPublicDjiTopologyPayload(topology) : sanitizedPayload
     };
     await this.events?.onRawMessage?.(raw);
 
@@ -344,7 +379,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     if (!topic.endsWith("/osd") && !topic.endsWith("/state")) return;
 
-    const normalized = normalizeDjiPayload(deviceId, payload, receivedAt);
+    const normalized = normalizeDjiPayload(deviceId, sanitizedPayload, receivedAt);
     const knownCapabilities = this.capabilities.get(deviceId) ?? new Set<Capability>();
     for (const capability of normalized.capabilities) knownCapabilities.add(capability);
     this.capabilities.set(deviceId, knownCapabilities);
@@ -497,6 +532,7 @@ export * from "./drc.js";
 export * from "./drc-transport.js";
 export * from "./topology.js";
 export * from "./capabilities.js";
+export * from "./feature-policy.js";
 export * from "./rtk.js";
 
 export * from "./payloads.js";
