@@ -109,3 +109,42 @@ test("drop-oldest never removes the in-flight item", async () => {
   assert.deepEqual(persisted, [1, 3]);
   await queue.shutdown();
 });
+
+
+test("retain-all preserves low-volume lifecycle work beyond nominal capacity", async () => {
+  let available = false;
+  const persisted: number[] = [];
+  const queue = new RetryQueue<number>({
+    capacity: 1,
+    retryIntervalMs: 60_000,
+    dropPolicy: "retain-all",
+    process: async (value) => {
+      if (!available) throw new Error("db_down");
+      persisted.push(value);
+    }
+  });
+
+  queue.enqueue(1);
+  await assert.rejects(queue.flush(), /db_down/);
+
+  queue.enqueue(2);
+  queue.enqueue(3);
+
+  // enqueue(2) starts an immediate retry while the simulated DB is still
+  // down. Let that failed in-flight attempt settle before recovery.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  assert.equal(queue.status.pending, 3);
+  assert.equal(queue.status.dropped, 0);
+
+  available = true;
+  await queue.flush();
+
+  assert.deepEqual(persisted, [1, 2, 3]);
+  assert.deepEqual(queue.status, {
+    pending: 0,
+    dropped: 0,
+    healthy: true
+  });
+  await queue.shutdown();
+});

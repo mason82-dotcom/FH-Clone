@@ -201,7 +201,12 @@ const emqxAuthnToken = process.env.EMQX_AUTHN_TOKEN;
 const emqxAuthzToken = process.env.EMQX_AUTHZ_TOKEN;
 const mediaIngestToken = process.env.MEDIA_INGEST_TOKEN;
 const missionSweepTimer = setInterval(() => {
-  void persistSweptMissionEnds();
+  void persistSweptMissionEnds().catch((error: unknown) => {
+    console.error(
+      "[Mission] Sweep-Persistenz fehlgeschlagen:",
+      errorMessage(error)
+    );
+  });
 }, 5_000);
 missionSweepTimer.unref();
 
