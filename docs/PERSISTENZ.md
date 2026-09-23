@@ -14,21 +14,24 @@ Zeitreihentelemetrie.
 
 - SQL-Grundschema unter `infra/timescale/sql/001_schema.sql`
 - Tabelle `missions`
-- TimescaleDB-Hypertable `telemetry`
+- TimescaleDB-Hypertable `telemetry` für die missionsbezogene Flugprojektion
+- TimescaleDB-Hypertable `raw_messages` für sanitierte Adapter-Rohmeldungen
+- TimescaleDB-Hypertable `normalized_parameters` für vollständige normalisierte Parameterhistorie mit Adapter-Provenienz
 - kontinuierliches Minutenaggregat `telemetry_1m`
-- MissionStore in der Control API
+- MissionStore und TelemetryStore in der Control API
 - Öffnen und Schließen automatisch erkannter Missionssitzungen
 - optionale sichere RTK-Quellenmetadaten
 - Recovery offener automatischer Missionen bei Dienstneustart mit `service_restart`
+- Persistenz von Gateway-Topologie, AuthN/AuthZ-Audit und MediaAssets
+- idempotenter Migrations-/Upgrade-Pfad im Root-Compose
 - separater TimescaleDB-Compose-Unterstack mit gepinntem Image `timescale/timescaledb:2.30.1-pg16`
 
-### Noch offen für V3
+### Noch offen als Betriebs-/Historienausbau
 
-- vollständiges Schreiben der normalisierten Telemetrie in `telemetry`
-- vollständiges Wiederaufbauen der übrigen Runtime-Registries nach Neustart
-- Persistenz von Topologie, AuthN/AuthZ-Audit und Medien
-- Migrations-/Upgrade-Ablauf im finalen Root-Compose
-- lokale Restart-/Retention-Abnahme
+- dokumentierter Backup-/Restore-Ablauf für die vollständige Datenbank
+- Last-/Kapazitätsmessung der 24-Monats-Retention mit realistischen Telemetrieraten
+- optionale öffentliche Historien-API; die Persistenz selbst benötigt dafür keinen Schreibendpunkt
+- vollständige Rehydrierung aller nicht-autorisierenden Inventar-/Analyse-Registries ist nur bei konkretem Bedarf sinnvoll; Control-Rechte bleiben absichtlich runtime-only
 
 ## Datenbank-Unterstack
 
@@ -47,13 +50,13 @@ Details: [TimescaleDB-Komponente](../infra/timescale/README.md).
 
 ## Verbindung
 
-Die Control API aktiviert den MissionStore, wenn gesetzt:
+Die Control API aktiviert MissionStore, MediaStore und TelemetryStore, wenn gesetzt:
 
 ```env
 TIMESCALE_URL=postgresql://...
 ```
 
-Ohne `TIMESCALE_URL` bleibt die Missionspersistenz deaktiviert.
+Ohne `TIMESCALE_URL` bleiben diese Historienpfade deaktiviert; die Live-Registries arbeiten weiter in-memory.
 
 Optionale nicht-sensitive RTK-Metadaten:
 
@@ -143,11 +146,33 @@ Rohtelemetrie später aus der Retention fällt.
 
 ## Rohdaten vs. normalisierte Telemetrie
 
-Das aktuelle SQL-Schema bildet fachlich ausgewählte Telemetriefelder ab.
+Die Persistenz besitzt drei getrennte Ebenen:
 
-Die V3-Architektur verlangt zusätzlich, dass unveränderte Rohmeldungen
-verlustfrei erhalten werden. Dafür ist vor V3-RC noch ein persistenter
-Raw-Message-Pfad zu ergänzen oder verbindlich zu entscheiden.
+```text
+raw_messages
+  = sanitierte Hersteller-/Adapter-Rohmeldung als JSONB
+
+normalized_parameters
+  = vollständige ParameterSample-Historie
+  = device + adapter + key + rawKey + value + quality + timestamp
+
+telemetry
+  = missionsbezogene, typisierte Projektion ausgewählter Flug-/RTK-Werte
+  -> telemetry_1m
+```
+
+DJI-Cloud- und MSDK-V5-Werte bleiben in `normalized_parameters` getrennt nach
+`adapter_id`. Die Runtime-Fusion in der `ParameterRegistry` entscheidet nur
+über die aktuelle Sicht; sie ersetzt die persistierte Adapter-Provenienz nicht.
+
+Die Projektion nach `telemetry` wird ausschließlich während einer bekannten
+Mission geschrieben. Unbekannte oder nicht abbildbare kanonische Keys gehen
+dadurch nicht verloren, weil sie weiterhin vollständig in
+`normalized_parameters` liegen.
+
+Vor dem Schreiben werden Raw-Payloads und Parameterwerte auf
+credential-/secret-artige Felder und unredigierte Bearer-Werte geprüft.
+Runtime-Control-Rechte, Leases und DRC-Sessions werden nicht persistiert.
 
 ## MissionStore
 
@@ -178,9 +203,12 @@ Credential-Speicher mit Passwort-Hashes.
 - Schema reproduzierbar initialisierbar
 - abgeschlossene Missionshistorie über Neustart hinweg vorhanden
 - offene automatische Missionen werden beim Neustart sicher mit `service_restart` abgeschlossen
-- Telemetrie-Writer implementiert und getestet
-- Retention funktioniert
-- Aggregat wird aktualisiert
+- Telemetrie-Writer für Raw-Messages und normalisierte Parameter implementiert und getestet
+- missionsbezogene `telemetry`-Projektion aus dem fusionierten kanonischen Sample
+- Migration `007_telemetry_history.sql` ist idempotent und im Upgrade-Pfad enthalten
+- `/ready` prüft konfigurierte Telemetriepersistenz fail-closed
+- 24-Monats-Retention für Raw-Messages und normalisierte Parameter ist im Schema definiert
+- `telemetry_1m` bleibt als missionsbezogenes Analyseaggregat erhalten
 - keine Secrets in Missions-/Telemetriedaten
-- Backup-/Restore-Verhalten dokumentiert
 - Root-Compose startet Datenbank und Migration reproduzierbar
+- Backup-/Restore und Kapazitätsplanung bleiben Betriebsaufgaben
