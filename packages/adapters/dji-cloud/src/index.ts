@@ -149,7 +149,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     });
 
     await new Promise<void>((resolve) => {
-      client.once("connect", resolve);
+      client.once("connect", () => resolve());
     });
   }
 
