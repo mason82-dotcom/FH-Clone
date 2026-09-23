@@ -58,8 +58,16 @@ Die offizielle DJI-Liste nennt für 5.18.0 unter anderem Unterstützung für:
 - Matrice 4E/4T + RC Plus 2
 - Matrice 400 + RC Plus 2
 
-Ein späterer FH2-MSDK-Adapter muss seine Capability weiterhin pro Gerät und
-SDK-Laufzeit melden.
+Der FH2-MSDK-Adapter ist auf 5.18.0 implementiert. Sein KeyManager-Inventar
+meldet statische Operationsmerkmale und tatsächliche Runtime-Probes getrennt.
+Component-/Lens-Unterstützung wird pro verbundenem Produkt/Firmwarezustand
+beobachtet; aus `canSet` oder `canPerformAction` entsteht keine automatische
+FH2-Control-Capability.
+
+Die reale KeyManager-Produktmatrix bleibt Hardware-Evidence und wird nicht aus
+der SDK-Version allein abgeleitet.
+
+Details: [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md).
 
 ## Payload SDK
 
