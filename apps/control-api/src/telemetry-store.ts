@@ -97,7 +97,11 @@ export class TelemetryStore {
     });
   }
 
-  enqueueParameter(sample: ParameterSample, missionId?: string): void {
+  enqueueParameter(
+    sample: ParameterSample,
+    missionId?: string,
+    projectionSample: ParameterSample = sample
+  ): void {
     if (!this.pool) return;
     this.enqueue("parameter_sample", async () => {
       assertParameterSamplePersistenceSafe(sample);
@@ -137,12 +141,13 @@ export class TelemetryStore {
         ]
       );
 
-      const projection = telemetryProjectionForSample(sample);
+      const projection =
+        telemetryProjectionForSample(projectionSample);
       if (missionId && projection) {
         await this.writeMissionProjection(
           missionId,
-          sample.deviceId,
-          sample.sampledAt,
+          projectionSample.deviceId,
+          projectionSample.sampledAt,
           projection
         );
       }
