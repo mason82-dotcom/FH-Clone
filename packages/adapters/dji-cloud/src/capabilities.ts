@@ -11,7 +11,6 @@ export const DJI_DRONE_CONTROL_ENABLED = true as const;
  */
 export type DjiDrcProfile =
   | "none"
-  | "pilot-m3-drone"
   | "pilot-m4-stick";
 
 export interface DjiCloudControlProfile {
@@ -83,22 +82,19 @@ export function getDjiCloudControlProfile(
     const cloudControl = supportedGateway && DJI_CLOUD_CONTROL_ENABLED;
     return {
       cloudControl,
-      flightControl: cloudControl && DJI_DRONE_CONTROL_ENABLED,
+      flightControl: false,
       stickControl: false,
-      droneControl: cloudControl && DJI_DRONE_CONTROL_ENABLED,
+      droneControl: false,
       flyTo: false,
       pointingFlight: false,
       orbitFlight: false,
       payloadControl: cloudControl,
       requiresCloudControlAuthority: cloudControl,
-      drcProfile:
-        cloudControl && DJI_DRONE_CONTROL_ENABLED
-          ? "pilot-m3-drone"
-          : "none",
+      drcProfile: "none",
       capabilities: [],
       reason: supportedGateway
-        ? "FH2 enables the DJI Pilot-to-Cloud RC Pro control profile for Mavic 3 Enterprise: drone_control plus documented camera/gimbal payload control. stick_control and FlyTo remain disabled for this profile. FC3/lease/DJI-authority/DRC-session/dead-man guards still apply to flight control."
-        : "Mavic 3 Enterprise cloud control remains disabled until a supported RC Pro Enterprise gateway is identified."
+        ? "DJI Pilot-to-Cloud supports cloud payload control for Mavic 3 Enterprise behind RC Pro Enterprise. FH2 therefore keeps cloud-control authority and payload control enabled, but flight control, stick_control, drone_control and FlyTo remain disabled for this product profile."
+        : "Mavic 3 Enterprise cloud payload control remains disabled until a supported RC Pro Enterprise gateway is identified."
     };
   }
 
