@@ -63,8 +63,7 @@ Der DJI-Adapter unterscheidet produktspezifische DRC-Profile, zum Beispiel:
 ```ts
 type DjiDrcProfile =
   | "none"
-  | "pilot-m4-stick"
-  | "dock-velocity";
+  | "pilot-m4-stick";
 ```
 
 Die Auswahl basiert auf Topologie und bestätigten Produktfähigkeiten.
@@ -429,3 +428,14 @@ Vor einer produktiven FC3-Freigabe müssen getestet sein:
 
 Herstellerlinks und verifizierte Versionsstände stehen in
 [COMPATIBILITY.md](COMPATIBILITY.md).
+
+
+## Global deaktivierte DRC-/Dock-Pfade
+
+Seit dem V3.0-Policy-Update sind DJI Dock 1, Dock 2, Dock 3 und Multi-Dock
+projektweit deaktiviert. Es existiert deshalb kein aktives
+`dock-velocity`-DRC-Profil mehr.
+
+PSDK-bezogene DRC-Methoden (`drc_psdk_*`) sind ebenfalls global gesperrt.
+Diese Sperren besitzen keinen Runtime-Schalter und können nicht über
+Umgebungsvariablen aktiviert werden.
