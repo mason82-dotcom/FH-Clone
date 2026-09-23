@@ -394,3 +394,56 @@ test("normalizes documented payload-scoped gimbal axes in degrees and keeps raw 
     false
   );
 });
+
+
+test("malformed numeric camera and gimbal values stay raw-only", () => {
+  const result = normalizeDjiPayload(
+    "AIRCRAFT-1",
+    {
+      data: {
+        cameras: [
+          {
+            payload_index: "77-1-0",
+            camera_mode: "recording",
+            zoom_factor: "7.5"
+          }
+        ],
+        "77-1-0": {
+          gimbal_pitch: "-45"
+        }
+      }
+    },
+    1_000
+  );
+
+  assert.equal(
+    result.samples.some(
+      (entry) => entry.key === "camera.77-1-0.mode.code"
+    ),
+    false
+  );
+  assert.equal(
+    result.samples.some(
+      (entry) => entry.key === "camera.77-1-0.zoom.factor"
+    ),
+    false
+  );
+  assert.equal(
+    result.samples.some(
+      (entry) => entry.key === "gimbal.77-1-0.pitch_deg"
+    ),
+    false
+  );
+  assert.ok(
+    result.samples.some(
+      (entry) => entry.key === "raw.dji-cloud.cameras"
+    )
+  );
+  assert.equal(
+    result.samples.find(
+      (entry) =>
+        entry.key === "raw.dji-cloud.77-1-0.gimbal_pitch"
+    )?.value,
+    "-45"
+  );
+});
