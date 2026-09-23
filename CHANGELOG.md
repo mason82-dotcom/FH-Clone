@@ -20,10 +20,12 @@ Keine Änderungen nach der V3.0.0-Freigabe.
 
 ### Safety und Control
 
-- DJI `stick_control` projektweit fail-closed deaktiviert
-- DJI `drone_control` als separater M4-/RC-Plus-2-DRC-Pfad hinter FC3/Lease/Authority/Session-Guards
+- DJI `cloud_control` explizit aktiviert und als eigenes Produktprofil ausgewiesen
+- DJI `stick_control` für unterstützte M4-/RC-Plus-2-Profile aktiviert
+- DJI `drone_control` für unterstützte M3-/RC-Pro- und M4-/RC-Plus-2-Profile aktiviert
+- alle Flugsteuerpfade bleiben hinter FC3/Lease/DJI-Authority/DRC-Session/Dead-Man-Guards
 - DJI Dock 1–3, Multi-Dock und PSDK-Payload-/Widget-/DRC-Pfade global deaktiviert
-- keine Runtime-/Environment-Schalter zur Aufhebung der globalen Dock/PSDK/Stick-Sperren
+- keine Runtime-/Environment-Schalter zur Aufhebung der globalen Dock-/Multi-Dock-/PSDK-Sperren
 - SafetyGate FC0..FC3
 - FC0 als Standard
 - Control Lease und Control Authority
@@ -67,8 +69,7 @@ Keine Änderungen nach der V3.0.0-Freigabe.
 
 ### Nicht im V3.0.0-Hardware-Supportumfang
 
-- M4T/RC Plus 2 `drone_control` ohne reale DRC-/Authority-Hardwareabnahme
-- `stick_control`: global deaktiviert
+- M3/RC-Pro- und M4/RC-Plus-2-Cloud-Control ohne reale DRC-/Authority-Hardwareabnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK: global deaktiviert
 - Pilot-2-JSBridge
 - vollständige WPML/Pilot-Wayline-Integration
