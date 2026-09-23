@@ -64,6 +64,18 @@ jobs:
         run: |
           gradle :app:assembleDebug --stacktrace --no-daemon
 
+      - name: Verify packaged DJI runtime classes
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
+          test -f "$APK"
+          test -x "$APKANALYZER"
+          "$APKANALYZER" dex packages --defined-only "$APK" > /tmp/fh2-dex-packages.txt
+          grep -F "dji.sdk.keyvalue.value.common.ComponentIndexType" /tmp/fh2-dex-packages.txt
+          grep -F "dji.v5.manager.SDKManager" /tmp/fh2-dex-packages.txt
+          grep -F "dji.sdk.keyvalue.key.CameraKey" /tmp/fh2-dex-packages.txt
+
       - name: Lint debug
         run: |
           gradle :app:lintDebug --stacktrace --no-daemon
