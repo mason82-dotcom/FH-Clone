@@ -57,6 +57,7 @@ const templateXml = `<?xml version="1.0" encoding="UTF-8"?>
           <wpml:actionActuatorFuncParam>
             <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
             <wpml:payloadLensIndex>narrow_band,visable</wpml:payloadLensIndex>
+            <wpml:actionUUID>7f320139-4fbf-41d1-b3bb-3b9f6f7f334c</wpml:actionUUID>
           </wpml:actionActuatorFuncParam>
         </wpml:action>
       </wpml:actionGroup>
@@ -150,6 +151,10 @@ test("parses DJI WPML template and execution documents without conflating height
   assert.equal(
     executionPoint?.actionGroups[0]?.actions[0]?.params.payloadLensIndex,
     "narrow_band,visable"
+  );
+  assert.equal(
+    executionPoint?.actionGroups[0]?.actions[0]?.params.actionUUID,
+    "7f320139-4fbf-41d1-b3bb-3b9f6f7f334c"
   );
 });
 
@@ -337,27 +342,30 @@ test("projects validated WPML into neutral FH2 mission and route models", () => 
   });
 });
 
-test("does not mislabel relative WPML execute heights as absolute altitude", () => {
-  const relativeWaylines = waylinesXml.replace(
-    "<wpml:executeHeightMode>WGS84</wpml:executeHeightMode>",
-    "<wpml:executeHeightMode>relativeToStartPoint</wpml:executeHeightMode>"
-  ).replace(
-    "<wpml:executeHeight>132.5</wpml:executeHeight>",
-    "<wpml:executeHeight>40</wpml:executeHeight>"
-  );
+test("does not mislabel non-WGS84 WPML execute heights as absolute altitude", () => {
+  for (const executeHeightMode of ["relativeToStartPoint", "realTimeFollowSurface"]) {
+    const nonAbsoluteWaylines = waylinesXml.replace(
+      "<wpml:executeHeightMode>WGS84</wpml:executeHeightMode>",
+      `<wpml:executeHeightMode>${executeHeightMode}</wpml:executeHeightMode>`
+    ).replace(
+      "<wpml:executeHeight>132.5</wpml:executeHeight>",
+      "<wpml:executeHeight>40</wpml:executeHeight>"
+    );
 
-  const projection = projectWpmlToGroundStation(
-    parseWpmlBundle(templateXml, relativeWaylines),
-    { id: "relative-route" }
-  );
+    const projection = projectWpmlToGroundStation(
+      parseWpmlBundle(templateXml, nonAbsoluteWaylines),
+      { id: `non-absolute-route-${executeHeightMode}` }
+    );
 
-  const point = projection.routes[0]?.segments?.[0]?.points[0];
-  assert.equal(point?.altitudeM, undefined);
-  assert.equal(point?.aglAltitudeM, undefined);
-  assert.deepEqual(
-    projection.routes[0]?.metadata?.waypointExecuteHeights,
-    [{ index: 0, executeHeightM: 40 }]
-  );
+    const point = projection.routes[0]?.segments?.[0]?.points[0];
+    assert.equal(point?.altitudeM, undefined);
+    assert.equal(point?.aglAltitudeM, undefined);
+    assert.equal(projection.routes[0]?.metadata?.executeHeightMode, executeHeightMode);
+    assert.deepEqual(
+      projection.routes[0]?.metadata?.waypointExecuteHeights,
+      [{ index: 0, executeHeightM: 40 }]
+    );
+  }
 });
 
 test("refuses to project WPML bundles with validation errors", () => {
