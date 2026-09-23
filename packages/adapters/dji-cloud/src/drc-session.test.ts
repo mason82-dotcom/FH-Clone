@@ -18,6 +18,7 @@ class FakeTransport implements DrcSessionTransport {
   stickCommands = 0;
   droneCommands = 0;
   sequenceResets = 0;
+  failExit = false;
 
   resetControlSequence(): void {
     this.sequenceResets += 1;
@@ -48,6 +49,9 @@ class FakeTransport implements DrcSessionTransport {
 
   async exitDrcMode(): Promise<unknown> {
     this.exitCalls += 1;
+    if (this.failExit) {
+      throw new Error("exit_failed");
+    }
     return {};
   }
 }
@@ -358,4 +362,83 @@ test("M3-style session accepts drone_control and rejects stick_control", async (
   await manager.closeGracefully("RC-PRO-001", "operator_release");
   assert.equal(transport.droneCommands, 2);
   assert.equal(transport.neutralCommands, 0);
+});
+
+
+test("shutdown aggregates DRC close failures after attempting every session", async () => {
+  const transport = new FakeTransport();
+  const store = new InMemoryDrcSessionStore();
+  const manager = new DrcSessionManager(transport, store, {
+    checkIntervalMs: 60_000
+  });
+
+  await manager.request({
+    aircraftSn: "M4T-SHUTDOWN-1",
+    gatewaySn: "RC-SHUTDOWN-1",
+    holder: "operator-a",
+    controlMethods: ["stick"],
+    guards: preAuthorityGuards
+  });
+  await advanceToControlling(manager, "RC-SHUTDOWN-1");
+
+  await manager.request({
+    aircraftSn: "M4T-SHUTDOWN-2",
+    gatewaySn: "RC-SHUTDOWN-2",
+    holder: "operator-b",
+    controlMethods: ["stick"],
+    guards: preAuthorityGuards
+  });
+
+  transport.failExit = true;
+
+  await assert.rejects(
+    manager.shutdown(),
+    (error: unknown) =>
+      error instanceof AggregateError &&
+      /DRC shutdown failed for 1 session/.test(error.message)
+  );
+
+  assert.equal(
+    (await manager.get("RC-SHUTDOWN-2"))?.state,
+    "closed"
+  );
+});
+
+test("watchdog runtime errors are reported and fail-close the session", async () => {
+  let failGet = false;
+  class FailingStore extends InMemoryDrcSessionStore {
+    override async get(gatewaySn: string) {
+      if (failGet) throw new Error("store_read_failed");
+      return super.get(gatewaySn);
+    }
+  }
+
+  const transport = new FakeTransport();
+  const store = new FailingStore();
+  const errors: string[] = [];
+  const manager = new DrcSessionManager(transport, store, {
+    checkIntervalMs: 5,
+    onRuntimeError: (_gatewaySn, error) => {
+      errors.push(error.message);
+    }
+  });
+
+  await manager.request({
+    aircraftSn: "M4T-WATCHDOG",
+    gatewaySn: "RC-WATCHDOG",
+    holder: "operator-a",
+    controlMethods: ["stick"],
+    guards: preAuthorityGuards
+  });
+  await advanceToControlling(manager, "RC-WATCHDOG");
+
+  failGet = true;
+  await new Promise<void>((resolve) => setTimeout(resolve, 25));
+  failGet = false;
+
+  assert.ok(errors.includes("store_read_failed"));
+  assert.equal(
+    (await manager.get("RC-WATCHDOG"))?.state,
+    "closed"
+  );
 });
