@@ -33,7 +33,15 @@ object MsdkControlClient {
         OkHttpClient.Builder()
             .pingInterval(10, TimeUnit.SECONDS)
             .build()
-    private val controlSession = RemoteControlSession()
+    private val controlSession =
+        RemoteControlSession(
+            onDeadmanTimeout = {
+                failClosed(
+                    "local_deadman_timeout",
+                    notifyServer = true
+                )
+            }
+        )
 
     @Volatile
     var snapshot = MsdkControlChannelSnapshot()
