@@ -169,14 +169,21 @@ export class TelemetryStore {
 
   async flush(): Promise<void> {
     await this.tail;
-    if (this.lastWriteError) {
-      throw this.lastWriteError;
+    if (this.writeFailure) {
+      throw this.writeFailure;
     }
   }
 
   async close(): Promise<void> {
-    await this.flush();
-    await this.pool?.end();
+    let failure: unknown;
+    try {
+      await this.flush();
+    } catch (error) {
+      failure = error;
+    } finally {
+      await this.pool?.end();
+    }
+    if (failure) throw failure;
   }
 
   private enqueue(
@@ -186,7 +193,6 @@ export class TelemetryStore {
     this.tail = this.tail
       .then(async () => {
         await write();
-        this.lastWriteError = undefined;
       })
       .catch((error: unknown) => {
         const normalized =
