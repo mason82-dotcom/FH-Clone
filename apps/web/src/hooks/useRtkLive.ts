@@ -5,6 +5,12 @@ import type {
   RtkStatusEvent,
   RtkTransitionEvent
 } from "../types/rtk.js";
+import {
+  asRtkSnapshotPayload,
+  isRtkStatusEvent,
+  isRtkTransitionEvent,
+  parseSseJsonEvent
+} from "./rtkSseGuards.js";
 
 export interface RtkLiveState {
   devices: RtkDeviceSnapshot[];
@@ -35,12 +41,8 @@ export function useRtkLive(): RtkLiveState {
     };
 
     source.addEventListener("snapshot", (event) => {
-      const payload = parseSseJson<
-        RtkDeviceSnapshot | RtkDeviceSnapshot[]
-      >(event);
-      if (payload === undefined) return;
-
-      const list = Array.isArray(payload) ? payload : [payload];
+      const list = asRtkSnapshotPayload(parseSseJsonEvent(event));
+      if (!list) return;
       setDevices(
         Object.fromEntries(list.map((snapshot) => [snapshot.deviceId, snapshot]))
       );
@@ -70,8 +72,9 @@ export function useRtkLive(): RtkLiveState {
     });
 
     source.addEventListener("rtk-status", (event) => {
-      const payload = parseSseJson<RtkStatusEvent>(event);
-      if (payload === undefined) return;
+      const candidate = parseSseJsonEvent(event);
+      if (!isRtkStatusEvent(candidate)) return;
+      const payload = candidate;
 
       setDevices((current) => {
         const previous = current[payload.deviceId];
@@ -126,8 +129,9 @@ export function useRtkLive(): RtkLiveState {
     });
 
     source.addEventListener("rtk-fix-transition", (event) => {
-      const payload = parseSseJson<RtkTransitionEvent>(event);
-      if (payload === undefined) return;
+      const candidate = parseSseJsonEvent(event);
+      if (!isRtkTransitionEvent(candidate)) return;
+      const payload = candidate;
 
       setTransitions((current) => [payload, ...current].slice(0, 20));
     });
@@ -172,11 +176,3 @@ export function useRtkLive(): RtkLiveState {
   };
 }
 
-
-function parseSseJson<T>(event: Event): T | undefined {
-  try {
-    return JSON.parse((event as MessageEvent<string>).data) as T;
-  } catch {
-    return undefined;
-  }
-}
