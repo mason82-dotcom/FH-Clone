@@ -168,6 +168,7 @@ Die App kann sich über die Control API read-only pairen:
 ```text
 POST /api/msdk/pair
 POST /api/msdk/heartbeat
+POST /api/msdk/unpair
 ```
 
 Ablauf:
@@ -202,6 +203,19 @@ er gelöscht.
 
 Release-Builds akzeptieren nur HTTPS. Der Debug-Build erlaubt HTTP
 ausschließlich für localhost beziehungsweise private RFC1918-LAN-Adressen.
+
+Explizites Trennen ist ein echtes Unpair: Die App beendet zuerst den lokalen
+Control-Transport fail-closed und ruft danach `POST /api/msdk/unpair` mit dem
+Agent-Token auf. FH2 persistiert ausschließlich den SHA-256-Digest des
+widerrufenen Tokens bis zu dessen Ablauf und lehnt ihn danach auch nach einem
+Control-API-Neustart ab. Der rohe Bearer-Token wird serverseitig nicht
+persistiert.
+
+Scheitert der serverseitige Widerruf wegen Netzwerk- oder Serverfehler, bleibt
+der verschlüsselte Pairing-Datensatz lokal erhalten und der Zustand wird als
+`unpair_failed` angezeigt, damit der Widerruf erneut versucht werden kann.
+Ein bereits ungültiges beziehungsweise abgelaufenes Token (`401/403`) gilt
+lokal als abgeschlossenes Unpair.
 
 Der Pairing-/Heartbeat-Kanal besitzt keinerlei Flight-Control-Command-
 Nachrichten.
