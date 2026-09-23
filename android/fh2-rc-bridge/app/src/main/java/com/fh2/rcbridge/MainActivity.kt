@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var disableButton: Button
     private lateinit var evidenceButton: Button
     private lateinit var mapButton: Button
+    private lateinit var videoButton: Button
     private lateinit var bridgeText: TextView
     private lateinit var payloadControlText: TextView
     private lateinit var waylineText: TextView
@@ -422,6 +423,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        videoButton = Button(this).apply {
+            text = "Livevideo öffnen"
+            setOnClickListener {
+                startActivity(
+                    Intent(this@MainActivity, VideoActivity::class.java)
+                )
+            }
+        }
+
         mapButton = Button(this).apply {
             text = "Karte öffnen"
             setOnClickListener {
@@ -497,6 +507,7 @@ class MainActivity : AppCompatActivity() {
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
             addView(evidenceButton, matchWidth(top = 24))
+            addView(videoButton, matchWidth(top = 12))
             addView(mapButton, matchWidth(top = 12))
         }
 
