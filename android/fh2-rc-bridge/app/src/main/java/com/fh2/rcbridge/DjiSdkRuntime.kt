@@ -46,6 +46,7 @@ object DjiSdkRuntime {
                     SensorInventorySource.start()
                     RtkTelemetrySource.start()
                     CameraGimbalController.start()
+                    Fh2BridgeClient.tryResume()
                 }
 
                 override fun onRegisterFailure(error: IDJIError) {
@@ -73,6 +74,7 @@ object DjiSdkRuntime {
                             productId = productId
                         )
                     }
+                    Fh2BridgeClient.tryResume()
                 }
 
                 override fun onProductChanged(productId: Int) {
