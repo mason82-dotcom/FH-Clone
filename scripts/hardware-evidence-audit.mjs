@@ -115,6 +115,7 @@ function sensitiveValueLeaked(value) {
 function requiredFor(level) {
   if (level === "REQUIRED_MAIN") return true;
   if (level === "REQUIRED_DRAFT") return scope === "all";
+  if (level === "REQUIRED_HARDWARE") return scope === "all";
   if (level === "CONDITIONAL_HSI") return hsiRequired;
   return false;
 }
@@ -295,18 +296,18 @@ add("GLOBAL_POLICY", "INFORMATIONAL", "PSDK-Payloads global deaktiviert", true, 
 // ---------------------------------------------------------------------------
 const wpmlPath = "docs/fixtures/wpml/evidence.json";
 const wpml = readJson(wpmlPath);
-add("WPML_PILOT", "REQUIRED_DRAFT", "reales Pilot-2-WPML-Evidence", realEvidence(wpml), wpmlPath);
+add("WPML_PILOT", "REQUIRED_HARDWARE", "reales Pilot-2-WPML-Evidence", realEvidence(wpml), wpmlPath);
 if (realEvidence(wpml)) {
-  add("WPML_PILOT", "REQUIRED_DRAFT", "Quelle ist DJI Pilot 2", wpml.generatedBy === "DJI Pilot 2");
-  add("WPML_PILOT", "REQUIRED_DRAFT", "authoritative KMZ SHA-256", sha256(wpml.sourceSha256));
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "Quelle ist DJI Pilot 2", wpml.generatedBy === "DJI Pilot 2");
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "authoritative KMZ SHA-256", sha256(wpml.sourceSha256));
   const archiveEntries = arr(wpml.archiveEntries).map((v) => String(v).replace(/^\/+/, ""));
-  add("WPML_PILOT", "REQUIRED_DRAFT", "template.kml im realen KMZ",
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "template.kml im realen KMZ",
     archiveEntries.some((v) => /(^|\/)template\.kml$/i.test(v)));
-  add("WPML_PILOT", "REQUIRED_DRAFT", "waylines.wpml im realen Standard-KMZ",
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "waylines.wpml im realen Standard-KMZ",
     archiveEntries.some((v) => /(^|\/)waylines\.wpml$/i.test(v)));
   const resourceReferences = arr(wpml.resourceReferences)
     .map((v) => String(v).replace(/^\/+/, ""));
-  add("WPML_PILOT", "REQUIRED_DRAFT", "referenzierte WPML-Ressourcen sind im KMZ vorhanden",
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "referenzierte WPML-Ressourcen sind im KMZ vorhanden",
     resourceReferences.every((ref) =>
       archiveEntries.some((entry) =>
         entry === ref ||
@@ -317,11 +318,11 @@ if (realEvidence(wpml)) {
     resourceReferences.length ? `refs=${resourceReferences.length}` : "keine Ressourcen referenziert");
   add("WPML_PILOT", "INFORMATIONAL", "res/-Ressourcenbereich beobachtet", true,
     archiveEntries.some((v) => /(^|\/)res\//i.test(v)) ? "vorhanden" : "kein ZIP-Eintrag beobachtet");
-  add("WPML_PILOT", "REQUIRED_DRAFT", "Parservergleich gegen Original erfolgreich", wpml.parserComparison?.pass === true);
-  add("WPML_PILOT", "REQUIRED_DRAFT", "MissionConfig/IDs/Höhen/Indizes geprüft",
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "Parservergleich gegen Original erfolgreich", wpml.parserComparison?.pass === true);
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "MissionConfig/IDs/Höhen/Indizes geprüft",
     ["missionConfig", "productEnums", "heightModes", "templateWaylineIds", "continuousWaypointIndices"]
       .every((k) => wpml.parserComparison?.checks?.[k] === true));
-  add("WPML_PILOT", "REQUIRED_DRAFT", "realer Pilot-Wayline-Katalog belegt",
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "realer Pilot-Wayline-Katalog belegt",
     wpml.pilotCatalog?.realWorkspace === true &&
     wpml.pilotCatalog?.responseValidated === true &&
     wpml.pilotCatalog?.tokenPresentInFixture !== true);
