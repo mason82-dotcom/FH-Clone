@@ -70,7 +70,7 @@ test("fully configured runtime is ready only when every required dependency is r
   assert.equal(result.ready, true);
   assert.deepEqual(
     Object.values(result.checks).map((check) => check.state),
-    ["ready", "ready", "ready", "ready"]
+    ["ready", "ready", "ready", "ready", "ready"]
   );
 });
 
