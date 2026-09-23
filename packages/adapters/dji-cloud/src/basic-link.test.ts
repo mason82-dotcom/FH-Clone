@@ -9,3 +9,9 @@ test("default Basic-Link topics contain no DRC channels", () => {
     false
   );
 });
+
+
+test("uses only the canonical Pilot topology status topic", () => {
+  assert.equal(DEFAULT_TOPICS.includes("sys/product/+/status"), true);
+  assert.equal(DEFAULT_TOPICS.includes("thing/product/+/status"), false);
+});
