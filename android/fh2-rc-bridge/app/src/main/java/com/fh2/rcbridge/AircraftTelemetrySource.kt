@@ -141,5 +141,11 @@ object AircraftTelemetrySource {
         snapshot = snapshot.transform()
         val current = snapshot
         listeners.forEach { it(current) }
+        if (
+            current.flightControllerConnected &&
+            !current.flightControllerSerial.isNullOrBlank()
+        ) {
+            Fh2BridgeClient.tryResume()
+        }
     }
 }
