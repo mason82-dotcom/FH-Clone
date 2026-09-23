@@ -173,6 +173,38 @@ Mit echter Hardware bestätigen:
 Die Beobachtung `clientid == gateway_sn` darf die V3-Security nicht auf diese
 Annahme reduzieren.
 
+## Native MSDK Pairing-/Transport-Gate
+
+Für die RC-Pro-Enterprise-App auf `agent/android-msdk-v5` wird der native
+HTTPS/WSS-Pfad separat vom Pilot-2-/MQTT-Gate abgenommen.
+
+Mit echter RC Pro Enterprise + unterstütztem M3-Aircraft prüfen:
+
+- [ ] Pairing liefert genau eine `gatewaySn + aircraftSn`-Bindung
+- [ ] Heartbeat wird nach dem Pairing etabliert
+- [ ] Agent-Control-WebSocket verbindet sich mit demselben Agent-Token
+- [ ] Control-API-Neustart führt zu neuem WSS, nicht zur Übernahme einer alten
+      Control-Session
+- [ ] App-Neustart resümiert nur bei identischer RC-/Aircraft-SN
+- [ ] Identity-Mismatch bleibt fail-closed
+- [ ] Unpair widerruft den Agent-Token serverseitig
+- [ ] Unpair beendet eine laufende Control-Session fail-closed
+- [ ] serverseitiger Unpair-Fehler löscht den lokalen Keystore-Datensatz nicht
+- [ ] nach erfolgreichem Unpair erfolgt nach App-Neustart kein automatisches
+      Resume ohne neues Pairing
+- [ ] Hardware-Evidence enthält keine Pairing-/Bearer-/DJI-App-Secrets
+
+Der Hardware-Nachweis erfolgt mit `fh2-msdk-evidence-<timestamp>.json`.
+Zusätzlich zum unveränderten `fh2.msdk.v1`-Snapshot enthält die Datei unter
+`evidence` den begrenzten, secret-freien Transport-Trace
+`fh2.pairing-transport-evidence.v1`.
+
+Der konkrete alte Bearer-Token wird für die Hardware-Abnahme nicht exportiert.
+Die serverseitige Ablehnung widerrufener Tokens bleibt daher automatisiert
+getestet; auf der RC wird nach Unpair nur geprüft, dass ohne neues Pairing kein
+Resume mehr entsteht.
+
+
 ## RTK-Gate
 
 Zu prüfen:

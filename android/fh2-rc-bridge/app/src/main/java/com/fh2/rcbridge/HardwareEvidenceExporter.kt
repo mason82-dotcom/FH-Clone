@@ -22,10 +22,18 @@ object HardwareEvidenceExporter {
             "fh2-msdk-evidence-$nowMs.json"
         )
 
+        PairingTransportEvidenceRecorder.recordMarker(
+            "hardware_evidence_export"
+        )
+
         val payload =
             BridgeSnapshotProvider
                 .current(nowMs)
                 .toJson()
+                .put(
+                    "evidence",
+                    PairingTransportEvidenceRecorder.toJson(nowMs)
+                )
                 .toString(2)
 
         file.writeText(payload, Charsets.UTF_8)

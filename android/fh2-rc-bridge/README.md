@@ -154,8 +154,28 @@ Android/data/com.fh2.rcbridge/files/evidence/
   fh2-msdk-evidence-<timestamp>.json
 ```
 
-Enthalten ist der aktuelle MSDK-/Aircraft-/Sensor-/RTK-/Control-Snapshot.
-Der DJI-App-Key und andere lokale Secrets werden nicht exportiert.
+Enthalten sind:
+
+- der aktuelle MSDK-/Aircraft-/Sensor-/RTK-/Control-Snapshot
+- der aktuelle FH2-Bridge-Zustand
+- der aktuelle Agent-Control-WebSocket-Zustand
+- ein auf 256 Einträge begrenzter Pairing-/Transport-Trace seit App-Start
+- Marker für Pairing-Annahme, Stored-Pairing-Resume, Unpair-Widerruf und
+  fehlgeschlagenen Widerruf
+
+Der Transport-Trace enthält **keinen** `MSDK_PAIRING_TOKEN`, keinen
+Agent-Bearer-Token und keinen DJI-App-Key. Fehlermeldungen werden auf 256
+Zeichen begrenzt und eventuell enthaltene `Bearer ...`-Werte redigiert.
+
+Die Root-Struktur bleibt `fh2.msdk.v1`; die zusätzlichen Nachweise liegen
+unter:
+
+```text
+evidence.schema = fh2.pairing-transport-evidence.v1
+evidence.bridge
+evidence.controlChannel
+evidence.events[]
+```
 
 Diese Datei dient als reale RC-Pro/M3-Hardware-Fixture und wird nicht
 automatisch hochgeladen.
@@ -289,6 +309,56 @@ Derzeit existiert bewusst **kein öffentlicher Operator-Ingress**, der
 `openSession()` oder `sendStick()` aufruft. Damit ist der Agent-Kanal
 vollständig implementiert und testbar, kann aber nicht durch einen
 unautorisierten Browser-/HTTP-Aufruf aktiviert werden.
+
+
+## Pairing-/Transport-Hardwareabnahme
+
+Für die reale RC-Pro-Abnahme ist pro Prozesslauf nach einem relevanten Schritt
+**Hardware-/Transport-Evidence speichern** auszuführen.
+
+Verbindliche Sequenz:
+
+```text
+1. App frisch starten, DJI-Produkt verbinden
+2. Pairing durchführen
+3. Heartbeat + Control-WSS als verbunden beobachten
+4. Control API neu starten
+5. WSS-Reconnect + erneuten Heartbeat beobachten
+6. Android-App vollständig beenden und neu starten
+7. Stored Pairing muss bei gleicher RC-/Aircraft-Identität automatisch resümieren
+8. FH2 Verbindung trennen / Unpair
+9. App erneut starten
+10. kein Stored-Pairing-Resume mehr
+```
+
+Erwartete Evidence-Marker beziehungsweise Zustände:
+
+```text
+pairing_accepted
+heartbeat_established
+control: connected
+... Transportverlust ...
+control: connected            # neuer Socket, keine alte Control-Session
+stored_pairing_resumed        # nach App-Neustart
+unpair_revocation_accepted
+pairing_cleared_local
+bridge: disconnected          # nach Unpair
+```
+
+Fail-Kriterien:
+
+- nach Control-API-Neustart wird eine alte Control-Session übernommen
+- nach App-Neustart stimmen gespeicherte und aktuelle RC-/Aircraft-SN nicht
+  überein und Resume erfolgt trotzdem
+- Unpair löscht lokal trotz serverseitigem Netzwerk-/Serverfehler den Token
+- nach erfolgreichem Unpair entsteht ohne neues Pairing erneut ein
+  `paired`-/`stored_pairing_resumed`-Zustand
+- Evidence enthält Pairing-/Bearer-/DJI-App-Secrets
+
+Der serverseitige Nachweis, dass ein widerrufener alter Agent-Token mit
+`401` abgewiesen wird, bleibt zusätzlich durch die automatisierten
+Revocation-Tests belegt; der reale RC-Test muss dafür keinen Bearer-Token
+offenlegen oder exportieren.
 
 
 ## Android API 36

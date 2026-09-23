@@ -114,6 +114,9 @@ object Fh2BridgeClient {
                         expiresAt = stored.expiresAt
                     )
                 }
+                PairingTransportEvidenceRecorder.recordMarker(
+                    "stored_pairing_resumed"
+                )
                 MsdkControlClient.connect(
                     baseUrl = baseUrl,
                     agentToken = stored.agentToken,
@@ -186,6 +189,9 @@ object Fh2BridgeClient {
                         expiresAt = expiresAt
                     )
                 }
+                PairingTransportEvidenceRecorder.recordMarker(
+                    "pairing_accepted"
+                )
                 MsdkControlClient.connect(
                     baseUrl = baseUrl,
                     agentToken = token,
@@ -237,10 +243,20 @@ object Fh2BridgeClient {
                     }
 
                 val error = unpair.exceptionOrNull()
-                if (
-                    error != null &&
-                    !isAlreadyUnauthorized(error)
-                ) {
+                if (error == null) {
+                    PairingTransportEvidenceRecorder.recordMarker(
+                        "unpair_revocation_accepted"
+                    )
+                } else if (isAlreadyUnauthorized(error)) {
+                    PairingTransportEvidenceRecorder.recordMarker(
+                        "unpair_token_already_invalid",
+                        error.message
+                    )
+                } else {
+                    PairingTransportEvidenceRecorder.recordMarker(
+                        "unpair_revocation_failed",
+                        error.message ?: error.toString()
+                    )
                     agentToken = token
                     update {
                         copy(
@@ -251,10 +267,17 @@ object Fh2BridgeClient {
                     }
                     return@execute
                 }
+            } else {
+                PairingTransportEvidenceRecorder.recordMarker(
+                    "unpair_local_only_no_token"
+                )
             }
 
             agentToken = null
             clearStoredPairing()
+            PairingTransportEvidenceRecorder.recordMarker(
+                "pairing_cleared_local"
+            )
             update { Fh2BridgeConnectionSnapshot() }
         }
     }
