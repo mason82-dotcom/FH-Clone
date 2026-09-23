@@ -71,6 +71,14 @@ Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
 
 Der FH2-Client ist read-only und folgt keinen HTTP-Redirects.
 
+### DJI Pilot Wayline-Katalog
+
+- `DJI_PILOT_WAYLINE_ENABLED`
+- `DJI_PILOT_BASE_URL`
+- `DJI_PILOT_WORKSPACE_ID`
+- `DJI_PILOT_AUTH_TOKEN`
+- `DJI_PILOT_TIMEOUT_MS`
+
 ### EMQX und Diagnose
 
 - `EMQX_AUTHZ_TOKEN` – internes Secret für EMQX -> Control API
@@ -136,6 +144,17 @@ GET /api/devices/{device_sn}/telemetry
 ```
 
 Liefert den aktuellen normalisierten Parametersnapshot.
+
+### DJI Pilot Waypoint-Dateien – read-only
+
+```http
+GET /api/dji/pilot/waylines/status
+GET /api/dji/pilot/waylines?page=1&page_size=10
+```
+
+Der `x-auth-token` bleibt ausschließlich serverseitig. Der Pfad listet
+Waypoint-Dateien und führt keine Mission aus. Upload, Collect, Download-Proxy,
+STS und Execution gehören nicht zu diesem read-only Vertrag.
 
 ### FlightHub 2 OpenAPI – read-only
 
