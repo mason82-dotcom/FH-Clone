@@ -37,8 +37,15 @@ import {
   PostgresGatewayCredentialStore
 } from "./authn.js";
 import { RtkTelemetryService } from "./rtk-service.js";
-import { MissionSessionTracker } from "./mission-session.js";
-import { MissionStore } from "./mission-store.js";
+import {
+  MissionSessionTracker,
+  type AutoMissionSession
+} from "./mission-session.js";
+import {
+  MissionStore,
+  type MissionProductIdentity
+} from "./mission-store.js";
+import { RetryQueue, type RetryQueueStatus } from "./retry-queue.js";
 import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
 import {
   createDjiPilotWaylineCatalogFromEnv,
@@ -144,6 +151,9 @@ const missionStore = new MissionStore({
     ? { rtkProvider: process.env.RTK_SOURCE_PROVIDER }
     : {})
 });
+const missionPersistence =
+  createMissionPersistenceQueue(missionStore);
+missionPersistence.recoverOpenSessions();
 const mediaStore = new MediaStore({
   ...(process.env.TIMESCALE_URL
     ? { connectionString: process.env.TIMESCALE_URL }
@@ -163,22 +173,6 @@ const authzAudit = new AuthzAuditWriter({
     ? { connectionString: process.env.TIMESCALE_URL }
     : {})
 });
-
-if (missionStore.enabled) {
-  try {
-    const recovered = await missionStore.recoverOpenAutomaticSessions();
-    if (recovered > 0) {
-      console.warn(
-        `[Mission] ${recovered} offene automatische Session(s) nach Service-Neustart geschlossen.`
-      );
-    }
-  } catch (error) {
-    console.error(
-      "[Mission] Recovery offener Sessions fehlgeschlagen:",
-      errorMessage(error)
-    );
-  }
-}
 
 if (mediaStore.enabled) {
   try {
@@ -236,7 +230,8 @@ const publicServer = createServer(async (request, response) => {
         },
         missions: {
           active: missions.listActive().length,
-          persistenceEnabled: missionStore.enabled
+          persistenceEnabled: missionStore.enabled,
+          persistenceQueue: missionPersistence.status
         },
         ugcs: {
           configured: Boolean(ugcs)
@@ -246,7 +241,8 @@ const publicServer = createServer(async (request, response) => {
           persistenceEnabled: mediaStore.enabled
         },
         telemetryPersistence: {
-          enabled: telemetryStore.enabled
+          enabled: telemetryStore.enabled,
+          queue: telemetryStore.status
         },
         controlRuntime: {
           configured: Boolean(controlCoordinator),
@@ -273,7 +269,10 @@ const publicServer = createServer(async (request, response) => {
         telemetryStoreReady
       ] = await Promise.all([
         topologyStore
-          ? topologyStore.assertReady().then(() => true).catch(() => false)
+          ? topologyStore
+              .assertReady()
+              .then(() => topologyPersistence.ready)
+              .catch(() => false)
           : Promise.resolve(false),
         gatewayCredentials
           ? gatewayCredentials.assertReady().then(() => true).catch(() => false)
@@ -282,7 +281,9 @@ const publicServer = createServer(async (request, response) => {
           ? msdkTokenRevocations.assertReady().then(() => true).catch(() => false)
           : Promise.resolve(false),
         missionStore.enabled
-          ? missionStore.ping()
+          ? missionStore
+              .ping()
+              .then((ready) => ready && missionPersistence.ready)
           : Promise.resolve(false),
         mediaStore.enabled
           ? mediaStore.ping()
@@ -876,32 +877,16 @@ if (dji) {
       const session = missions.observe(message);
 
       if (session && session.endedAt !== undefined) {
-        try {
-          await missionStore.closeSession(session);
-        } catch (error) {
-          console.error(
-            "[Mission] Failed to persist automatic mission end:",
-            session.missionId,
-            errorMessage(error)
-          );
-        }
+        missionPersistence.close(session);
       } else if (
         session &&
         session.missionId !== previousMissionId
       ) {
-        try {
-          await missionStore.open(session, {
-            ...(message.deviceId
-              ? getMissionProduct(message.deviceId)
-              : {})
-          });
-        } catch (error) {
-          console.error(
-            "[Mission] Failed to persist automatic mission start:",
-            session.missionId,
-            errorMessage(error)
-          );
-        }
+        missionPersistence.open(session, {
+          ...(message.deviceId
+            ? getMissionProduct(message.deviceId)
+            : {})
+        });
       }
 
       telemetryStore.enqueueRaw(
@@ -963,6 +948,10 @@ const shutdown = onceAsync(async () => {
       run: () => msdkTokenRevocations.close()
     },
     {
+      name: "mission_queue",
+      run: () => missionPersistence.shutdown()
+    },
+    {
       name: "mission_store",
       run: () => missionStore.close()
     },
@@ -976,7 +965,7 @@ const shutdown = onceAsync(async () => {
     },
     {
       name: "topology_queue",
-      run: () => topologyPersistence.flush()
+      run: () => topologyPersistence.shutdown()
     },
     {
       name: "topology_store",
@@ -1302,15 +1291,7 @@ function getWaylineObservation(deviceId: string) {
 async function persistSweptMissionEnds(): Promise<void> {
   const ended = missions.sweep();
   for (const session of ended) {
-    try {
-      await missionStore.closeSession(session);
-    } catch (error) {
-      console.error(
-        "[Mission] Failed to persist automatic mission end:",
-        session.missionId,
-        errorMessage(error)
-      );
-    }
+    missionPersistence.close(session);
   }
 }
 
@@ -1355,26 +1336,112 @@ async function createTopologyStore(): Promise<PostgresGatewayRegistryStore | und
 type TopologyChange = import("@fh-clone/adapter-dji-cloud").TopologyChange;
 type TopologyPersistenceQueue = {
   enabled: boolean;
+  readonly ready: boolean;
+  readonly status: RetryQueueStatus;
   enqueue(change: TopologyChange): void;
-  flush(): Promise<void>;
+  shutdown(): Promise<void>;
 };
 
 function createTopologyPersistenceQueue(
   store: PostgresGatewayRegistryStore | undefined
 ): TopologyPersistenceQueue {
-  let tail = Promise.resolve();
+  const queue = store
+    ? new RetryQueue<TopologyChange>({
+        capacity: 1_000,
+        retryIntervalMs: 1_000,
+        process: (change) => store.save(change),
+        onError: (error) => {
+          console.error(
+            "[Topology] Inventory persistence unavailable; retrying:",
+            errorMessage(error)
+          );
+        }
+      })
+    : undefined;
+
   return {
-    enabled: Boolean(store),
-    enqueue(change) {
-      if (!store) return;
-      tail = tail
-        .then(() => store.save(change))
-        .catch((error) => {
-          console.error("[Topology] Inventory persistence failed:", errorMessage(error));
-        });
+    enabled: Boolean(queue),
+    get ready() {
+      return queue?.ready ?? true;
     },
-    async flush() {
-      await tail;
+    get status() {
+      return queue?.status ?? {
+        pending: 0,
+        dropped: 0,
+        healthy: true
+      };
+    },
+    enqueue(change) {
+      queue?.enqueue(change);
+    },
+    async shutdown() {
+      await queue?.shutdown();
+    }
+  };
+}
+
+type MissionPersistenceQueue = {
+  enabled: boolean;
+  readonly ready: boolean;
+  readonly status: RetryQueueStatus;
+  recoverOpenSessions(): void;
+  open(
+    session: AutoMissionSession,
+    identity?: MissionProductIdentity
+  ): void;
+  close(session: AutoMissionSession): void;
+  shutdown(): Promise<void>;
+};
+
+function createMissionPersistenceQueue(
+  store: MissionStore
+): MissionPersistenceQueue {
+  const queue = store.enabled
+    ? new RetryQueue<() => Promise<void>>({
+        capacity: 2_000,
+        retryIntervalMs: 1_000,
+        process: (operation) => operation(),
+        onError: (error) => {
+          console.error(
+            "[Mission] Persistence unavailable; retrying:",
+            errorMessage(error)
+          );
+        }
+      })
+    : undefined;
+
+  return {
+    enabled: Boolean(queue),
+    get ready() {
+      return queue?.ready ?? true;
+    },
+    get status() {
+      return queue?.status ?? {
+        pending: 0,
+        dropped: 0,
+        healthy: true
+      };
+    },
+    recoverOpenSessions() {
+      if (!queue) return;
+      queue.enqueue(async () => {
+        const recovered =
+          await store.recoverOpenAutomaticSessions();
+        if (recovered > 0) {
+          console.warn(
+            `[Mission] ${recovered} offene automatische Session(s) nach Service-Neustart geschlossen.`
+          );
+        }
+      });
+    },
+    open(session, identity = {}) {
+      queue?.enqueue(() => store.open(session, identity));
+    },
+    close(session) {
+      queue?.enqueue(() => store.closeSession(session));
+    },
+    async shutdown() {
+      await queue?.shutdown();
     }
   };
 }
