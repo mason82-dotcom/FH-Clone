@@ -16,6 +16,7 @@ data class BridgeSnapshot(
     val schema: String = "fh2.msdk.v1",
     val timestampMs: Long,
     val sdk: DjiSdkSnapshot,
+    val gateway: RemoteControllerIdentitySnapshot,
     val aircraft: AircraftTelemetrySnapshot,
     val sensors: SensorInventorySnapshot,
     val rtk: RtkSnapshot,
@@ -27,6 +28,7 @@ data class BridgeSnapshot(
             put("schema", schema)
             put("timestampMs", timestampMs)
             put("sdk", sdk.toJson())
+            put("gateway", gateway.toJson())
             put("aircraft", aircraft.toJson())
             put(
                 "sensors",
@@ -72,6 +74,7 @@ object BridgeSnapshotProvider {
         return BridgeSnapshot(
             timestampMs = nowMs,
             sdk = DjiSdkRuntime.snapshot,
+            gateway = RemoteControllerIdentitySource.snapshot,
             aircraft = AircraftTelemetrySource.snapshot,
             sensors = sensors,
             rtk = RtkTelemetrySource.snapshot,
@@ -90,6 +93,15 @@ private fun DjiSdkSnapshot.toJson() =
         putNullable("registrationError", registrationError)
         put("productConnected", productConnected)
         putNullable("productId", productId)
+    }
+
+
+private fun RemoteControllerIdentitySnapshot.toJson() =
+    JSONObject().apply {
+        put("connected", connected)
+        putNullable("serialNumber", serialNumber)
+        putNullable("firmwareVersion", firmwareVersion)
+        put("componentIndex", componentIndex)
     }
 
 private fun AircraftTelemetrySnapshot.toJson() =
