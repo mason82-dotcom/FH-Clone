@@ -126,6 +126,8 @@ export interface DrcControllerOptions {
   postEmergencyStopCooldownMs?: number;
   /** Heartbeat period. DJI exits an idle DRC link after prolonged heartbeat absence. */
   heartbeatIntervalMs?: number;
+  /** Runtime error sink for heartbeat publish failures. */
+  onHeartbeatError?: (error: Error) => void | Promise<void>;
 }
 
 function assertFiniteRange(name: string, value: number, min: number, max: number): void {
@@ -171,6 +173,9 @@ export class DrcController {
   private readonly minControlIntervalMs: number;
   private readonly postEmergencyStopCooldownMs: number;
   private readonly heartbeatIntervalMs: number;
+  private readonly onHeartbeatError:
+    | ((error: Error) => void | Promise<void>)
+    | undefined;
 
   constructor(
     private readonly services: DjiServiceRequester,
@@ -181,6 +186,7 @@ export class DrcController {
     this.minControlIntervalMs = options.minControlIntervalMs ?? 100;
     this.postEmergencyStopCooldownMs = options.postEmergencyStopCooldownMs ?? 2_200;
     this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 10_000;
+    this.onHeartbeatError = options.onHeartbeatError;
   }
 
   resetControlSequence(): void {
@@ -389,9 +395,9 @@ export class DrcController {
 
   startHeartbeat(gatewaySn: string): void {
     this.stopHeartbeat();
-    void this.sendHeartbeat(gatewaySn);
+    this.publishHeartbeat(gatewaySn);
     this.heartbeatTimer = setInterval(() => {
-      void this.sendHeartbeat(gatewaySn);
+      this.publishHeartbeat(gatewaySn);
     }, this.heartbeatIntervalMs);
   }
 
@@ -434,6 +440,22 @@ export class DrcController {
       throw new DjiServiceError(method, reply.result, reply);
     }
     return reply;
+  }
+
+  private publishHeartbeat(gatewaySn: string): void {
+    void this.sendHeartbeat(gatewaySn).catch((error: unknown) => {
+      this.stopHeartbeat();
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
+      void Promise.resolve(
+        this.onHeartbeatError?.(normalized)
+      ).catch((callbackError: unknown) => {
+        console.error(
+          "DJI DRC heartbeat error callback failed",
+          callbackError
+        );
+      });
+    });
   }
 
   private async waitForControlSlot(): Promise<void> {
