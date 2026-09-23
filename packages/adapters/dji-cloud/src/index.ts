@@ -41,6 +41,8 @@ export interface DjiCloudAdapterOptions {
   clientId?: string;
   topicFilters?: string[];
   serviceTimeoutMs?: number;
+  /** Maximum time startup waits for the first broker connection before continuing offline. */
+  initialConnectWaitMs?: number;
   /**
    * Dokumentations-/Kompatibilitätsprofil. Dies ist keine MQTT-Protokollverhandlung.
    * Standard ist die aktuell verifizierte DJI Cloud API Baseline.
@@ -82,6 +84,29 @@ function deviceFromTopic(topic: string): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function waitForInitialMqttConnect(
+  client: MqttClient,
+  timeoutMs: number
+): Promise<boolean> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new RangeError("initialConnectWaitMs must be greater than zero");
+  }
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (connected: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      client.off("connect", onConnect);
+      resolve(connected);
+    };
+    const onConnect = () => finish(true);
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    client.once("connect", onConnect);
+  });
 }
 
 export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
@@ -132,6 +157,10 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     });
 
     this.client = client;
+    const initialConnect = waitForInitialMqttConnect(
+      client,
+      this.options.initialConnectWaitMs ?? 10_000
+    );
 
     client.on("connect", () => {
       this.connected = true;
@@ -141,10 +170,26 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     client.on("close", () => {
       this.connected = false;
+      void this.markKnownDevicesDisconnected(Date.now()).catch(
+        (error: unknown) => {
+          console.error(
+            "DJI device offline propagation failed after MQTT close",
+            error
+          );
+        }
+      );
     });
 
     client.on("error", (error) => {
       this.connected = false;
+      void this.markKnownDevicesDisconnected(Date.now()).catch(
+        (notifyError: unknown) => {
+          console.error(
+            "DJI device offline propagation failed after MQTT error",
+            notifyError
+          );
+        }
+      );
       console.warn("DJI MQTT connection error; retrying", error.message);
     });
 
@@ -154,15 +199,19 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       });
     });
 
-    await new Promise<void>((resolve) => {
-      client.once("connect", () => resolve());
-    });
+    const connectedInitially = await initialConnect;
+    if (!connectedInitially) {
+      console.warn(
+        "DJI MQTT initial connection timed out; adapter remains offline and will keep retrying"
+      );
+    }
   }
 
   async stop(): Promise<void> {
     const client = this.client;
     this.client = undefined;
     this.connected = false;
+    await this.markKnownDevicesDisconnected(Date.now());
 
     for (const [tid, pending] of this.pendingServices) {
       clearTimeout(pending.timer);
@@ -322,6 +371,25 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       message:
         "Direct DJI flight-control publishing remains disabled in the adapter; use the backend CommandCoordinator/DRC service."
     };
+  }
+
+  private async markKnownDevicesDisconnected(at: number): Promise<void> {
+    const notifications: Array<Promise<void>> = [];
+
+    for (const [deviceId, current] of this.devices) {
+      if (!current.connected) continue;
+      const offline: AdapterDevice = {
+        ...current,
+        connected: false,
+        lastSeenAt: at
+      };
+      this.devices.set(deviceId, offline);
+      notifications.push(
+        Promise.resolve(this.events?.onDevice?.(offline)).then(() => undefined)
+      );
+    }
+
+    await Promise.all(notifications);
   }
 
   private async handleMessage(topic: string, bytes: Buffer): Promise<void> {
