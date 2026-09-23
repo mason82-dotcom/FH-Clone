@@ -88,6 +88,8 @@ Auf `main` sind unter anderem vorhanden:
 - Root-Compose für Control API, EMQX, Web und TimescaleDB
 - lokale Runtime-Verify-Suite
 - FlightHub-2-OpenAPI-V2-Client für Waylines und Flight Tasks (read-only)
+- DJI-WPML/KMZ-Parser für `template.kml` und `waylines.wpml` (read-only)
+- DJI-Pilot-Waypoint-Dateikatalog (read-only)
 - read-only Mission-/Wayline-/Capability-APIs
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
@@ -95,7 +97,7 @@ Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 - M4E/M4T FC3-/DRC-Flugsteuerung ohne reale Hardwareabnahme
 - Dock3/M4D/M4TD
 - Pilot-2-JSBridge
-- vollständige WPML/Pilot-Wayline-Integration aus offenen Drafts
+- schreibende WPML/Pilot-Wayline-Upload-, Collect- und Execution-Pfade
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - nicht real belegte M3T/M4T Tele-/Thermal-Medienpfade
 
@@ -205,8 +207,8 @@ Wichtige Kernunterlagen:
 - [Aktueller Release-Status](docs/RELEASE_STATUS.md)
 - [Changelog](CHANGELOG.md)
 
-Fachunterlagen zu RC Pro, DRC, RTK, Missionen, Medien/Multispektral, UgCS und
-Kompatibilität sind über den Dokumentationsindex verlinkt.
+Fachunterlagen zu RC Pro, DRC, RTK, WPML/Missionen, Medien/Multispektral,
+UgCS und Kompatibilität sind über den Dokumentationsindex verlinkt.
 
 ## Projektsteuerung
 

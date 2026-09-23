@@ -2,7 +2,7 @@
 
 ## Stand
 
-Verifiziert am **22. September 2026** gegen die jeweils offiziellen
+Verifiziert am **23. September 2026** gegen die jeweils offiziellen
 DJI-Developer-Unterlagen.
 
 Diese Datei unterscheidet SDK-Version, Produktunterstützung und tatsächlich in
@@ -29,6 +29,27 @@ verhandelt diese Version nicht.
 Die offiziellen DJI-Cloud-API-Demos werden seit dem 10. April 2025 nicht mehr
 gewartet. Sie dienen nur als Protokollreferenz und werden nicht als
 Produktionsbasis übernommen.
+
+## DJI WPML
+
+FH2 integriert WPML read-only auf Basis der aktuellen DJI-Spezifikation:
+
+- KMZ als Archivformat,
+- `template.kml` für Planungs-/Template-Attribute,
+- `waylines.wpml` für Ausführungsdetails,
+- optionale `res/`-Ressourcen,
+- Common Elements für MissionConfig, Produkt-/Payload-Identität und Actions.
+
+Die aktuell verifizierte DJI-WPML-Dokumentation umfasst die bekannten
+M300/M350/M30/M3E/M3T/M3M/M3D/M3TD-Verträge. Die aktuelle DJI-Developer-
+Dokumentation führt zusätzlich die neueren M4-Familienwerte; FH2 behandelt
+diese als explizite WPML-Produktwerte und unbekannte zukünftige Werte
+weiterhin fail-safe als unbekannt statt sie zu erraten.
+
+WPML-Produktschlüssel, Pilot-`*_model_key` und MQTT-`payload_index` bleiben
+getrennte Identitätsverträge.
+
+Details: [WPML.md](WPML.md).
 
 ## Android Mobile SDK V5
 
@@ -129,6 +150,10 @@ konkreten Produkts zu prüfen.
   https://developer.dji.com/doc/cloud-api-tutorial/cn/
 - Cloud API Produktunterstützung:
   https://developer.dji.com/doc/cloud-api-tutorial/en/overview/product-support.html
+- DJI WPML template.kml:
+  https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/template-kml.html
+- DJI WPML waylines.wpml:
+  https://developer.dji.com/doc/cloud-api-tutorial/en/api-reference/dji-wpml/waylines-wpml.html
 - Mobile SDK V5:
   https://developer.dji.com/doc/mobile-sdk-tutorial/en/
 - Payload SDK:
