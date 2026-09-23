@@ -2,12 +2,16 @@ import type {
   PilotCloudAuthorityRequest,
   DrcSessionGuards,
   DrcSessionManager,
-  EnterDrcModeOptions
+  EnterDrcModeOptions,
+  type DrcAxes,
+  type DrcStickChannels
 } from "@fh-clone/adapter-dji-cloud";
 
 export interface DjiControlRuntime {
   resolveGatewaySn(deviceSn: string): string | undefined;
   supportsFlightControl(deviceSn: string): boolean;
+  supportsStickControl(deviceSn: string): boolean;
+  supportsDroneControl(deviceSn: string): boolean;
   connectDrcTransport(credentials: EnterDrcModeOptions["mqttBroker"]): Promise<void>;
   disconnectDrcTransport(): Promise<void>;
   pilotAuthority: {
@@ -56,9 +60,23 @@ export class ControlCoordinator {
       throw new Error("drc_session_already_active");
     }
 
+    const controlMethods = [
+      ...(this.dji.supportsStickControl(input.aircraftSn) ? ["stick" as const] : []),
+      ...(this.dji.supportsDroneControl(input.aircraftSn) ? ["drone" as const] : [])
+    ];
+    if (controlMethods.length === 0) {
+      throw new Error("flight_control_method_not_supported");
+    }
+
     const initial = this.guards(input.aircraftSn, input.holder);
     if (initial.djiAuthority) throw new Error("dji_cloud_authority_already_held");
-    await this.sessions.request({ aircraftSn: input.aircraftSn, gatewaySn, holder: input.holder, guards: initial });
+    await this.sessions.request({
+      aircraftSn: input.aircraftSn,
+      gatewaySn,
+      holder: input.holder,
+      controlMethods,
+      guards: initial
+    });
 
     let authorityRequested = false;
     let drcEntered = false;
@@ -93,6 +111,41 @@ export class ControlCoordinator {
       }
       throw error;
     }
+  }
+
+
+  async sendStick(
+    aircraftSn: string,
+    holder: string,
+    channels: DrcStickChannels
+  ): Promise<number> {
+    if (!this.dji.supportsStickControl(aircraftSn)) {
+      throw new Error("stick_control_not_supported");
+    }
+    const gatewaySn = this.dji.resolveGatewaySn(aircraftSn);
+    if (!gatewaySn) throw new Error("dji_gateway_unknown");
+    return this.sessions.sendStick(
+      gatewaySn,
+      channels,
+      this.guards(aircraftSn, holder)
+    );
+  }
+
+  async sendDroneControl(
+    aircraftSn: string,
+    holder: string,
+    axes: DrcAxes
+  ): Promise<number> {
+    if (!this.dji.supportsDroneControl(aircraftSn)) {
+      throw new Error("drone_control_not_supported");
+    }
+    const gatewaySn = this.dji.resolveGatewaySn(aircraftSn);
+    if (!gatewaySn) throw new Error("dji_gateway_unknown");
+    return this.sessions.sendDroneControl(
+      gatewaySn,
+      axes,
+      this.guards(aircraftSn, holder)
+    );
   }
 
   async stop(aircraftSn: string, reason = "operator_release") {
