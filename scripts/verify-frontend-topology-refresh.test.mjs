@@ -7,16 +7,21 @@ const source = fs.readFileSync(
   "utf8"
 );
 
-test("workspace refreshes DJI topology continuously with abort protection", () => {
+test("workspace refreshes DJI topology continuously without starving slow requests", () => {
   assert.match(source, /setInterval\([\s\S]*?refreshTopology[\s\S]*?2_000/);
+  assert.match(source, /if \(controller\) return;/);
   assert.match(source, /new AbortController\(\)/);
   assert.match(source, /signal:\s*request\.signal/);
-  assert.match(source, /controller\?\.abort\(\)/);
+  assert.match(
+    source,
+    /finally \{[\s\S]*?controller === request[\s\S]*?controller = undefined/
+  );
+  assert.equal((source.match(/controller\?\.abort\(\);/g) ?? []).length, 1);
 });
 
 test("workspace preserves last known topology on transient fetch failure", () => {
   const catchBlock = source.match(
-    /catch \(error\) \{([\s\S]*?)\n      \}/
+    /catch \(error\) \{([\s\S]*?)\n      \} finally/
   )?.[1] ?? "";
   assert.doesNotMatch(catchBlock, /setTopology\(\[\]\)/);
 });
