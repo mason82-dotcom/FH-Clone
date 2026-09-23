@@ -41,8 +41,8 @@ Implementiert:
 Nicht implementiert:
 
 - keine automatische Flight-Control-Aktivierung
-- noch kein FH2-WebSocket
-- noch keine Backend-Pairing-Credentials
+- noch kein FH2-Control-WebSocket
+- Pairing + read-only Snapshot-Heartbeat sind implementiert
 - noch keine Remote-Control-Freigabe aus dem Netzwerk
 - Kamera/Gimbal/RTK/Wayline folgen separat
 
@@ -150,3 +150,33 @@ Der DJI-App-Key und andere lokale Secrets werden nicht exportiert.
 
 Diese Datei dient als reale RC-Pro/M3-Hardware-Fixture und wird nicht
 automatisch hochgeladen.
+
+
+## FH2 Pairing
+
+Die App kann sich über die Control API read-only pairen:
+
+```text
+POST /api/msdk/pair
+POST /api/msdk/heartbeat
+```
+
+Ablauf:
+
+```text
+manuell eingegebener MSDK_PAIRING_TOKEN
+  -> /api/msdk/pair
+  -> HMAC-signiertes Agent-Token
+  -> 1 Hz /api/msdk/heartbeat
+  -> fh2.msdk.v1 BridgeSnapshot
+```
+
+Der Pairing-Token wird nicht gespeichert. Das Agent-Token bleibt in diesem
+Entwicklungsstand ausschließlich im Prozessspeicher und geht beim App-Neustart
+verloren.
+
+Release-Builds akzeptieren nur HTTPS. Der Debug-Build erlaubt HTTP
+ausschließlich für localhost beziehungsweise private RFC1918-LAN-Adressen.
+
+Der Pairing-/Heartbeat-Kanal besitzt keinerlei Flight-Control-Command-
+Nachrichten.

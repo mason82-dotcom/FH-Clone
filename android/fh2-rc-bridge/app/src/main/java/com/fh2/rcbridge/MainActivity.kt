@@ -4,10 +4,12 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.text.InputType
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -20,6 +22,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var enableButton: Button
     private lateinit var disableButton: Button
     private lateinit var evidenceButton: Button
+    private lateinit var bridgeText: TextView
+    private lateinit var baseUrlInput: EditText
+    private lateinit var pairingTokenInput: EditText
+    private lateinit var pairButton: Button
+    private lateinit var unpairButton: Button
 
     private val sdkListener: (DjiSdkSnapshot) -> Unit = { state ->
         runOnUiThread {
@@ -125,6 +132,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val bridgeListener: (Fh2BridgeConnectionSnapshot) -> Unit = { state ->
+        runOnUiThread {
+            bridgeText.text = buildString {
+                appendLine("FH2 Bridge")
+                appendLine("Status: ${state.status}")
+                appendLine("Server: ${state.baseUrl ?: "-"}")
+                appendLine("Gateway: ${state.gatewaySn ?: "-"}")
+                appendLine("Aircraft: ${state.aircraftSn ?: "-"}")
+                appendLine("Token gültig bis: ${state.expiresAt ?: "-"}")
+                append("Letzter Heartbeat: ${state.lastHeartbeatAt ?: "-"}")
+                state.lastError?.let {
+                    appendLine()
+                    append("Fehler: $it")
+                }
+            }
+            unpairButton.isEnabled = state.status == "paired"
+        }
+    }
+
     private val controlListener: (VirtualStickSnapshot) -> Unit = { state ->
         runOnUiThread {
             controlText.text = buildString {
@@ -162,6 +188,23 @@ class MainActivity : AppCompatActivity() {
         }
         rtkText = TextView(this).apply {
             textSize = 18f
+        }
+        bridgeText = TextView(this).apply {
+            textSize = 18f
+        }
+        baseUrlInput = EditText(this).apply {
+            hint = "FH2 URL, z. B. https://fh2.example:8080"
+            inputType =
+                InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_VARIATION_URI
+            setSingleLine(true)
+        }
+        pairingTokenInput = EditText(this).apply {
+            hint = "Pairing-Token"
+            inputType =
+                InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine(true)
         }
 
         enableButton = Button(this).apply {
@@ -217,6 +260,35 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        pairButton = Button(this).apply {
+            text = "Mit FH2 pairen"
+            setOnClickListener {
+                val baseUrl = baseUrlInput.text.toString().trim()
+                val pairingToken = pairingTokenInput.text.toString()
+                pairingTokenInput.text.clear()
+
+                Fh2BridgeClient.pair(baseUrl, pairingToken) { result ->
+                    result.exceptionOrNull()?.let { error ->
+                        runOnUiThread {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Pairing fehlgeschlagen: ${error.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        unpairButton = Button(this).apply {
+            text = "FH2 Verbindung trennen"
+            isEnabled = false
+            setOnClickListener {
+                Fh2BridgeClient.disconnect()
+            }
+        }
+
         val notice = TextView(this).apply {
             text =
                 "MSDK-Modus: DJI Pilot 2 muss auf RC Pro Enterprise beendet " +
@@ -235,6 +307,11 @@ class MainActivity : AppCompatActivity() {
             addView(telemetryText, matchWidth(top = 24))
             addView(sensorText, matchWidth(top = 24))
             addView(rtkText, matchWidth(top = 24))
+            addView(bridgeText, matchWidth(top = 24))
+            addView(baseUrlInput, matchWidth(top = 12))
+            addView(pairingTokenInput, matchWidth(top = 12))
+            addView(pairButton, matchWidth(top = 12))
+            addView(unpairButton, matchWidth(top = 12))
             addView(controlText, matchWidth(top = 24))
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
@@ -258,6 +335,7 @@ class MainActivity : AppCompatActivity() {
         AircraftTelemetrySource.addListener(telemetryListener)
         SensorInventorySource.addListener(sensorListener)
         RtkTelemetrySource.addListener(rtkListener)
+        Fh2BridgeClient.addListener(bridgeListener)
         VirtualStickController.addListener(controlListener)
     }
 
@@ -267,6 +345,7 @@ class MainActivity : AppCompatActivity() {
         AircraftTelemetrySource.removeListener(telemetryListener)
         SensorInventorySource.removeListener(sensorListener)
         RtkTelemetrySource.removeListener(rtkListener)
+        Fh2BridgeClient.removeListener(bridgeListener)
         VirtualStickController.removeListener(controlListener)
         super.onDestroy()
     }

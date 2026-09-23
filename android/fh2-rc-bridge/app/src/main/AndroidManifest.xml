@@ -9,7 +9,8 @@
         android:extractNativeLibs="true"
         android:label="FH2 RC Bridge"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:usesCleartextTraffic="false">
 
         <meta-data
             android:name="com.dji.sdk.API_KEY"
