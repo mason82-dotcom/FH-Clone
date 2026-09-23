@@ -20,6 +20,7 @@
     "test:msdk-control-deadman": "node --test scripts/verify-msdk-control-deadman.test.mjs",
     "test:github-support-handoff": "node --test scripts/github-sensitive-data-support-handoff.test.mjs",
     "test:frontend-topology-refresh": "node --test scripts/verify-frontend-topology-refresh.test.mjs",
+    "test:frontend-runtime-hardening": "node --test scripts/verify-frontend-runtime-hardening.test.mjs",
     "verify:msdk-evidence": "node scripts/verify-msdk-evidence.mjs",
     "test:pilot2-jsbridge": "node --test scripts/verify-pilot2-jsbridge.test.mjs",
     "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs"

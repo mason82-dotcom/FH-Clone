@@ -100,6 +100,9 @@ jobs:
       - name: GitHub Sensitive-Data Support Handoff
         run: npm run test:github-support-handoff
 
+      - name: Frontend Runtime Hardening
+        run: npm run test:frontend-runtime-hardening
+
       - name: Frontend Topology Refresh
         run: npm run test:frontend-topology-refresh
 
@@ -201,6 +204,9 @@ jobs:
 
       - name: GitHub Sensitive-Data Support Handoff
         run: npm run test:github-support-handoff
+
+      - name: Frontend Runtime Hardening
+        run: npm run test:frontend-runtime-hardening
 
   ugcs:
     name: UgCS-Bridge

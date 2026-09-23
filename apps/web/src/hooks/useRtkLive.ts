@@ -35,12 +35,12 @@ export function useRtkLive(): RtkLiveState {
     };
 
     source.addEventListener("snapshot", (event) => {
-      const payload = JSON.parse((event as MessageEvent<string>).data) as
-        | RtkDeviceSnapshot
-        | RtkDeviceSnapshot[]
-        | undefined;
+      const payload = parseSseJson<
+        RtkDeviceSnapshot | RtkDeviceSnapshot[]
+      >(event);
+      if (payload === undefined) return;
 
-      const list = Array.isArray(payload) ? payload : payload ? [payload] : [];
+      const list = Array.isArray(payload) ? payload : [payload];
       setDevices(
         Object.fromEntries(list.map((snapshot) => [snapshot.deviceId, snapshot]))
       );
@@ -70,9 +70,8 @@ export function useRtkLive(): RtkLiveState {
     });
 
     source.addEventListener("rtk-status", (event) => {
-      const payload = JSON.parse(
-        (event as MessageEvent<string>).data
-      ) as RtkStatusEvent;
+      const payload = parseSseJson<RtkStatusEvent>(event);
+      if (payload === undefined) return;
 
       setDevices((current) => {
         const previous = current[payload.deviceId];
@@ -127,9 +126,8 @@ export function useRtkLive(): RtkLiveState {
     });
 
     source.addEventListener("rtk-fix-transition", (event) => {
-      const payload = JSON.parse(
-        (event as MessageEvent<string>).data
-      ) as RtkTransitionEvent;
+      const payload = parseSseJson<RtkTransitionEvent>(event);
+      if (payload === undefined) return;
 
       setTransitions((current) => [payload, ...current].slice(0, 20));
     });
@@ -172,4 +170,13 @@ export function useRtkLive(): RtkLiveState {
     connected,
     error
   };
+}
+
+
+function parseSseJson<T>(event: Event): T | undefined {
+  try {
+    return JSON.parse((event as MessageEvent<string>).data) as T;
+  } catch {
+    return undefined;
+  }
 }
