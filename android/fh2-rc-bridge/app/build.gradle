@@ -33,12 +33,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
         freeCompilerArgs += ["-Xjvm-default=all"]
     }
 
@@ -59,7 +59,20 @@ android {
                 "**/libDJIWaypointV2Core-CSDK.so",
                 "**/libdjiwpv2-CSDK.so",
                 "**/libFlightRecordEngine.so",
-                "**/libvideo-framing.so"
+                "**/libvideo-framing.so",
+                "**/libmrtc_rtsp.so",
+                "**/libmrtc_rtmp.so",
+                "**/libmrtc_onvif.so",
+                "**/libmrtc_log.so",
+                "**/libmrtc_data.so",
+                "**/libmrtc_core_jni.so",
+                "**/libmrtc_core.so",
+                "**/libmrtc_agora.so",
+                "**/libmrtc_28181.so",
+                "**/libc++_shared.so",
+                "**/libc++.so",
+                "**/libagora-rtsa-sdk.so",
+                "**/libwaes.so"
             ]
         }
     }
