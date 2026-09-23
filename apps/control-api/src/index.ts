@@ -1391,8 +1391,8 @@ function createMissionPersistenceQueue(
 ): MissionPersistenceQueue {
   const queue = store.enabled
     ? new RetryQueue<() => Promise<void>>({
-        capacity: 2_000,
         retryIntervalMs: 1_000,
+        dropPolicy: "retain-all",
         process: (operation) => operation(),
         onError: (error) => {
           console.error(
