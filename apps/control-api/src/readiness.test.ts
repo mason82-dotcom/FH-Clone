@@ -21,7 +21,8 @@ test("optional disabled dependencies do not make readiness fail", () => {
     topologyStore: disabled(),
     gatewayCredentialStore: disabled(),
     missionStore: disabled(),
-    mediaStore: disabled()
+    mediaStore: disabled(),
+    telemetryStore: disabled()
   });
 
   assert.equal(result.ready, true);
@@ -35,7 +36,8 @@ test("configured but disconnected MQTT is not ready", () => {
     topologyStore: disabled(),
     gatewayCredentialStore: disabled(),
     missionStore: disabled(),
-    mediaStore: disabled()
+    mediaStore: disabled(),
+    telemetryStore: disabled()
   });
 
   assert.equal(result.ready, false);
@@ -48,7 +50,8 @@ test("configured persistence must actually be reachable", () => {
     topologyStore: ready(),
     gatewayCredentialStore: unavailable(),
     missionStore: ready(),
-    mediaStore: ready()
+    mediaStore: ready(),
+    telemetryStore: ready()
   });
 
   assert.equal(result.ready, false);
@@ -64,13 +67,14 @@ test("fully configured runtime is ready only when every required dependency is r
     topologyStore: ready(),
     gatewayCredentialStore: ready(),
     missionStore: ready(),
-    mediaStore: ready()
+    mediaStore: ready(),
+    telemetryStore: ready()
   });
 
   assert.equal(result.ready, true);
   assert.deepEqual(
     Object.values(result.checks).map((check) => check.state),
-    ["ready", "ready", "ready", "ready", "ready"]
+    ["ready", "ready", "ready", "ready", "ready", "ready"]
   );
 });
 
@@ -81,9 +85,27 @@ test("configured media persistence must be reachable", () => {
     topologyStore: disabled(),
     gatewayCredentialStore: disabled(),
     missionStore: ready(),
-    mediaStore: unavailable()
+    mediaStore: unavailable(),
+    telemetryStore: ready()
   });
 
   assert.equal(result.ready, false);
   assert.equal(result.checks.mediaStore.state, "unavailable");
+});
+
+test("configured telemetry history must be reachable", () => {
+  const result = evaluateControlApiReadiness({
+    mqttBackend: disabled(),
+    topologyStore: disabled(),
+    gatewayCredentialStore: disabled(),
+    missionStore: ready(),
+    mediaStore: ready(),
+    telemetryStore: unavailable()
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(
+    result.checks.telemetryStore.state,
+    "unavailable"
+  );
 });
