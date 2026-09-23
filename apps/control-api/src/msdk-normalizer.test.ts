@@ -133,11 +133,21 @@ test("normalizes MSDK snapshot into common device and telemetry registries", () 
   );
   assert.equal(values.get("flight.position.latitude_deg"), 49.12);
   assert.equal(values.get("flight.position.longitude_deg"), 8.58);
-  assert.equal(values.get("navigation.rtk.fix_status"), "FIXED_POINT");
+  assert.equal(values.get("navigation.rtk.solution"), "fixed_point");
+  assert.equal(values.get("navigation.rtk.fix_status"), "fixed");
+  assert.equal(values.get("navigation.rtk.fixed"), true);
+  assert.equal(
+    values.get("raw.msdk.rtk.positioning_solution"),
+    "FIXED_POINT"
+  );
   assert.deepEqual(values.get("raw.msdk.camera.types"), ["M3T"]);
   assert.equal(values.get("flight.home.latitude_deg"), 49.119);
   assert.equal(values.get("flight.home.longitude_deg"), 8.579);
-  assert.equal(values.get("flight.heading_deg"), 187.5);
+  assert.equal(values.get("flight.attitude.yaw_deg"), 187.5);
+  assert.equal(
+    values.get("raw.msdk.flight.compass_heading_deg"),
+    187.5
+  );
   assert.equal(values.get("raw.msdk.gateway.gps.latitude_deg"), 49.121);
   assert.equal(values.get("raw.msdk.gateway.gps.accuracy_m"), 2.5);
   assert.equal(
@@ -156,4 +166,61 @@ test("normalizes MSDK snapshot into common device and telemetry registries", () 
     values.get("raw.msdk.wayline.available_ids"),
     [0, 1]
   );
+});
+
+
+test("normalizes non-fixed MSDK RTK solutions without inventing fixed state", () => {
+  const input = snapshot();
+
+  for (const [raw, expectedStatus, expectedFixed] of [
+    ["NONE", "not_started", false],
+    ["SINGLE_POINT", "fixing", false],
+    ["FLOAT", "fixing", false]
+  ] as const) {
+    input.rtk.positioningSolution = raw;
+    const normalized = normalizeMsdkBridgeSnapshot(input, 2_000);
+    const values = new Map(
+      normalized.samples.map((sample) => [
+        sample.key,
+        sample.value
+      ])
+    );
+
+    assert.equal(
+      values.get("navigation.rtk.fix_status"),
+      expectedStatus
+    );
+    assert.equal(
+      values.get("navigation.rtk.fixed"),
+      expectedFixed
+    );
+    assert.equal(
+      values.get("raw.msdk.rtk.positioning_solution"),
+      raw
+    );
+  }
+});
+
+test("unknown future MSDK RTK solution stays raw-only", () => {
+  const input = snapshot();
+  input.rtk.positioningSolution = "FUTURE_SOLUTION";
+
+  const normalized = normalizeMsdkBridgeSnapshot(
+    input,
+    2_000
+  );
+  const values = new Map(
+    normalized.samples.map((sample) => [
+      sample.key,
+      sample.value
+    ])
+  );
+
+  assert.equal(
+    values.get("raw.msdk.rtk.positioning_solution"),
+    "FUTURE_SOLUTION"
+  );
+  assert.equal(values.has("navigation.rtk.solution"), false);
+  assert.equal(values.has("navigation.rtk.fix_status"), false);
+  assert.equal(values.has("navigation.rtk.fixed"), false);
 });
