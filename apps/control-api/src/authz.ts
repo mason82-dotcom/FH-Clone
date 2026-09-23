@@ -170,7 +170,7 @@ export async function evaluateDjiGatewayAuthorization(
     }
 
     if (
-      (parsed.family === "sys" || parsed.family === "thing") &&
+      parsed.family === "sys" &&
       parsed.sn === gatewaySn &&
       parsed.suffix === "status"
     ) {
