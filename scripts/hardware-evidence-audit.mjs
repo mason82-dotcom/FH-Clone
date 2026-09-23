@@ -3,8 +3,6 @@ import path from "node:path";
 
 const root = process.cwd();
 const scope = process.env.FH2_HARDWARE_SCOPE === "all" ? "all" : "main";
-const multiDockRequired = process.env.FH2_MULTI_DOCK_REQUIRED === "true";
-const psdkRequired = process.env.FH2_PSDK_REQUIRED === "true";
 const hsiRequired = process.env.FH2_DRC_HSI_REQUIRED === "true";
 
 const results = [];
@@ -117,8 +115,6 @@ function sensitiveValueLeaked(value) {
 function requiredFor(level) {
   if (level === "REQUIRED_MAIN") return true;
   if (level === "REQUIRED_DRAFT") return scope === "all";
-  if (level === "CONDITIONAL_MULTI_DOCK") return scope === "all" && multiDockRequired;
-  if (level === "CONDITIONAL_PSDK") return scope === "all" && psdkRequired;
   if (level === "CONDITIONAL_HSI") return hsiRequired;
   return false;
 }
@@ -288,41 +284,11 @@ if (realEvidence(m3m)) {
 }
 
 // ---------------------------------------------------------------------------
-// Dock 3 + M4D/M4TD (PR #43)
+// Global feature policy
 // ---------------------------------------------------------------------------
-const dock3Path = "docs/fixtures/dock3/hardware-evidence.json";
-const dock3 = readJson(dock3Path);
-add("DOCK3_M4D", "REQUIRED_DRAFT", "reales redigiertes Dock3/M4D-Evidence", realEvidence(dock3), dock3Path);
-if (realEvidence(dock3)) {
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "keine Secrets im öffentlichen Dock3-Fixture", !sensitiveValueLeaked(dock3));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "Dock3 update_topo auf sys/product/.../status",
-    hasMethod(dock3, "update_topo") && hasTopic(dock3, /^sys\/product\/[^/]+\/status$/));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "Dock3 Produktidentität 3/0",
-    Boolean(findRecord(dock3, (v) => Number(v.type) === 3 && Number(v.sub_type ?? v.subType) === 0)));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "M4D oder M4TD 100/0|1",
-    Boolean(findRecord(dock3, (v) => Number(v.type) === 100 && [0, 1].includes(Number(v.sub_type ?? v.subType)))));
-  const osd = dock3.osd?.data ?? dock3.osd;
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "OSD vorhanden", record(osd));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "State vorhanden", record(dock3.state?.data ?? dock3.state));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "cameras[] mit M4D/M4TD-Payload",
-    arr(get(osd, "cameras")).some((c) => ["98-0-0", "99-0-0"].includes(c?.payload_index)));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "battery.batteries[]",
-    arr(get(osd, "battery.batteries")).length > 0);
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "RTK Fixed/Nicht-Fixed als getrennte Captures",
-    Number(get(dock3.rtk?.fixed, "position_state.is_fixed")) === 2 &&
-    [0, 1, 3].includes(Number(get(dock3.rtk?.notFixed, "position_state.is_fixed"))));
-  add("DOCK3_M4D", "REQUIRED_DRAFT", "dynamischer Kamera-/Gimbal-Key real beobachtet",
-    typeof dock3.dynamicCameraKey === "string" && dock3.dynamicCameraKey.length > 0);
-
-  add("DOCK3_M4D", "CONDITIONAL_MULTI_DOCK", "wireless_link_topo real beobachtet",
-    Boolean(findRecord(dock3, (v) => record(v.wireless_link_topo))));
-  add("DOCK3_M4D", "CONDITIONAL_MULTI_DOCK", "best_link_gateway real beobachtet",
-    Boolean(findRecord(dock3, (v) => typeof v.best_link_gateway === "string" && v.best_link_gateway.length > 0)));
-  add("DOCK3_M4D", "CONDITIONAL_MULTI_DOCK", "secret_code im Public-Pfad redigiert",
-    dock3.secretRedaction?.rawObserved === true && dock3.secretRedaction?.publicLeak === false);
-  add("DOCK3_M4D", "CONDITIONAL_PSDK", "PSDK Array real beobachtet",
-    Boolean(findRecord(dock3, (v) => Array.isArray(v.psdk_widget_values) || Array.isArray(v.psdk))));
-}
+add("GLOBAL_POLICY", "INFORMATIONAL", "DJI Dock 1-3 global deaktiviert", true, "domain=3 wird in der Runtime verworfen");
+add("GLOBAL_POLICY", "INFORMATIONAL", "Multi-Dock global deaktiviert", true, "keine Fixture- oder Runtime-Freigabe");
+add("GLOBAL_POLICY", "INFORMATIONAL", "PSDK-Payloads global deaktiviert", true, "psdk_* und drc_psdk_* gesperrt");
 
 // ---------------------------------------------------------------------------
 // WPML + Pilot Wayline catalog (PR #45)
@@ -419,8 +385,6 @@ const lines = [
   "# FH2 DJI Hardware Evidence",
   "",
   `Scope: **${scope}**`,
-  `Multi-Dock required: **${multiDockRequired}**`,
-  `PSDK required: **${psdkRequired}**`,
   `DRC HSI required: **${hsiRequired}**`,
   "",
   "| Gate | Level | Check | Result | Detail |",

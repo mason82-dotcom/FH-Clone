@@ -47,6 +47,10 @@ SDK-Laufzeit melden.
 
 ## Payload SDK
 
+> **FH2-Policy:** PSDK-Payloads sind projektweit deaktiviert. Die folgenden
+> Herstellerangaben werden ausschließlich als Referenz dokumentiert und
+> aktivieren weder Runtime-, Telemetrie- noch Control-Capabilities.
+
 **Aktuell verifizierter Release: 3.16.0 vom 31. März 2026**
 
 Die DJI-Unterlagen unterscheiden empfohlene Versionen je Produktfamilie.
@@ -70,6 +74,17 @@ RID-/ADS-B-Datenweitergabe.
 
 Diese Funktion ist kein Ersatz für DJI Cloud API oder MSDK und wird nicht auf
 M3E/M3T/M3M übertragen.
+
+## Globale Ausschlüsse
+
+Unabhängig vom DJI-Herstellersupport unterstützt FH2 derzeit **keine**:
+
+- DJI Dock 1/2/3 Runtime
+- Multi-Dock-Funktionen
+- PSDK-Payload-/Widget-/DRC-Funktionen
+
+DJI definiert `domain=3` als Dock-Domain. FH2 verwirft diese Domain global.
+Die Ausschlüsse können nicht per Environment-Variable aufgehoben werden.
 
 ## Produktbezogene Regeln
 

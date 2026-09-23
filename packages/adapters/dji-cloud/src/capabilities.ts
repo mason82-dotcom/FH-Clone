@@ -3,8 +3,7 @@ import type { DjiGatewayTopology, DjiProductRef } from "./topology.js";
 
 export type DjiDrcProfile =
   | "none"
-  | "pilot-m4-stick"
-  | "dock-velocity";
+  | "pilot-m4-stick";
 
 export interface DjiCloudControlProfile {
   flightControl: boolean;

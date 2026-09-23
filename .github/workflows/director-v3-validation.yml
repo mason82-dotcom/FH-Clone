@@ -27,23 +27,13 @@ on:
         options:
           - main
           - all
-      multi_dock_required:
-        description: "Multi-Dock-Hardware als Pflichtgate aktivieren"
-        type: boolean
-        required: false
-        default: false
-      psdk_required:
-        description: "PSDK-Hardware als Pflichtgate aktivieren"
-        type: boolean
-        required: false
-        default: false
       drc_hsi_required:
         description: "DRC hsi_info_push als Pflichtgate aktivieren"
         type: boolean
         required: false
         default: false
       analyze_drafts:
-        description: "Draft-PRs #43-#46 gegen aktuellen main analysieren"
+        description: "Aktive Post-Release-Drafts gegen aktuellen main analysieren"
         type: boolean
         required: false
         default: true
@@ -350,8 +340,6 @@ jobs:
       - name: Reale DJI-Hardware-Nachweise prüfen
         env:
           FH2_HARDWARE_SCOPE: ${{ inputs.hardware_scope }}
-          FH2_MULTI_DOCK_REQUIRED: ${{ inputs.multi_dock_required }}
-          FH2_PSDK_REQUIRED: ${{ inputs.psdk_required }}
           FH2_DRC_HSI_REQUIRED: ${{ inputs.drc_hsi_required }}
         run: node scripts/hardware-evidence-audit.mjs
 
@@ -368,9 +356,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pr: 43
-            ref: agent/m4d-dock3-properties-v4
-            label: Dock3 M4D/M4TD
           - pr: 44
             ref: agent/msdk-keymanager-contract-v3
             label: MSDK KeyManager
@@ -461,12 +446,6 @@ jobs:
           git diff "$base..origin/${{ matrix.ref }}" > "$patch"
 
           case "${{ matrix.pr }}" in
-            43)
-              if git diff "$base..origin/${{ matrix.ref }}" -- packages/adapters/dji-cloud/src                 | grep '^+'                 | grep -E '"control\.|property/set|drc/down'; then
-                echo "::error::PR #43 erweitert den read-only Codepfad um Control-/Write-Muster."
-                exit 1
-              fi
-              ;;
             44)
               node -e '
                 const fs = require("fs");

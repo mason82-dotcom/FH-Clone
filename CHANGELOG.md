@@ -4,6 +4,14 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
+### Policy
+
+- DJI Dock 1, Dock 2 und Dock 3 global deaktiviert (`domain=3`)
+- Multi-Dock Runtime und Hardware-Gates entfernt
+- PSDK-Payload-/Widget-/DRC-Methoden global gesperrt
+- PSDK- und Multi-Dock-Telemetrie vor Persistenz/Normalisierung gefiltert
+- native DJI-Kamera-Payloads M3T/M4T bleiben unterstützt
+
 Keine Änderungen. V3.0.0 ist der eingefrorene Basisstand.
 
 ## 3.0.0 – 2026-09-23

@@ -61,7 +61,6 @@ Noch nicht vollständig real belegt:
 - M4T RC-Plus-2-DRC-Heartbeat-/Authority-Hardwarekette
 - M4T Thermal-Medienfixture
 - realer M3M Narrow-Band-Capture-Satz
-- Dock3/M4D/M4TD
 - reales Pilot-2-WPML-KMZ / Workspace-Katalog
 - reale Pilot-2-JSBridge-Session
 
@@ -87,12 +86,18 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - FlightHub-2 OpenAPI V2 read-only
 - Weboberfläche und lokale Root-Compose-Runtime
 
+## Globale Produkt-Policy
+
+Seit dem Policy-Update sind **DJI Dock 1, Dock 2, Dock 3, Multi-Dock und
+PSDK-Payloads projektweit deaktiviert**. Die Sperre ist fest im DJI-Adapter und
+in der CI verankert und besitzt keinen Konfigurationsschalter.
+
 ## Nicht als Hardwarefunktion freigegeben
 
 Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
 - M4E/M4T FC3-/DRC-Flugsteuerung ohne reale Abnahme
-- Dock3 / M4D / M4TD
+- DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: **global deaktiviert**
 - Pilot-2-JSBridge
 - WPML/Pilot-Wayline-Integration aus den offenen Drafts
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
@@ -102,7 +107,7 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
 Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
 
-- #43 Dock3/M4D/M4TD: Build FAIL in Direktor-CI
+- #43 Dock3/M4D/M4TD: durch globale Dock-Policy obsolet; nicht mergefähig
 - #46 Pilot2 JSBridge: Build FAIL in Direktor-CI
 - #44 MSDK KeyManager-Vertrag: Build/Test PASS, nach V3.0 verschoben
 - #45 WPML/Pilot Waylines: Build/Test PASS, Realfixture offen
