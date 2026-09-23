@@ -4,12 +4,14 @@ plugins {
 }
 
 def fh2MapStyleUrl =
-    project.findProperty("FH2_MAP_STYLE_URL") ?:
-        "https://demotiles.maplibre.org/style.json"
-def fh2MapStyleUrlEscaped =
-    fh2MapStyleUrl
-        .replace("\\", "\\\\")
-        .replace(""", "\\"")
+    (project.findProperty("FH2_MAP_STYLE_URL") ?:
+        "https://demotiles.maplibre.org/style.json").toString()
+def fh2MapStyleBuildConfigValue =
+    "\"" +
+        fh2MapStyleUrl
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"") +
+        "\""
 
 android {
     namespace "com.fh2.rcbridge"
@@ -26,7 +28,7 @@ android {
         buildConfigField(
             "String",
             "FH2_MAP_STYLE_URL",
-            "\"" + fh2MapStyleUrlEscaped + "\""
+            fh2MapStyleBuildConfigValue
         )
 
         manifestPlaceholders = [
