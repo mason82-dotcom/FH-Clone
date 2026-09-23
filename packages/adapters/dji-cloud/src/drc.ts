@@ -173,6 +173,9 @@ export class DrcController {
   private readonly minControlIntervalMs: number;
   private readonly postEmergencyStopCooldownMs: number;
   private readonly heartbeatIntervalMs: number;
+  private readonly onHeartbeatError:
+    | ((error: Error) => void | Promise<void>)
+    | undefined;
 
   constructor(
     private readonly services: DjiServiceRequester,
@@ -183,6 +186,7 @@ export class DrcController {
     this.minControlIntervalMs = options.minControlIntervalMs ?? 100;
     this.postEmergencyStopCooldownMs = options.postEmergencyStopCooldownMs ?? 2_200;
     this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 10_000;
+    this.onHeartbeatError = options.onHeartbeatError;
   }
 
   resetControlSequence(): void {
@@ -444,7 +448,7 @@ export class DrcController {
       const normalized =
         error instanceof Error ? error : new Error(String(error));
       void Promise.resolve(
-        this.options.onHeartbeatError?.(normalized)
+        this.onHeartbeatError?.(normalized)
       ).catch((callbackError: unknown) => {
         console.error(
           "DJI DRC heartbeat error callback failed",
