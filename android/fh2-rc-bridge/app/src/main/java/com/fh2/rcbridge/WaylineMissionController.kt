@@ -100,7 +100,7 @@ object WaylineMissionController {
                     update {
                         copy(
                             uploadState = "uploading",
-                            uploadProgress = progress.coerceIn(0.0, 1.0)
+                            uploadProgress = progress
                         )
                     }
                 }
