@@ -20,6 +20,7 @@ data class BridgeSnapshot(
     val aircraft: AircraftTelemetrySnapshot,
     val sensors: SensorInventorySnapshot,
     val rtk: RtkSnapshot,
+    val payloadControl: CameraGimbalControlSnapshot,
     val control: VirtualStickSnapshot,
     val capabilities: BridgeCapabilities
 ) {
@@ -37,6 +38,7 @@ data class BridgeSnapshot(
                 }
             )
             put("rtk", rtk.toJson())
+            put("payloadControl", payloadControl.toJson())
             put("control", control.toJson())
             put("capabilities", capabilities.toJson())
         }
@@ -78,6 +80,7 @@ object BridgeSnapshotProvider {
             aircraft = AircraftTelemetrySource.snapshot,
             sensors = sensors,
             rtk = RtkTelemetrySource.snapshot,
+            payloadControl = CameraGimbalController.snapshot,
             control = VirtualStickController.snapshot,
             capabilities = capabilities
         )
@@ -172,6 +175,15 @@ private fun RtkSnapshot.toJson() =
             }
         )
         putNullable("error", error)
+    }
+
+private fun CameraGimbalControlSnapshot.toJson() =
+    JSONObject().apply {
+        put("cameraIndex", cameraIndex)
+        put("isShootingPhoto", isShootingPhoto)
+        put("isRecording", isRecording)
+        putNullable("lastAction", lastAction)
+        putNullable("lastError", lastError)
     }
 
 private fun VirtualStickSnapshot.toJson() =
