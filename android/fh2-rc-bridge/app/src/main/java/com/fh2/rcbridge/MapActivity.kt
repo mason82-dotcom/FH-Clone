@@ -32,6 +32,7 @@ class MapActivity : AppCompatActivity() {
 
     private var aircraftMarker: Marker? = null
     private var homeMarker: Marker? = null
+    private var rcMarker: Marker? = null
     private var rtkMarker: Marker? = null
     private var flightPathLine: Polyline? = null
 
@@ -41,6 +42,13 @@ class MapActivity : AppCompatActivity() {
     private val aircraftListener: (AircraftTelemetrySnapshot) -> Unit = { state ->
         runOnUiThread {
             renderAircraft(state)
+        }
+    }
+
+    private val rcListener:
+        (RemoteControllerIdentitySnapshot) -> Unit = { state ->
+        runOnUiThread {
+            renderRemoteController(state)
         }
     }
 
@@ -174,11 +182,13 @@ class MapActivity : AppCompatActivity() {
         }
 
         AircraftTelemetrySource.addListener(aircraftListener)
+        RemoteControllerIdentitySource.addListener(rcListener)
         RtkTelemetrySource.addListener(rtkListener)
     }
 
     private fun renderAll() {
         renderAircraft(AircraftTelemetrySource.snapshot)
+        renderRemoteController(RemoteControllerIdentitySource.snapshot)
         renderRtk(RtkTelemetrySource.snapshot)
     }
 
@@ -248,6 +258,48 @@ class MapActivity : AppCompatActivity() {
                         " · " + String.format("%.0f°", it)
                     } ?: ""
                 )
+    }
+
+    private fun renderRemoteController(
+        state: RemoteControllerIdentitySnapshot
+    ) {
+        val readyMap = map ?: return
+        if (!styleReady) return
+
+        if (
+            !state.rcGpsValid ||
+            !isValidCoordinate(
+                state.rcLatitude,
+                state.rcLongitude
+            )
+        ) {
+            rcMarker?.let(readyMap::removeMarker)
+            rcMarker = null
+            return
+        }
+
+        val position =
+            LatLng(
+                state.rcLatitude!!,
+                state.rcLongitude!!
+            )
+
+        if (rcMarker == null) {
+            rcMarker =
+                readyMap.addMarker(
+                    MarkerOptions()
+                        .position(position)
+                        .title("RC Pro")
+                        .snippet(
+                            state.rcAccuracyM?.let {
+                                "GPS ±" +
+                                    String.format("%.1f m", it)
+                            } ?: "RC GPS"
+                        )
+                )
+        } else {
+            rcMarker?.position = position
+        }
     }
 
     private fun renderRtk(state: RtkSnapshot) {
@@ -367,6 +419,7 @@ class MapActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         AircraftTelemetrySource.removeListener(aircraftListener)
+        RemoteControllerIdentitySource.removeListener(rcListener)
         RtkTelemetrySource.removeListener(rtkListener)
         mapView.onDestroy()
         super.onDestroy()
