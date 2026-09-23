@@ -15,6 +15,7 @@ services:
       - ./infra/timescale/sql/004_gateway_credentials.sql:/docker-entrypoint-initdb.d/004_gateway_credentials.sql:ro
       - ./infra/postgres/migrations/001_dji_gateway_registry.sql:/docker-entrypoint-initdb.d/005_dji_gateway_registry.sql:ro
       - ./infra/timescale/sql/005_msdk_token_revocations.sql:/docker-entrypoint-initdb.d/006_msdk_token_revocations.sql:ro
+      - ./infra/timescale/sql/006_media_assets.sql:/docker-entrypoint-initdb.d/007_media_assets.sql:ro
     healthcheck:
       test:
         [
@@ -25,6 +26,33 @@ services:
       timeout: 5s
       retries: 20
     restart: unless-stopped
+    networks:
+      - backend
+
+  db-migrations:
+    image: timescale/timescaledb:2.30.1-pg16
+    environment:
+      PGPASSWORD: ${TIMESCALE_PASSWORD:?TIMESCALE_PASSWORD fehlt}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - ./infra/timescale/sql/006_media_assets.sql:/migrations/006_media_assets.sql:ro
+    command:
+      [
+        "psql",
+        "-h",
+        "timescaledb",
+        "-U",
+        "fhclone",
+        "-d",
+        "fhclone",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-f",
+        "/migrations/006_media_assets.sql"
+      ]
+    restart: "no"
     networks:
       - backend
 
@@ -80,6 +108,8 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
+      db-migrations:
+        condition: service_completed_successfully
       emqx:
         condition: service_healthy
     ports:
