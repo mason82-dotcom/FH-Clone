@@ -4,15 +4,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
-### Policy
-
-- DJI Dock 1, Dock 2 und Dock 3 global deaktiviert (`domain=3`)
-- Multi-Dock Runtime und Hardware-Gates entfernt
-- PSDK-Payload-/Widget-/DRC-Methoden global gesperrt
-- PSDK- und Multi-Dock-Telemetrie vor Persistenz/Normalisierung gefiltert
-- native DJI-Kamera-Payloads M3T/M4T bleiben unterstützt
-
-Keine Änderungen. V3.0.0 ist der eingefrorene Basisstand.
+Keine Änderungen nach der V3.0.0-Freigabe.
 
 ## 3.0.0 – 2026-09-23
 
@@ -28,6 +20,10 @@ Keine Änderungen. V3.0.0 ist der eingefrorene Basisstand.
 
 ### Safety und Control
 
+- DJI Cloud `stick_control` und Legacy-`drone_control` projektweit fail-closed deaktiviert
+- DJI Dock 1–3, Multi-Dock und PSDK-Payload-/Widget-/DRC-Pfade global deaktiviert
+- keine Runtime-/Environment-Schalter zur Umgehung dieser globalen Sperren
+- native DJI-Kamera-Payloads M3T/M4T bleiben davon unberührt
 - SafetyGate FC0..FC3
 - FC0 als Standard
 - Control Lease und Control Authority
@@ -71,8 +67,8 @@ Keine Änderungen. V3.0.0 ist der eingefrorene Basisstand.
 
 ### Nicht im V3.0.0-Hardware-Supportumfang
 
-- M4T FC3/DRC ohne reale Hardwareabnahme
-- Dock3/M4D/M4TD
+- manuelle DJI-Cloud-Flugsteuerung: global deaktiviert
+- DJI Dock 1–3 / Multi-Dock / PSDK: global deaktiviert
 - Pilot-2-JSBridge
 - vollständige WPML/Pilot-Wayline-Integration
 - produktive M3M-Radiometrie ohne reale Capture-Fixtures
