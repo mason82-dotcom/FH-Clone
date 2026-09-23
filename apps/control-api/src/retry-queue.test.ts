@@ -130,6 +130,10 @@ test("retain-all preserves low-volume lifecycle work beyond nominal capacity", a
   queue.enqueue(2);
   queue.enqueue(3);
 
+  // enqueue(2) starts an immediate retry while the simulated DB is still
+  // down. Let that failed in-flight attempt settle before recovery.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
   assert.equal(queue.status.pending, 3);
   assert.equal(queue.status.dropped, 0);
 
