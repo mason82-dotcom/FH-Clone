@@ -1,6 +1,8 @@
 package com.fh2.rcbridge
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import dji.v5.common.error.IDJIError
 import dji.v5.common.register.DJISDKInitEvent
@@ -13,15 +15,19 @@ data class DjiSdkSnapshot(
     val initEvent: String = "NOT_STARTED",
     val initProgress: Int = 0,
     val registered: Boolean = false,
+    val runtimeReady: Boolean = false,
     val registrationError: String? = null,
+    val runtimeError: String? = null,
     val productConnected: Boolean = false,
     val productId: Int? = null
 )
 
 object DjiSdkRuntime {
     private const val TAG = "DjiSdkRuntime"
+    private const val RUNTIME_START_DELAY_MS = 5_000L
 
     private val listeners = CopyOnWriteArrayList<(DjiSdkSnapshot) -> Unit>()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     @Volatile
     private var started = false
@@ -42,23 +48,26 @@ object DjiSdkRuntime {
                         update {
                             copy(
                                 registered = true,
-                                registrationError = null
+                                runtimeReady = false,
+                                registrationError = null,
+                                runtimeError = null
                             )
                         }
-                        RemoteControllerIdentitySource.start()
-                        AircraftTelemetrySource.start()
-                        SensorInventorySource.start()
-                        RtkTelemetrySource.start()
-                        CameraGimbalController.start()
-                        MsdkKeyManagerRuntime.start()
-                        Fh2BridgeClient.tryResume()
+
+                        mainHandler.removeCallbacksAndMessages(RUNTIME_CALLBACK_TOKEN)
+                        mainHandler.postAtTime(
+                            { initializeRuntimeComponents() },
+                            RUNTIME_CALLBACK_TOKEN,
+                            android.os.SystemClock.uptimeMillis() +
+                                RUNTIME_START_DELAY_MS
+                        )
                     }
 
                     override fun onRegisterFailure(error: IDJIError) {
-                        MsdkKeyManagerRuntime.stop()
                         update {
                             copy(
                                 registered = false,
+                                runtimeReady = false,
                                 registrationError = error.toString()
                             )
                         }
@@ -71,7 +80,17 @@ object DjiSdkRuntime {
                                 productId = productId
                             )
                         }
-                        MsdkKeyManagerRuntime.onProductDisconnected()
+
+                        if (snapshot.runtimeReady) {
+                            runCatching {
+                                MsdkKeyManagerRuntime.onProductDisconnected()
+                            }.onFailure {
+                                recordRuntimeFailure(
+                                    "PRODUCT_DISCONNECT_HANDLER_FAILED",
+                                    it
+                                )
+                            }
+                        }
                     }
 
                     override fun onProductConnect(productId: Int) {
@@ -81,8 +100,18 @@ object DjiSdkRuntime {
                                 productId = productId
                             )
                         }
-                        MsdkKeyManagerRuntime.onProductConnected()
-                        Fh2BridgeClient.tryResume()
+
+                        if (snapshot.runtimeReady) {
+                            runCatching {
+                                MsdkKeyManagerRuntime.onProductConnected()
+                                Fh2BridgeClient.tryResume()
+                            }.onFailure {
+                                recordRuntimeFailure(
+                                    "PRODUCT_CONNECT_HANDLER_FAILED",
+                                    it
+                                )
+                            }
+                        }
                     }
 
                     override fun onProductChanged(productId: Int) {
@@ -95,7 +124,8 @@ object DjiSdkRuntime {
                     ) {
                         update {
                             copy(
-                                initialized = event == DJISDKInitEvent.INITIALIZE_COMPLETE,
+                                initialized =
+                                    event == DJISDKInitEvent.INITIALIZE_COMPLETE,
                                 initEvent = event.name,
                                 initProgress = totalProcess
                             )
@@ -105,7 +135,10 @@ object DjiSdkRuntime {
                             try {
                                 SDKManager.getInstance().registerApp()
                             } catch (error: Throwable) {
-                                recordStartupFailure("REGISTER_APP_FAILED", error)
+                                recordStartupFailure(
+                                    "REGISTER_APP_FAILED",
+                                    error
+                                )
                             }
                         }
                     }
@@ -130,6 +163,39 @@ object DjiSdkRuntime {
         listeners -= listener
     }
 
+    private fun initializeRuntimeComponents() {
+        if (!snapshot.registered || snapshot.runtimeReady) return
+
+        runCatching {
+            RemoteControllerIdentitySource.start()
+            AircraftTelemetrySource.start()
+            SensorInventorySource.start()
+            RtkTelemetrySource.start()
+            CameraGimbalController.start()
+            VirtualStickController.startObserving()
+            MsdkKeyManagerRuntime.start()
+
+            // Force creation only after DJI registration. These managers are
+            // backed by runtime classes that are not safe to touch earlier on
+            // the RC Pro Enterprise Android image.
+            WaylineMissionController.snapshot
+
+            update {
+                copy(
+                    runtimeReady = true,
+                    runtimeError = null
+                )
+            }
+
+            if (snapshot.productConnected) {
+                MsdkKeyManagerRuntime.onProductConnected()
+            }
+            Fh2BridgeClient.tryResume()
+        }.onFailure {
+            recordRuntimeFailure("RUNTIME_COMPONENT_INIT_FAILED", it)
+        }
+    }
+
     private fun recordStartupFailure(
         event: String,
         error: Throwable
@@ -140,8 +206,24 @@ object DjiSdkRuntime {
                 initialized = false,
                 initEvent = event,
                 registered = false,
+                runtimeReady = false,
                 registrationError =
                     error.message ?: error.javaClass.simpleName
+            )
+        }
+    }
+
+    private fun recordRuntimeFailure(
+        event: String,
+        error: Throwable
+    ) {
+        Log.e(TAG, "DJI MSDK runtime failed at $event", error)
+        update {
+            copy(
+                runtimeReady = false,
+                runtimeError =
+                    "$event: " +
+                        (error.message ?: error.javaClass.simpleName)
             )
         }
     }
@@ -153,4 +235,6 @@ object DjiSdkRuntime {
         val current = snapshot
         listeners.forEach { it(current) }
     }
+
+    private object RUNTIME_CALLBACK_TOKEN
 }
