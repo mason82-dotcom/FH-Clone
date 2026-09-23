@@ -206,11 +206,11 @@ export class DjiPilotBridgeClient {
       ])
     ) as Record<DjiPilotModuleName, boolean>;
 
+    const version = this.getVersion();
+
     return {
       verified: true,
-      ...(this.getVersion()
-        ? { version: this.getVersion() }
-        : {}),
+      ...(version ? { version } : {}),
       identity: this.getIdentity(),
       modules,
       ...(modules.thing
