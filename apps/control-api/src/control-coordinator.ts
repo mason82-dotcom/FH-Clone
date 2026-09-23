@@ -3,8 +3,8 @@ import type {
   DrcSessionGuards,
   DrcSessionManager,
   EnterDrcModeOptions,
-  type DrcAxes,
-  type DrcStickChannels
+  DrcAxes,
+  DrcStickChannels
 } from "@fh-clone/adapter-dji-cloud";
 
 export interface DjiControlRuntime {
