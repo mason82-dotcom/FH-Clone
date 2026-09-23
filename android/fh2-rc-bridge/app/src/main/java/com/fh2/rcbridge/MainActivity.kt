@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sdkText: TextView
     private lateinit var controlText: TextView
     private lateinit var telemetryText: TextView
+    private lateinit var gatewayText: TextView
     private lateinit var sensorText: TextView
     private lateinit var rtkText: TextView
     private lateinit var enableButton: Button
@@ -36,6 +37,18 @@ class MainActivity : AppCompatActivity() {
 
             enableButton.isEnabled =
                 state.registered && state.productConnected
+        }
+    }
+
+    private val gatewayListener:
+        (RemoteControllerIdentitySnapshot) -> Unit = { state ->
+        runOnUiThread {
+            gatewayText.text = buildString {
+                appendLine("Gateway / Remote Controller")
+                appendLine("Verbunden: ${state.connected}")
+                appendLine("RC-SN: ${state.serialNumber ?: "-"}")
+                append("Firmware: ${state.firmwareVersion ?: "-"}")
+            }
         }
     }
 
@@ -141,6 +154,9 @@ class MainActivity : AppCompatActivity() {
         telemetryText = TextView(this).apply {
             textSize = 18f
         }
+        gatewayText = TextView(this).apply {
+            textSize = 18f
+        }
         sensorText = TextView(this).apply {
             textSize = 18f
         }
@@ -215,6 +231,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(32, 32, 32, 32)
             addView(notice, matchWidth())
             addView(sdkText, matchWidth(top = 24))
+            addView(gatewayText, matchWidth(top = 24))
             addView(telemetryText, matchWidth(top = 24))
             addView(sensorText, matchWidth(top = 24))
             addView(rtkText, matchWidth(top = 24))
@@ -237,6 +254,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         DjiSdkRuntime.addListener(sdkListener)
+        RemoteControllerIdentitySource.addListener(gatewayListener)
         AircraftTelemetrySource.addListener(telemetryListener)
         SensorInventorySource.addListener(sensorListener)
         RtkTelemetrySource.addListener(rtkListener)
@@ -245,6 +263,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         DjiSdkRuntime.removeListener(sdkListener)
+        RemoteControllerIdentitySource.removeListener(gatewayListener)
         AircraftTelemetrySource.removeListener(telemetryListener)
         SensorInventorySource.removeListener(sensorListener)
         RtkTelemetrySource.removeListener(rtkListener)
