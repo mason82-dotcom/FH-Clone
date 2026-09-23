@@ -84,8 +84,15 @@ export interface MsdkBridgeSnapshot {
     lastError?: string | null | undefined;
   } | undefined;
   control: {
-    enabled: boolean;
-    authorityOwner: string;
+    networkArmed: boolean;
+    networkArmedAt?: number | null | undefined;
+    virtualStick: {
+      enabled: boolean;
+      advancedMode?: boolean | undefined;
+      authorityOwner: string;
+      changeReason?: string | undefined;
+      lastError?: string | null | undefined;
+    };
   };
   capabilities: Record<string, boolean>;
 }
@@ -332,8 +339,21 @@ export function isMsdkBridgeSnapshot(
   }
 
   if (!isRecord(value.control)) return false;
-  if (typeof value.control.enabled !== "boolean") return false;
-  if (typeof value.control.authorityOwner !== "string") return false;
+  if (typeof value.control.networkArmed !== "boolean") return false;
+  if (
+    value.control.networkArmedAt !== undefined &&
+    value.control.networkArmedAt !== null &&
+    !finiteNumber(value.control.networkArmedAt)
+  ) {
+    return false;
+  }
+  if (!isRecord(value.control.virtualStick)) return false;
+  if (typeof value.control.virtualStick.enabled !== "boolean") return false;
+  if (
+    typeof value.control.virtualStick.authorityOwner !== "string"
+  ) {
+    return false;
+  }
 
   if (!isRecord(value.capabilities)) return false;
   if (
