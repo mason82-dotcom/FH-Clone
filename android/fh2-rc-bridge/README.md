@@ -32,6 +32,9 @@ Implementiert:
 - Payload-Port-Verbindungen + ProductName
 - RTKCenter System State und RTK-Location
 - RTK Solution, Source, Standardabweichungen und Satellitenzahlen
+- Live-Karte auf MapLibre 10.3.5
+- Aircraft-, Home-, RC-Pro- und RTK-Marker
+- Live-Flugspur + Aircraft-Follow
 - kanonischer FH2 BridgeSnapshot als JSON
 - lokaler Hardware-Evidence-Export in den App-Dateibereich
 - Capability-Ableitung nur aus MSDK CameraType/Component-State
@@ -49,7 +52,7 @@ Nicht implementiert:
 - noch kein FH2-Control-WebSocket
 - Pairing + read-only Snapshot-Heartbeat sind implementiert
 - noch keine Remote-Control-Freigabe aus dem Netzwerk
-- Kamera/Gimbal/RTK/Wayline folgen separat
+- Kamera/Gimbal/RTK-Inventar ist vorhanden; Wayline folgt separat
 
 ## DJI App Key
 
@@ -223,3 +226,61 @@ gradle wrapper --gradle-version 8.13
 ```
 
 Danach kann regulär mit `./gradlew :app:assembleDebug` gebaut werden.
+
+
+## Kartenfunktion
+
+Die RC-App besitzt eine eigene Live-Karte auf **MapLibre 10.3.5**. Diese
+Version entspricht der MapLibre-Basis im offiziellen DJI-V5-UXSDK-Sample.
+
+Dargestellt werden ausschließlich reale MSDK-Werte:
+
+```text
+Aircraft  <- FlightControllerKey.KeyAircraftLocation3D
+Home      <- FlightControllerKey.KeyHomeLocation
+RC Pro    <- RemoteControllerKey.KeyRcGPSInfo
+RTK       <- RTKCenter / RTKLocationInfo
+Flugspur  <- laufende Aircraft-Position
+Heading   <- FlightControllerKey.KeyCompassHeading
+```
+
+Funktionen:
+
+- Aircraft-Marker
+- Home-Marker
+- RC-Pro-GPS-Marker
+- RTK-Mobile-Station-Marker
+- Live-Flugspur
+- Aircraft-Follow an/aus
+- Flugspur löschen
+- vollständiger MapView-Lifecycle
+
+Der Kartenstil ist konfigurierbar. Standard für Entwicklung:
+
+```properties
+FH2_MAP_STYLE_URL=https://demotiles.maplibre.org/style.json
+```
+
+Für Produktion kann in `~/.gradle/gradle.properties` ein eigener
+HTTPS-Style-/Tile-Server gesetzt werden:
+
+```properties
+FH2_MAP_STYLE_URL=https://maps.example.local/styles/fh2/style.json
+```
+
+Die App bleibt bei `android:usesCleartextTraffic="false"`; produktive
+Kartenquellen sollen daher HTTPS verwenden.
+
+### Geplante Kartenlayer
+
+Die Struktur ist vorbereitet für:
+
+- Wayline/Missionsroute
+- UgCS-Routen
+- Thermal-Capture-Punkte
+- Multispektral-/NDVI-Captures
+- Geofences/FlySafe
+- spätere FH2-Backend-Overlays
+
+Die Karte berechnet keine erfundenen Positionen oder Footprints. Fehlt ein
+MSDK-/Backend-Datensatz, wird der entsprechende Layer nicht gezeichnet.
