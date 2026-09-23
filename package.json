@@ -17,6 +17,7 @@
     "test:authz": "npm run build && node --test apps/control-api/dist/authz.test.js",
     "test:msdk-evidence": "node --test scripts/verify-msdk-evidence.test.mjs",
     "test:msdk-media-lifecycle": "node --test scripts/verify-msdk-media-lifecycle.test.mjs",
+    "test:msdk-control-deadman": "node --test scripts/verify-msdk-control-deadman.test.mjs",
     "test:github-support-handoff": "node --test scripts/github-sensitive-data-support-handoff.test.mjs",
     "verify:msdk-evidence": "node scripts/verify-msdk-evidence.mjs",
     "test:pilot2-jsbridge": "node --test scripts/verify-pilot2-jsbridge.test.mjs",
