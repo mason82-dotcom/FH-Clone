@@ -249,6 +249,18 @@ Die App akzeptiert `session_start` nur bei lokaler Netzwerkfreigabe. Sie
 fordert dann MSDK Virtual Stick an und bestätigt `session_ready` erst,
 wenn `authorityOwner == MSDK` gemeldet wird.
 
+Transport-Lifecycle:
+
+- ein gültiges HMAC-Agent-Token darf den WSS-Transport nach einem
+  Control-API-Prozessneustart erneut authentisieren; eine Control-Session bleibt
+  trotzdem gesperrt, bis wieder ein frischer Snapshot-Heartbeat vorliegt
+- nach einem transienten WSS-Abbruch versucht die Android-App den Control-Kanal
+  nur nach erfolgreichem Heartbeat erneut aufzubauen, mit 3 s Mindestabstand
+- Tokenablauf schließt den Backend-Socket mit Code `4003` und beendet eine
+  aktive Session vorher mit `neutral` + `session_stop`
+- ein ersetzter Agent-Socket beendet eine laufende Session ebenfalls zuerst
+  fail-closed; eine neue Verbindung übernimmt niemals eine alte Session
+
 Fail-closed:
 
 - lokales Disarm -> Neutral + Authority release

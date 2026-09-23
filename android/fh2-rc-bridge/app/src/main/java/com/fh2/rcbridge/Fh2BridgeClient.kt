@@ -249,6 +249,14 @@ object Fh2BridgeClient {
                         return@scheduleAtFixedRate
                     }
 
+                    if (
+                        current.expiresAt != null &&
+                        current.expiresAt <= System.currentTimeMillis()
+                    ) {
+                        expirePairing("agent_token_expired_local")
+                        return@scheduleAtFixedRate
+                    }
+
                     runCatching {
                         postJson(
                             "$baseUrl/api/msdk/heartbeat",
@@ -263,6 +271,14 @@ object Fh2BridgeClient {
                                 lastError = null
                             )
                         }
+
+                        current.aircraftSn?.let { aircraftSn ->
+                            MsdkControlClient.ensureConnected(
+                                baseUrl = baseUrl,
+                                agentToken = token,
+                                aircraftSn = aircraftSn
+                            )
+                        }
                     }.onFailure { error ->
                         val message =
                             error.message ?: error.toString()
@@ -272,17 +288,7 @@ object Fh2BridgeClient {
                             message.startsWith("http_401") ||
                             message.startsWith("http_403")
                         ) {
-                            agentToken = null
-                            clearStoredPairing()
-                            stopHeartbeat()
-                            MsdkControlClient.disconnect("agent_token_expired")
-                            NetworkControlArm.disarm()
-                            update {
-                                copy(
-                                    status = "expired",
-                                    lastError = message
-                                )
-                            }
+                            expirePairing(message)
                         }
                     }
                 },
@@ -295,6 +301,20 @@ object Fh2BridgeClient {
     private fun stopHeartbeat() {
         heartbeatTask?.cancel(false)
         heartbeatTask = null
+    }
+
+    private fun expirePairing(reason: String) {
+        agentToken = null
+        clearStoredPairing()
+        stopHeartbeat()
+        MsdkControlClient.disconnect("agent_token_expired")
+        NetworkControlArm.disarm()
+        update {
+            copy(
+                status = "expired",
+                lastError = reason
+            )
+        }
     }
 
     private fun clearStoredPairing() {

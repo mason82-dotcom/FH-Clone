@@ -43,6 +43,9 @@ object MsdkControlClient {
     private var socket: WebSocket? = null
 
     @Volatile
+    private var lastConnectAttemptAt = 0L
+
+    @Volatile
     private var sessionId: String? = null
 
     @Volatile
@@ -62,6 +65,7 @@ object MsdkControlClient {
         aircraftSn: String
     ) {
         disconnect("reconnect")
+        lastConnectAttemptAt = SystemClock.elapsedRealtime()
 
         if (!armListenerRegistered) {
             NetworkControlArm.addListener(armListener)
@@ -149,6 +153,26 @@ object MsdkControlClient {
                     }
                 }
             )
+    }
+
+    fun ensureConnected(
+        baseUrl: String,
+        agentToken: String,
+        aircraftSn: String
+    ) {
+        val status = snapshot.status
+        if (
+            status == "connecting" ||
+            status == "connected" ||
+            status == "starting" ||
+            status == "active"
+        ) {
+            return
+        }
+
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastConnectAttemptAt < RECONNECT_BACKOFF_MS) return
+        connect(baseUrl, agentToken, aircraftSn)
     }
 
     fun disconnect(reason: String = "operator_disconnect") {
@@ -518,4 +542,6 @@ object MsdkControlClient {
         val current = snapshot
         listeners.forEach { it(current) }
     }
+
+    private const val RECONNECT_BACKOFF_MS = 3_000L
 }
