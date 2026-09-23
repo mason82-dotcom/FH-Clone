@@ -197,11 +197,36 @@ cleanup_verify_marker() {
 }
 
 cleanup_verify_artifacts() {
-  cleanup_verify_credential || true
-  cleanup_verify_marker || true
+  cleanup_failed=0
+
+  if ! cleanup_verify_credential; then
+    cleanup_failed=1
+  fi
+
+  if ! cleanup_verify_marker; then
+    cleanup_failed=1
+  fi
+
+  return "$cleanup_failed"
 }
 
-trap 'status=$?; trap - 0; cleanup_verify_artifacts; exit "$status"' 0
+finish_verify() {
+  original_status=$?
+  final_status=$original_status
+
+  trap - 0 INT TERM
+
+  if ! cleanup_verify_artifacts; then
+    echo "FEHLER: Verify-Cleanup konnte nicht vollständig abgeschlossen werden." >&2
+    if [ "$final_status" -eq 0 ]; then
+      final_status=1
+    fi
+  fi
+
+  exit "$final_status"
+}
+
+trap 'finish_verify' 0
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
