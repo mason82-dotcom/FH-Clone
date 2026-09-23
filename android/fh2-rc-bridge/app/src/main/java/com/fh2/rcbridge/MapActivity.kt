@@ -9,16 +9,16 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import org.maplibre.android.MapLibre
-import org.maplibre.android.annotations.Marker
-import org.maplibre.android.annotations.MarkerOptions
-import org.maplibre.android.annotations.Polyline
-import org.maplibre.android.annotations.PolylineOptions
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
+import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.annotations.Marker
+import com.mapbox.mapboxsdk.annotations.MarkerOptions
+import com.mapbox.mapboxsdk.annotations.Polyline
+import com.mapbox.mapboxsdk.annotations.PolylineOptions
+import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import com.mapbox.mapboxsdk.geometry.LatLng
+import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.MapView
+import com.mapbox.mapboxsdk.maps.Style
 import kotlin.math.abs
 
 class MapActivity : AppCompatActivity() {
@@ -26,7 +26,7 @@ class MapActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     private lateinit var followButton: Button
 
-    private var map: MapLibreMap? = null
+    private var map: MapboxMap? = null
     private var styleReady = false
     private var followAircraft = true
 
@@ -61,7 +61,7 @@ class MapActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        MapLibre.getInstance(this)
+        Mapbox.getInstance(this)
 
         mapView = MapView(this)
         statusText = TextView(this).apply {
