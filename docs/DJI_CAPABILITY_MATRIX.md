@@ -90,7 +90,7 @@ Es gibt keinen Environment- oder Runtime-Schalter zur Reaktivierung.
 | Payload-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `payload.control`-Werbung |
 | Cloud-Control-Authority | DJI Pilot-to-Cloud | DJI dokumentiert | M3 + RC Pro und M4 + RC Plus 2: an; Consent/State muss positiv bestätigt sein |
 | Stick-Control | für M3/RC Pro nicht verwendet | DJI dokumentiert | M3: aus; M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
-| `drone_control` | DJI Pilot-to-Cloud dokumentiert | DJI dokumentiert | M3 + RC Pro und M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
+| `drone_control` | **keine Cloud-Flugsteuerung** | DJI dokumentiert | M3: aus; M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
 | Return-to-Home | nicht freigegeben | DJI dokumentiert `return_home` / `return_home_cancel` | nicht implementiert |
 | FlyTo | nicht freigegeben | DJI dokumentiert | M4: `DrcController.flyToPoint()` implementiert |
 | Pointing Flight | nicht freigegeben | DJI dokumentiert | nicht implementiert |
@@ -111,20 +111,20 @@ DJI beschreibt für den Pilot-to-Cloud-Live-Control-Pfad:
 - Zoom
 - Infrarot-Funktionen bei geeigneter Kamera
 
-DJI Pilot-to-Cloud dokumentiert für die Mavic-3-Enterprise-Serie einen
-DRC-Live-Control-Pfad und nennt `drone_control` als Flight-Control-Methode,
-die Flight-Control-Authority benötigt. Zusätzlich sind Payload-/Kamera-/
-Gimbal-Kommandos dokumentiert.
+DJI grenzt die Mavic-3-Enterprise-Serie im Pilot-to-Cloud-Pfad auf
+Cloud-Payload-Control ein. Cloud-Flugsteuerung ist dort nicht unterstützt;
+die Fernsteuerung kann während des Cloud-Payload-Control weiter manuell
+geflogen werden.
 
-FH2 aktiviert hinter RC Pro Enterprise:
+FH2 aktiviert hinter RC Pro Enterprise daher:
 
 ```text
 cloudControl   = true
-flightControl  = true
+flightControl  = false
 stickControl   = false
-droneControl   = true
+droneControl   = false
 payloadControl = true
-DrcProfile     = pilot-m3-drone
+DrcProfile     = none
 FlyTo          = false
 ```
 
