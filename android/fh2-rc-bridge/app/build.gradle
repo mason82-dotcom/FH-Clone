@@ -6,6 +6,10 @@ plugins {
 def fh2MapStyleUrl =
     project.findProperty("FH2_MAP_STYLE_URL") ?:
         "https://demotiles.maplibre.org/style.json"
+def fh2MapStyleUrlEscaped =
+    fh2MapStyleUrl
+        .replace("\\", "\\\\")
+        .replace(""", "\\"")
 
 android {
     namespace "com.fh2.rcbridge"
@@ -18,6 +22,12 @@ android {
         targetSdk Integer.parseInt(project.ANDROID_TARGET_SDK_VERSION)
         versionCode 1
         versionName "0.1.0"
+
+        buildConfigField(
+            "String",
+            "FH2_MAP_STYLE_URL",
+            "\"" + fh2MapStyleUrlEscaped + "\""
+        )
 
         manifestPlaceholders = [
             DJI_API_KEY: project.findProperty("AIRCRAFT_API_KEY") ?: ""
