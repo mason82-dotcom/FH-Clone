@@ -1,6 +1,5 @@
 package com.fh2.rcbridge
 
-import java.io.BufferedReader
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -246,9 +245,10 @@ object Fh2BridgeClient {
                 }
 
             val responseText =
-                stream?.bufferedReader(Charsets.UTF_8)?.use(
-                    BufferedReader::readText
-                ).orEmpty()
+                stream
+                    ?.bufferedReader(Charsets.UTF_8)
+                    ?.use { reader -> reader.readText() }
+                    .orEmpty()
 
             if (status !in 200..299) {
                 throw IllegalStateException(
