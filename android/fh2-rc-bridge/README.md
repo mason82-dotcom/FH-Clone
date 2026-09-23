@@ -180,9 +180,25 @@ manuell eingegebener MSDK_PAIRING_TOKEN
   -> fh2.msdk.v1 BridgeSnapshot
 ```
 
-Der Pairing-Token wird nicht gespeichert. Das Agent-Token bleibt in diesem
-Entwicklungsstand ausschließlich im Prozessspeicher und geht beim App-Neustart
-verloren.
+Der Bootstrap-Pairing-Token wird **nie** gespeichert.
+
+Das vom Backend ausgestellte Agent-Token wird dagegen verschlüsselt mit
+Android Keystore (`AES/GCM`) gespeichert. Der Klartext liegt weder in
+SharedPreferences noch in einer Datei.
+
+Automatisches Resume erfolgt nur, wenn nach dem App-Neustart gleichzeitig:
+
+```text
+MSDK registriert
++ DJI-Produkt verbunden
++ RC-SN == gespeicherte gatewaySn
++ Flight-Controller-SN == gespeicherte aircraftSn
++ Agent-Token noch nicht abgelaufen
+```
+
+gelten. Bei anderer RC/Aircraft-Kombination bleibt der gespeicherte Pairing-
+Datensatz fail-closed. Bei `401/403`, Tokenablauf oder explizitem Trennen wird
+er gelöscht.
 
 Release-Builds akzeptieren nur HTTPS. Der Debug-Build erlaubt HTTP
 ausschließlich für localhost beziehungsweise private RFC1918-LAN-Adressen.
@@ -397,3 +413,39 @@ Android/data/com.fh2.rcbridge/files/media/
 Es gibt keinen automatischen Media-Sync und keinen automatischen Upload zum
 FH2-Backend. Beim Verlassen des Screens werden laufende Pulls beendet und der
 MediaManager wieder deaktiviert.
+
+
+## CI-APK
+
+Der Workflow **Android MSDK Validation** erzeugt nach erfolgreichem
+`assembleDebug` + `lintDebug` ein Hardware-Test-Artefakt:
+
+```text
+fh2-rc-bridge-debug.apk
+fh2-rc-bridge-debug.apk.sha256
+BUILD_INFO.txt
+```
+
+`BUILD_INFO.txt` enthält Commit, MSDK-Version, Application-ID, SHA-256 und
+nur die Information, ob ein DJI-App-Key beim Build konfiguriert war.
+
+Ein DJI-App-Key wird niemals in das Artefakt-Metadatenfile geschrieben.
+
+Optionales GitHub-Secret:
+
+```text
+DJI_MSDK_APP_KEY
+```
+
+Ist es vorhanden, wird es ausschließlich für den Gradle-Build nach
+`~/.gradle/gradle.properties` injiziert. Fehlt es, bleibt das APK ein
+Compile-/UI-Testbuild und kann sich bei DJI nicht erfolgreich registrieren.
+
+Installation auf einer für Drittanbieter-Apps freigegebenen RC per ADB:
+
+```bash
+adb install -r fh2-rc-bridge-debug.apk
+```
+
+Vor dem Hardwaretest die SHA-256 aus
+`fh2-rc-bridge-debug.apk.sha256` gegen das APK prüfen.
