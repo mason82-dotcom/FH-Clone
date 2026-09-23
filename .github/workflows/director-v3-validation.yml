@@ -188,6 +188,11 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: Pilot2 JSBridge Safety
+        run: |
+          npm run test:pilot2-jsbridge
+          npm run verify:pilot2-jsbridge
+
   ugcs:
     name: UgCS-Bridge
     if: ${{ !inputs.r1_bootstrap }}
@@ -354,101 +359,3 @@ jobs:
       - name: Evidence-Vertrag muss vorhanden sein
         if: always()
         run: test -s docs/HARDWARE_EVIDENCE.md
-
-  draft-analysis:
-    name: "Draft #${{ matrix.pr }} · ${{ matrix.label }}"
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.r1_bootstrap && inputs.analyze_drafts) }}
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-    steps:
-      - name: Aktuellen main auschecken
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Draft und Branch-Drift erfassen
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "refs/heads/${{ matrix.ref }}:refs/remotes/origin/${{ matrix.ref }}"
-          behind="$(git rev-list --count "origin/${{ matrix.ref }}..origin/main")"
-          ahead="$(git rev-list --count "origin/main..origin/${{ matrix.ref }}")"
-          merge_base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
-          {
-            printf '## Draft #%s – %s\n\n' '${{ matrix.pr }}' '${{ matrix.label }}'
-            printf -- '- Branch: %s\n' '${{ matrix.ref }}'
-            printf -- '- Ahead gegenüber main: **%s**\n' "$ahead"
-            printf -- '- Behind gegenüber main: **%s**\n' "$behind"
-            printf -- '- Merge-Base: %s\n' "$merge_base"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Ephemeren main+Draft-Stand erzeugen
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "FH2 Director CI"
-          git config user.email "director-ci@users.noreply.github.com"
-          git checkout -B "ci-draft-${{ matrix.pr }}" "origin/${{ matrix.ref }}"
-          if ! git merge --no-commit --no-ff origin/main; then
-            {
-              echo
-              echo "### Ergebnis"
-              echo
-              echo "**MERGE_CONFLICT**"
-              echo
-              echo "Konfliktdateien:"
-              git diff --name-only --diff-filter=U | sed 's/^/- /'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-
-      - name: Node.js 22.23.2 und npm 11.19.1
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22.23.2"
-
-      - name: npm 11.19.1 einrichten
-        run: |
-          set -euo pipefail
-          npm install --global npm@11.19.1 --no-audit --no-fund
-          test "$(npm --version)" = "11.19.1"
-
-      - name: Reproduzierbar installieren
-        run: npm ci --no-audit --no-fund
-
-      - name: Build
-        run: npm run build
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Tests
-        run: npm test
-
-      - name: Draft-spezifische Safety-Grenzen prüfen
-        shell: bash
-        run: |
-          set -euo pipefail
-          base="$(git merge-base origin/main "origin/${{ matrix.ref }}")"
-          patch="/tmp/pr-${{ matrix.pr }}.patch"
-          git diff "$base..origin/${{ matrix.ref }}" > "$patch"
-
-          case "${{ matrix.pr }}" in
-          esac
-
-      - name: Draft-Ergebnis dokumentieren
-        if: success()
-        run: |
-          {
-            echo
-            echo "### Ergebnis"
-            echo
-            echo "**MERGE_SIMULATION_BUILD_TEST_PASS**"
-            echo
-            echo "Hardware-Evidence wird separat im zentralen Hardware-Evidence-Job bewertet."
-          } >> "$GITHUB_STEP_SUMMARY"
