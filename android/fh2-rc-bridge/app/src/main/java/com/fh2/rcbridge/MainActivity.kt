@@ -25,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var evidenceButton: Button
     private lateinit var mapButton: Button
     private lateinit var bridgeText: TextView
+    private lateinit var payloadControlText: TextView
     private lateinit var baseUrlInput: EditText
     private lateinit var pairingTokenInput: EditText
     private lateinit var pairButton: Button
@@ -153,6 +154,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val payloadControlListener:
+        (CameraGimbalControlSnapshot) -> Unit = { state ->
+        runOnUiThread {
+            payloadControlText.text = buildString {
+                appendLine("Kamera / Gimbal")
+                appendLine("Kamera: ${state.cameraIndex}")
+                appendLine("Foto aktiv: ${state.isShootingPhoto}")
+                appendLine("Video aktiv: ${state.isRecording}")
+                state.lastAction?.let {
+                    appendLine("Letzte Aktion: $it")
+                }
+                state.lastError?.let {
+                    append("Fehler: $it")
+                }
+            }.trimEnd()
+        }
+    }
+
     private val controlListener: (VirtualStickSnapshot) -> Unit = { state ->
         runOnUiThread {
             controlText.text = buildString {
@@ -194,6 +213,9 @@ class MainActivity : AppCompatActivity() {
         bridgeText = TextView(this).apply {
             textSize = 18f
         }
+        payloadControlText = TextView(this).apply {
+            textSize = 18f
+        }
         baseUrlInput = EditText(this).apply {
             hint = "FH2 URL, z. B. https://fh2.example:8080"
             inputType =
@@ -207,6 +229,57 @@ class MainActivity : AppCompatActivity() {
                 InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_VARIATION_PASSWORD
             setSingleLine(true)
+        }
+
+        val photoButton = Button(this).apply {
+            text = "Foto"
+            setOnClickListener {
+                CameraGimbalController.shootPhoto { result ->
+                    showLocalActionResult("Foto", result)
+                }
+            }
+        }
+
+        val startVideoButton = Button(this).apply {
+            text = "Video starten"
+            setOnClickListener {
+                CameraGimbalController.startRecording { result ->
+                    showLocalActionResult("Video starten", result)
+                }
+            }
+        }
+
+        val stopVideoButton = Button(this).apply {
+            text = "Video stoppen"
+            setOnClickListener {
+                CameraGimbalController.stopRecording { result ->
+                    showLocalActionResult("Video stoppen", result)
+                }
+            }
+        }
+
+        val gimbalUpButton = Button(this).apply {
+            text = "Gimbal hoch"
+            setOnClickListener {
+                CameraGimbalController.nudgeGimbal(
+                    pitchSpeedDegS = 20.0,
+                    yawSpeedDegS = 0.0
+                ) { result ->
+                    showLocalActionResult("Gimbal hoch", result)
+                }
+            }
+        }
+
+        val gimbalDownButton = Button(this).apply {
+            text = "Gimbal runter"
+            setOnClickListener {
+                CameraGimbalController.nudgeGimbal(
+                    pitchSpeedDegS = -20.0,
+                    yawSpeedDegS = 0.0
+                ) { result ->
+                    showLocalActionResult("Gimbal runter", result)
+                }
+            }
         }
 
         enableButton = Button(this).apply {
@@ -319,7 +392,13 @@ class MainActivity : AppCompatActivity() {
             addView(sensorText, matchWidth(top = 24))
             addView(rtkText, matchWidth(top = 24))
             addView(bridgeText, matchWidth(top = 24))
-            addView(baseUrlInput, matchWidth(top = 12))
+            addView(payloadControlText, matchWidth(top = 24))
+            addView(photoButton, matchWidth(top = 12))
+            addView(startVideoButton, matchWidth(top = 12))
+            addView(stopVideoButton, matchWidth(top = 12))
+            addView(gimbalUpButton, matchWidth(top = 12))
+            addView(gimbalDownButton, matchWidth(top = 12))
+            addView(baseUrlInput, matchWidth(top = 24))
             addView(pairingTokenInput, matchWidth(top = 12))
             addView(pairButton, matchWidth(top = 12))
             addView(unpairButton, matchWidth(top = 12))
@@ -348,6 +427,7 @@ class MainActivity : AppCompatActivity() {
         SensorInventorySource.addListener(sensorListener)
         RtkTelemetrySource.addListener(rtkListener)
         Fh2BridgeClient.addListener(bridgeListener)
+        CameraGimbalController.addListener(payloadControlListener)
         VirtualStickController.addListener(controlListener)
     }
 
@@ -358,8 +438,24 @@ class MainActivity : AppCompatActivity() {
         SensorInventorySource.removeListener(sensorListener)
         RtkTelemetrySource.removeListener(rtkListener)
         Fh2BridgeClient.removeListener(bridgeListener)
+        CameraGimbalController.removeListener(payloadControlListener)
         VirtualStickController.removeListener(controlListener)
         super.onDestroy()
+    }
+
+    private fun showLocalActionResult(
+        action: String,
+        result: Result<Unit>
+    ) {
+        result.exceptionOrNull()?.let { error ->
+            runOnUiThread {
+                Toast.makeText(
+                    this,
+                    "$action fehlgeschlagen: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun matchWidth(top: Int = 0): LinearLayout.LayoutParams =
