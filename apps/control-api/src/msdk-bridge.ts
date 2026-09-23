@@ -54,15 +54,15 @@ interface MsdkTokenPayload {
 }
 
 export interface MsdkBridgeServiceOptions {
-  pairingToken?: string;
-  signingSecret?: string;
-  tokenTtlMs?: number;
-  now?: () => number;
+  pairingToken?: string | undefined;
+  signingSecret?: string | undefined;
+  tokenTtlMs?: number | undefined;
+  now?: (() => number) | undefined;
 }
 
 export class MsdkBridgeService {
-  private readonly pairingToken?: string;
-  private readonly signingSecret?: string;
+  private readonly pairingToken: string | undefined;
+  private readonly signingSecret: string | undefined;
   private readonly tokenTtlMs: number;
   private readonly now: () => number;
   private readonly agents = new Map<string, MsdkAgentRecord>();
@@ -272,7 +272,7 @@ function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function isRecord(value: unknown): value is Record<string, any> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
