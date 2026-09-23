@@ -12,7 +12,11 @@ function snapshot(): MsdkBridgeSnapshot {
     gateway: {
       connected: true,
       serialNumber: "RC-PRO-001",
-      firmwareVersion: "01.02"
+      firmwareVersion: "01.02",
+      rcGpsValid: true,
+      rcLatitude: 49.121,
+      rcLongitude: 8.581,
+      rcAccuracyM: 2.5
     },
     aircraft: {
       flightControllerConnected: true,
@@ -20,7 +24,10 @@ function snapshot(): MsdkBridgeSnapshot {
       flightControllerSerial: "M3T-001",
       latitude: 49.12,
       longitude: 8.58,
-      altitudeM: 123.4
+      altitudeM: 123.4,
+      homeLatitude: 49.119,
+      homeLongitude: 8.579,
+      headingDeg: 187.5
     },
     sensors: [
       {
@@ -40,6 +47,12 @@ function snapshot(): MsdkBridgeSnapshot {
       stdLongitude: 0.01,
       stdLatitude: 0.01,
       stdAltitude: 0.02
+    },
+    payloadControl: {
+      cameraIndex: "LEFT_OR_MAIN",
+      isShootingPhoto: false,
+      isRecording: true,
+      lastAction: "start_record"
     },
     control: {
       enabled: false,
@@ -82,4 +95,17 @@ test("normalizes MSDK snapshot into common device and telemetry registries", () 
   assert.equal(values.get("flight.position.longitude_deg"), 8.58);
   assert.equal(values.get("navigation.rtk.fix_status"), "FIXED_POINT");
   assert.deepEqual(values.get("raw.msdk.camera.types"), ["M3T"]);
+  assert.equal(values.get("flight.home.latitude_deg"), 49.119);
+  assert.equal(values.get("flight.home.longitude_deg"), 8.579);
+  assert.equal(values.get("flight.heading_deg"), 187.5);
+  assert.equal(values.get("raw.msdk.gateway.gps.latitude_deg"), 49.121);
+  assert.equal(values.get("raw.msdk.gateway.gps.accuracy_m"), 2.5);
+  assert.equal(
+    values.get("raw.msdk.payload_control.is_recording"),
+    true
+  );
+  assert.equal(
+    values.get("raw.msdk.payload_control.last_action"),
+    "start_record"
+  );
 });
