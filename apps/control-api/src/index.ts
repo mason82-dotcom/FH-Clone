@@ -11,6 +11,8 @@ import {
   InMemoryDrcSessionStore,
   isDjiM3mMediaInput,
   normalizeDjiM3mMediaMetadata,
+  DjiPilotWaylineCatalogError,
+  DjiPilotWaylineCatalogNotConfigured,
   type DjiCloudAdapterOptions,
   type DjiProductRef
 } from "@fh-clone/adapter-dji-cloud";
@@ -36,6 +38,10 @@ import { RtkTelemetryService } from "./rtk-service.js";
 import { MissionSessionTracker } from "./mission-session.js";
 import { MissionStore } from "./mission-store.js";
 import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
+import {
+  createDjiPilotWaylineCatalogFromEnv,
+  parseDjiPilotWaylineListQuery
+} from "./dji-pilot-waylines.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 import { ControlCoordinator } from "./control-coordinator.js";
@@ -50,6 +56,7 @@ import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 const fh2 = createFh2OpenApiFromEnv();
+const djiPilotWaylines = createDjiPilotWaylineCatalogFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
 
@@ -407,6 +414,38 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/fh2/status") {
       return json(response, 200, fh2.status());
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/dji/pilot/waylines/status") {
+      return json(response, 200, djiPilotWaylines.status());
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/dji/pilot/waylines") {
+      try {
+        return json(
+          response,
+          200,
+          await djiPilotWaylines.listWaylines(
+            parseDjiPilotWaylineListQuery(url)
+          )
+        );
+      } catch (error) {
+        if (error instanceof DjiPilotWaylineCatalogNotConfigured) {
+          return json(response, 503, {
+            error: "dji_pilot_waylines_not_configured"
+          });
+        }
+        if (error instanceof DjiPilotWaylineCatalogError) {
+          console.warn(
+            "[DJI Pilot Waylines] Upstream-Fehler:",
+            error.message
+          );
+          return json(response, 502, {
+            error: "dji_pilot_waylines_upstream_error"
+          });
+        }
+        throw error;
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/fh2/waylines") {

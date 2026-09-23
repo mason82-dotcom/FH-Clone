@@ -365,9 +365,6 @@ jobs:
           - pr: 46
             ref: agent/dji-jsbridge-v3
             label: Pilot2 JSBridge
-          - pr: 51
-            ref: agent/wpml-integration-current-v1
-            label: WPML aktuelle Integration
     steps:
       - name: Aktuellen main auschecken
         uses: actions/checkout@v4
@@ -448,14 +445,6 @@ jobs:
                 const fs = require("fs");
                 JSON.parse(fs.readFileSync("docs/contracts/msdk-keymanager-contract.json", "utf8"));
               '
-              ;;
-            51)
-              if git diff "$base..origin/${{ matrix.ref }}" -- apps/control-api/src packages/adapters/dji-cloud/src \
-                | grep '^+' \
-                | grep -E 'request\.method === "(POST|PUT|PATCH|DELETE)"|wayline_(upload|create|execute|start)|flighttask_(execute|prepare)'; then
-                echo "::error::PR #51 verletzt die read-only WPML-/Pilot-Grenze."
-                exit 1
-              fi
               ;;
             46)
               if git diff "$base..origin/${{ matrix.ref }}" -- .env.example apps/web infra/docker                 | grep '^+'                 | grep -Ei 'VITE_.*(MQTT.*PASSWORD|EMQX.*TOKEN|DRC.*PASSWORD|AUTH_TOKEN)'; then

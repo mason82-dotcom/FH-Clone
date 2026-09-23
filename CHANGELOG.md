@@ -7,6 +7,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - M3E/M3T/M3TA + RC Pro auf den offiziell dokumentierten Cloud-Payload-Control-Vertrag korrigiert; Cloud-Flugsteuerung (`stick_control`/`drone_control`) bleibt für M3 aus.
 - M4E/M4T + RC Plus 2 bleibt das separate Cloud-Flight-Control-Profil.
 - `ControlCoordinator` wird im Control-API-Prozess tatsächlich instanziiert; Runtime-Status ist read-only sichtbar, öffentliche Flight-Control-Schreibendpunkte bleiben deaktiviert.
+- read-only WPML/KMZ-Parser sowie serverseitiger Pilot-Wayline-Katalog integriert; kein Upload, Collect oder Missionsstart.
 
 ## 3.0.0 – 2026-09-23
 
@@ -76,6 +77,6 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - M4/RC-Plus-2-Cloud-Flight-Control ohne reale DRC-/Authority-Hardwareabnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK: global deaktiviert
 - Pilot-2-JSBridge
-- vollständige WPML/Pilot-Wayline-Integration
+- reale Pilot-2-WPML-/Workspace-Hardwarefreigabe ohne reales Evidence-Fixture
 - produktive M3M-Radiometrie ohne reale Capture-Fixtures
 - nicht belegte M3T/M4T Thermal-/Tele-Medienpfade

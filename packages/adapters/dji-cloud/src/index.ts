@@ -566,3 +566,5 @@ export function parseDrcStatusNotify(message: unknown): 0 | 1 | 2 | undefined {
 }
 
 export * from "./m3m-media.js";
+
+export * from "./wpml/index.js";
