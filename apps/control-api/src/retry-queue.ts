@@ -24,6 +24,7 @@ export class RetryQueue<T> {
   private readonly timer: NodeJS.Timeout;
   private processing: Promise<void> | undefined;
   private lastFailure: Error | undefined;
+  private activeItem = false;
   private dropped = 0;
   private closed = false;
 
@@ -58,7 +59,13 @@ export class RetryQueue<T> {
       if (this.dropPolicy === "reject-new") {
         throw new Error("retry_queue_capacity_exceeded");
       }
-      const dropped = this.items.shift();
+      const dropIndex = this.activeItem ? 1 : 0;
+      if (dropIndex >= this.items.length) {
+        this.dropped += 1;
+        this.options.onDrop?.(item);
+        return;
+      }
+      const [dropped] = this.items.splice(dropIndex, 1);
       this.dropped += 1;
       if (dropped !== undefined) this.options.onDrop?.(dropped);
     }
@@ -100,6 +107,7 @@ export class RetryQueue<T> {
   private async drainLoop(): Promise<void> {
     while (this.items.length > 0) {
       const item = this.items[0]!;
+      this.activeItem = true;
       try {
         await this.options.process(item);
         this.items.shift();
@@ -111,6 +119,8 @@ export class RetryQueue<T> {
         this.lastFailure = normalized;
         if (changed) this.options.onError?.(normalized);
         throw normalized;
+      } finally {
+        this.activeItem = false;
       }
     }
   }
