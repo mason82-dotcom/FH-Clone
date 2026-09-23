@@ -90,6 +90,8 @@ Auf `main` sind unter anderem vorhanden:
 - Root-Compose für Control API, EMQX, Web und TimescaleDB
 - lokale Runtime-Verify-Suite
 - FlightHub-2-OpenAPI-V2-Client für Waylines und Flight Tasks (read-only)
+- DJI-WPML/KMZ-Parser für `template.kml` und `waylines.wpml` (read-only)
+- DJI-Pilot-Waypoint-Dateikatalog (read-only)
 - read-only Mission-/Wayline-/Capability-APIs
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
@@ -98,7 +100,7 @@ Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 - M3E/M3T/M3TA Cloud-Payload-Control ohne reale RC-Pro-/Payload-Hardwareabnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: global deaktiviert
 - Pilot-2-JSBridge
-- vollständige WPML/Pilot-Wayline-Integration aus offenen Drafts
+- schreibende WPML/Pilot-Wayline-Upload-, Collect- und Execution-Pfade
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - nicht real belegte M3T/M4T Tele-/Thermal-Medienpfade
 
