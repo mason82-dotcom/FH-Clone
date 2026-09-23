@@ -51,6 +51,7 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - Shutdown ist idempotent, wartet beide HTTP-Server ab und führt verbleibende Cleanup-Schritte auch nach Teilfehlern weiter aus
 - Web-/Proxy-Regressionscheck schützt `/health`, `/ready`, `/api/*`, SPA-Fallback und die Nicht-Exposition von Port 8081
 - Persistenzgrenze verhindert FC-Stufe, Control Lease, DJI-Authority und rehydrierbare DRC-Sessions in PostgreSQL; DRC bleibt in-memory
+- AuthZ erlaubt den Topologie-Bootstrap ausschließlich auf `sys/product/{gateway_sn}/status`; der veraltete `thing/.../status`-Pfad ist deny
 
 ## Hardware-Evidence
 
