@@ -103,6 +103,7 @@ dependencies {
     compileOnly "com.dji:dji-sdk-v5-aircraft-provided:${project.DJI_MSDK_VERSION}"
     implementation "com.dji:dji-sdk-v5-aircraft:${project.DJI_MSDK_VERSION}"
     implementation "org.maplibre.gl:android-sdk:${project.MAPLIBRE_VERSION}"
+    implementation "com.squareup.okhttp3:okhttp:${project.OKHTTP_VERSION}"
 
     implementation "androidx.core:core-ktx:${project.ANDROIDX_CORE_VERSION}"
     implementation "androidx.appcompat:appcompat:${project.ANDROIDX_APPCOMPAT_VERSION}"
