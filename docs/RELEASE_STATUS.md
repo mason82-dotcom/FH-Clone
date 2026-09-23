@@ -103,6 +103,7 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
 - Android MSDK V5 KeyManager-Runtimeinventar mit read-only Hardware-Probes
+- authentifizierter MSDK-Agent-Controltransport ist softwareseitig implementiert; öffentliche Operator-Control-API bleibt deaktiviert
 - Pilot 2 JSBridge read-only Runtime für Verifikation, Identität und Modulstatus
 - zentrale DJI-`ControlCoordinator`-Runtime im Serverprozess
 - read-only Control-Runtime-Status; keine öffentliche Flight-Control-Write-API
