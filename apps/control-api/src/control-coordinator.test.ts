@@ -30,6 +30,7 @@ function fixture(authorized = true) {
   };
   const dji = {
     resolveGatewaySn: () => "RC-PLUS2-001",
+    supportsCloudControl: () => true,
     supportsFlightControl: () => true,
     supportsStickControl: () => true,
     supportsDroneControl: () => true,
@@ -218,4 +219,35 @@ test("M3 RC Pro routes drone_control but rejects stick_control", async () => {
     ),
     /stick_control_not_supported/
   );
+});
+
+
+test("start rejects products without cloud_control support before authority request", async () => {
+  const f = fixture(true);
+  f.dji.supportsCloudControl = () => false;
+  const coordinator = new ControlCoordinator(
+    f.dji,
+    f.sessions as never,
+    () => f.guards
+  );
+
+  await assert.rejects(
+    coordinator.start({
+      aircraftSn: "UNKNOWN-001",
+      holder: "operator-a",
+      authority: { userId: "u1", userCallsign: "OP-A" },
+      drc: {
+        mqttBroker: {
+          address: "mqtt://broker",
+          client_id: "drc",
+          username: "u",
+          password: "p",
+          expire_time: Math.floor(Date.now() / 1000) + 120,
+          enable_tls: false
+        }
+      }
+    }),
+    /cloud_control_not_supported/
+  );
+  assert.deepEqual(f.calls, []);
 });

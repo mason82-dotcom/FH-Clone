@@ -369,9 +369,13 @@ status = ok | failed | canceled
 
 Ein erfolgreiches `services_reply` allein aktiviert keine Flugsteuerung.
 
-Der aktuelle öffentliche Control-API stellt **keinen** Endpoint bereit, der diese
-Autorisierung auslöst. Das bleibt bis zur expliziten FC3-Freigabe intern.
+Cloud-Control ist im DJI-Runtime-Profil aktiviert. Der öffentliche API-Endpunkt
+liefert den Authority-Zustand weiterhin nur read-only; die eigentliche
+`cloud_control_auth_request`-Ausführung bleibt im zentralen
+ControlCoordinator und damit hinter FC3, Control Lease und den
+DRC-Sicherheitsguards.
 
-Für Mavic 3 Enterprise gilt ebenfalls: Cloud-Payload-Control benötigt die
-DJI-Pilot-Autorisierung, auch wenn Cloud-Flugsteuerung für dieses Produktprofil
-nicht freigegeben ist.
+Für Mavic 3 Enterprise wird das RC-Pro-Cloud-Control-Profil nur bei eindeutig
+erkannter Produkt-/Gateway-Topologie freigegeben. `stick_control` bleibt dort
+aus; `drone_control` und Payload-Control bleiben an die zentrale
+Cloud-Control-Authority- und Safety-Kette gebunden.

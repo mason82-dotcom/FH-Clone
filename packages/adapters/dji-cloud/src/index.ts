@@ -200,6 +200,10 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
     return this.getControlProfile(deviceSn)?.drcProfile ?? "none";
   }
 
+  supportsCloudControl(deviceSn: string): boolean {
+    return this.getControlProfile(deviceSn)?.cloudControl ?? false;
+  }
+
   supportsFlightControl(deviceSn: string): boolean {
     return this.getControlProfile(deviceSn)?.flightControl ?? false;
   }

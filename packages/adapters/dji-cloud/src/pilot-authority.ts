@@ -1,3 +1,4 @@
+import { DJI_CLOUD_CONTROL_ENABLED } from "./capabilities.js";
 import type {
   DjiCloudControlAuthorityRegistry,
   DjiCloudControlAuthorityState
@@ -45,6 +46,9 @@ export class DjiPilotCloudAuthorityCoordinator {
     gatewaySn: string,
     input: PilotCloudAuthorityRequest
   ): Promise<DjiCloudControlAuthorityState> {
+    if (!DJI_CLOUD_CONTROL_ENABLED) {
+      return Promise.reject(new PilotCloudAuthorityError("dji_cloud_control_disabled"));
+    }
     const existing = this.pending.get(gatewaySn);
     if (existing) return existing;
 
@@ -60,6 +64,9 @@ export class DjiPilotCloudAuthorityCoordinator {
     gatewaySn: string,
     timeoutMs = 10_000
   ): Promise<DjiCloudControlAuthorityState> {
+    if (!DJI_CLOUD_CONTROL_ENABLED) {
+      throw new PilotCloudAuthorityError("dji_cloud_control_disabled");
+    }
     const reply = await this.services.requestService(
       gatewaySn,
       "cloud_control_release",

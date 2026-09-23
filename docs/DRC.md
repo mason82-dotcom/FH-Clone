@@ -71,26 +71,39 @@ unbekannt/falsch      -> DjiDrcProfile = none
 
 ### Mavic 3 Enterprise + RC Pro Enterprise
 
-DJI dokumentiert Payload-/Kamera-/Gimbal-Steuerung, FH2 V3 implementiert dafür
-aber noch keinen ausführbaren Command-Pfad.
-
-Daher gilt aktuell:
+FH2 aktiviert hinter einer bestätigten RC Pro Enterprise das spezialisierte
+Pilot-to-Cloud-Profil für M3E/M3T/M3TA:
 
 ```text
-DjiDrcProfile = none
-keine schreibende AdapterDevice-Capability
-keine Cloud-Flugsteuerung
+cloudControl   = true
+flightControl  = true
+stickControl   = false
+droneControl   = true
+payloadControl = true
+DjiDrcProfile  = pilot-m3-drone
 ```
 
-Die Herstellerunterstützung bleibt in der Capability-Matrix dokumentiert.
+Der spezialisierte Pfad bleibt von generischen
+`AircraftAdapter.execute()`-Capabilities getrennt und benötigt für
+Flugsteuerung FC3, Control Lease, DJI Cloud-Control-Authority, aktive
+DRC-Sitzung und Dead-Man.
 
 ### Matrice 4 + RC Plus 2
 
 DJI dokumentiert für diesen Pfad Stick-Control und Cloud-Control-Authority.
-FH2 hält die zugehörigen Protokollbausteine als Referenz vor, aktiviert
-`stick_control` beziehungsweise manuelle DRC-Flugsteuerung aber global nicht.
+FH2 aktiviert hinter RC Plus 2 das M4-Cloud-Control-Profil:
 
-FlyTo bleibt davon als separater Servicepfad getrennt.
+```text
+cloudControl  = true
+flightControl = true
+stickControl  = true
+droneControl  = true
+DjiDrcProfile = pilot-m4-stick
+```
+
+FlyTo bleibt davon als separater Servicepfad getrennt. Alle schreibenden
+Flugsteuerpfade bleiben zusätzlich FC3-/Lease-/Authority-/Session-/Dead-Man-
+gegated.
 
 ## DJI-Control-Authority
 
@@ -132,8 +145,7 @@ primäre Pilot-Cloud-Authority-Flow für Matrice 4 + RC Plus 2.
 
 DJI-Authority und FH2-Steuerhoheit sind getrennte Ebenen.
 
-Historisch vorgesehene M4-Flug-DRC-Sitzungen würden folgende Guards benötigen;
-die Runtime startet solche Stick-Sitzungen aktuell wegen der globalen Sperre nicht:
+Aktive M3-/M4-Flug-DRC-Sitzungen benötigen weiterhin folgende Guards:
 
 ```text
 Produkt-Capability
@@ -146,9 +158,9 @@ Produkt-Capability
 ```
 
 DJI dokumentiert, dass DRC-Kommandos nicht pauschal an Flugsteuerungsrecht
-gebunden sind. Das aktuelle `stick_control` benötigt dieses Recht jedoch
-zwingend. FH2 aktiviert diesen manuellen Flugsteuerpfad unabhängig davon
-projektweit nicht.
+gebunden sind. Flugsteuernde Cloud-Control-Pfade werden in FH2 trotzdem nur
+nach erfolgreicher DJI Control Authority und den lokalen Safety-Gates
+freigegeben.
 
 DJI dokumentiert M3E/M3T/M3TA im RC-Pro-Pilot-Cloud-Pfad als Payload-orientiert. FH2 V3 implementiert dafür derzeit keinen schreibenden Payload-Command-Pfad. M3M wird separat über MSDK/WPML/Media betrachtet und erhält kein automatisch abgeleitetes Pilot-Cloud-Control-Profil.
 
@@ -450,6 +462,7 @@ FH2 erlaubt wieder beide DJI-DRC-Steuerpfade, aber ausschließlich hinter den
 Produkt-/Gateway- und Safety-Gates:
 
 ```text
+cloud_control  = ENABLED
 stick_control  = ENABLED
 drone_control  = ENABLED
 ```
@@ -458,8 +471,11 @@ Für Matrice 4 + RC Plus 2 gilt damit wieder `flightControl=true` und
 `DjiDrcProfile=pilot-m4-stick`. M3E/M3T/M3TA bleiben ohne Cloud-
 Flugsteuerungsprofil.
 
-Beide Pfade bleiben an FC3, Control Lease, DJI Control Authority, aktive
-DRC-Sitzung und Dead-Man gebunden. Das Aktivieren des globalen Stick-Schalters
+Cloud-Control-Authority wird explizit über `cloud_control_auth_request`
+angefordert und über `cloud_control_auth_notify` bzw.
+`is_cloud_control_auth` bestätigt. Stick- und Drone-Control bleiben an FC3,
+Control Lease, DJI Control Authority, aktive DRC-Sitzung und Dead-Man
+gebunden. Das Aktivieren des globalen Stick-Schalters
 hebt diese Guards nicht auf.
 
 `fly_to_point` bleibt als eigener Servicepfad davon unabhängig.

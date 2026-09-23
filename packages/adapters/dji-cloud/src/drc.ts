@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import { DjiServiceError } from "./service.js";
 import {
+  DJI_CLOUD_CONTROL_ENABLED,
   DJI_CLOUD_STICK_CONTROL_ENABLED,
   DJI_DRONE_CONTROL_ENABLED
 } from "./capabilities.js";
@@ -199,6 +200,9 @@ export class DrcController {
     gatewaySn: string,
     request: CloudControlAuthRequest
   ): Promise<DjiServiceReply> {
+    if (!DJI_CLOUD_CONTROL_ENABLED) {
+      throw new Error("dji_cloud_control_disabled");
+    }
     if (!request.userId.trim()) {
       throw new Error("Cloud-control userId is required");
     }
@@ -216,6 +220,9 @@ export class DrcController {
   async releaseCloudControlAuthority(
     gatewaySn: string
   ): Promise<DjiServiceReply> {
+    if (!DJI_CLOUD_CONTROL_ENABLED) {
+      throw new Error("dji_cloud_control_disabled");
+    }
     return this.requestServiceOk(gatewaySn, "cloud_control_release", {
       control_keys: ["flight"]
     });

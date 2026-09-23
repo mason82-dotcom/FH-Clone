@@ -9,6 +9,7 @@ import type {
 
 export interface DjiControlRuntime {
   resolveGatewaySn(deviceSn: string): string | undefined;
+  supportsCloudControl(deviceSn: string): boolean;
   supportsFlightControl(deviceSn: string): boolean;
   supportsStickControl(deviceSn: string): boolean;
   supportsDroneControl(deviceSn: string): boolean;
@@ -51,6 +52,9 @@ export class ControlCoordinator {
   }) {
     const gatewaySn = this.dji.resolveGatewaySn(input.aircraftSn);
     if (!gatewaySn) throw new Error("dji_gateway_unknown");
+    if (!this.dji.supportsCloudControl(input.aircraftSn)) {
+      throw new Error("cloud_control_not_supported");
+    }
     if (!this.dji.supportsFlightControl(input.aircraftSn)) {
       throw new Error("flight_control_not_supported");
     }

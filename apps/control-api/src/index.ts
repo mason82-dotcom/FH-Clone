@@ -6,6 +6,7 @@ import {
 } from "@fh-clone/aircraft-core";
 import {
   DjiCloudAdapter,
+  DJI_CLOUD_CONTROL_ENABLED,
   DrcSessionManager,
   InMemoryDrcSessionStore,
   isDjiM3mMediaInput,
@@ -215,6 +216,26 @@ const publicServer = createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/dji/topology/persisted") {
       if (!topologyStore) return json(response, 503, { error: "topology_persistence_disabled" });
       return json(response, 200, await topologyStore.list());
+    }
+
+    const authorityMatch = url.pathname.match(
+      /^\/api\/dji\/gateways\/([^/]+)\/authority$/
+    );
+    if (request.method === "GET" && authorityMatch) {
+      const gatewaySn = decodeURIComponent(authorityMatch[1] ?? "");
+      if (!dji) return json(response, 503, { error: "dji_not_configured" });
+      const state = dji.getCloudControlAuthority(gatewaySn);
+      return json(response, 200, {
+        gatewaySn,
+        cloudControlEnabled: DJI_CLOUD_CONTROL_ENABLED,
+        state: state ?? {
+          gatewaySn,
+          status: "unknown",
+          authorized: false,
+          updatedAt: null,
+          source: "local"
+        }
+      });
     }
 
     if (request.method === "GET" && url.pathname === "/api/missions/active") {
@@ -803,6 +824,7 @@ function getDeviceCapabilityView(deviceId: string) {
       genericAdapterCapabilities: adapterCapabilities,
       specializedRuntime: controlProfile
         ? {
+            cloudControl: controlProfile.cloudControl,
             flightControl: controlProfile.flightControl,
             stickControl: controlProfile.stickControl,
             droneControl: controlProfile.droneControl,
