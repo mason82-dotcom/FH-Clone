@@ -417,3 +417,23 @@ Wichtig:
 - DJI-`mode_code == 5` erzeugt keine Wayline-ID,
 - FH2-Task-ID und DJI-Wayline-ID bleiben getrennte Referenzarten,
 - jede Korrelation muss ihre Quelle und Vertrauensstufe behalten.
+
+
+## MediaStore und Telemetrie-Fusion
+
+Die adapterübergreifende Live-Telemetrie und die MediaAsset-Persistenz sind
+getrennte Datenebenen:
+
+```text
+Live-Telemetrie
+  -> ParameterRegistry
+  -> fused current + per-adapter provenance
+
+MediaAsset
+  -> MediaStore / TimescaleDB
+  -> MediaOverlayRegistry rehydration
+```
+
+Ein MediaStore-Ausfall beeinflusst die Readiness, erzeugt aber keine
+alternative Telemetriequelle. Umgekehrt ersetzt die Telemetrie-Fusion keine
+MediaAsset-Persistenz.
