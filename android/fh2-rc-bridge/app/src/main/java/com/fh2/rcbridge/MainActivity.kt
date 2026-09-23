@@ -235,16 +235,16 @@ class MainActivity : AppCompatActivity() {
     private val networkArmListener:
         (NetworkControlArmSnapshot) -> Unit = { state ->
         runOnUiThread {
-            networkControlText.text = buildString {
-                appendLine("Netzwerk-Control")
-                appendLine("Lokal freigegeben: ${state.armed}")
-                append(
-                    "Freigabezeit: " +
-                        (state.armedAt?.toString() ?: "-")
-                )
-            }
+            renderNetworkControl()
             armNetworkButton.isEnabled = !state.armed
             disarmNetworkButton.isEnabled = state.armed
+        }
+    }
+
+    private val controlChannelListener:
+        (MsdkControlChannelSnapshot) -> Unit = {
+        runOnUiThread {
+            renderNetworkControl()
         }
     }
 
@@ -522,8 +522,8 @@ class MainActivity : AppCompatActivity() {
         val notice = TextView(this).apply {
             text =
                 "MSDK-Modus: DJI Pilot 2 muss auf RC Pro Enterprise beendet " +
-                "sein. Remote-Steuerung ist in diesem Build noch nicht " +
-                "freigeschaltet."
+                "sein. Netzwerk-Control benötigt lokale Freigabe sowie " +
+                "serverseitig FC3 und Control Lease."
             textSize = 16f
         }
 
@@ -583,6 +583,7 @@ class MainActivity : AppCompatActivity() {
         RtkTelemetrySource.addListener(rtkListener)
         Fh2BridgeClient.addListener(bridgeListener)
         NetworkControlArm.addListener(networkArmListener)
+        MsdkControlClient.addListener(controlChannelListener)
         WaylineMissionController.addListener(waylineListener)
         CameraGimbalController.addListener(payloadControlListener)
         VirtualStickController.addListener(controlListener)
@@ -596,10 +597,38 @@ class MainActivity : AppCompatActivity() {
         RtkTelemetrySource.removeListener(rtkListener)
         Fh2BridgeClient.removeListener(bridgeListener)
         NetworkControlArm.removeListener(networkArmListener)
+        MsdkControlClient.removeListener(controlChannelListener)
         WaylineMissionController.removeListener(waylineListener)
         CameraGimbalController.removeListener(payloadControlListener)
         VirtualStickController.removeListener(controlListener)
         super.onDestroy()
+    }
+
+    private fun renderNetworkControl() {
+        val arm = NetworkControlArm.snapshot
+        val channel = MsdkControlClient.snapshot
+
+        networkControlText.text = buildString {
+            appendLine("Netzwerk-Control")
+            appendLine("Lokal freigegeben: ${arm.armed}")
+            appendLine(
+                "Freigabezeit: " +
+                    (arm.armedAt?.toString() ?: "-")
+            )
+            appendLine("Control-Socket: ${channel.status}")
+            appendLine(
+                "Session: " +
+                    (channel.sessionId ?: "-")
+            )
+            appendLine(
+                "Lease-Holder: " +
+                    (channel.holder ?: "-")
+            )
+            appendLine("Seq: ${channel.lastSeq}")
+            channel.lastError?.let {
+                append("Fehler: $it")
+            }
+        }
     }
 
     private fun showLocalActionResult(
