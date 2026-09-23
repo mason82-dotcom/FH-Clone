@@ -143,7 +143,7 @@ export class MsdkControlHub {
       requestedAt: now
     });
 
-    this.audit("session_start_requested", session);
+    this.audit("session_start_requested", { ...session });
     return { ...session };
   }
 
@@ -259,7 +259,7 @@ export class MsdkControlHub {
         state: "active",
         updatedAt: now
       });
-      this.audit("session_active", session);
+      this.audit("session_active", { ...session });
       return;
     }
 
