@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONObject
 
 data class Fh2BridgeConnectionSnapshot(
@@ -36,8 +37,7 @@ object Fh2BridgeClient {
     @Volatile
     private var storedPairing: StoredPairing? = null
 
-    @Volatile
-    private var resumeInProgress = false
+    private val resumeInProgress = AtomicBoolean(false)
 
     private var secureStore: SecurePairingStore? = null
     private var heartbeatTask: ScheduledFuture<*>? = null
@@ -62,7 +62,7 @@ object Fh2BridgeClient {
     }
 
     fun tryResume() {
-        if (resumeInProgress || agentToken != null) return
+        if (agentToken != null) return
 
         val store = secureStore ?: return
         val stored = storedPairing ?: store.load() ?: return
@@ -98,7 +98,8 @@ object Fh2BridgeClient {
             return
         }
 
-        resumeInProgress = true
+        if (!resumeInProgress.compareAndSet(false, true)) return
+
         executor.execute {
             try {
                 val baseUrl = normalizeBaseUrl(stored.baseUrl)
@@ -129,7 +130,7 @@ object Fh2BridgeClient {
                     )
                 }
             } finally {
-                resumeInProgress = false
+                resumeInProgress.set(false)
             }
         }
     }
