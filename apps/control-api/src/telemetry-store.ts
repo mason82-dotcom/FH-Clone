@@ -41,7 +41,7 @@ export interface TelemetryProjection {
 export class TelemetryStore {
   private readonly pool: Pool | undefined;
   private tail: Promise<void> = Promise.resolve();
-  private lastWriteError: Error | undefined;
+  private writeFailure: Error | undefined;
 
   constructor(options: TelemetryStoreOptions = {}) {
     this.pool = options.connectionString
@@ -53,7 +53,7 @@ export class TelemetryStore {
       : undefined;
 
     this.pool?.on("error", (error) => {
-      this.lastWriteError = error;
+      this.writeFailure ??= error;
       console.warn(
         "[Telemetry] PostgreSQL pool connection lost; next query will reconnect:",
         error.message
@@ -150,7 +150,7 @@ export class TelemetryStore {
   }
 
   async ping(): Promise<boolean> {
-    if (!this.pool || this.lastWriteError) return false;
+    if (!this.pool || this.writeFailure) return false;
     try {
       await this.pool.query("SELECT 1 FROM raw_messages LIMIT 0");
       await this.pool.query(
@@ -186,7 +186,7 @@ export class TelemetryStore {
       .catch((error: unknown) => {
         const normalized =
           error instanceof Error ? error : new Error(String(error));
-        this.lastWriteError = normalized;
+        this.writeFailure ??= normalized;
         console.error(
           `[Telemetry] Persistenzfehler (${kind}):`,
           normalized.message
