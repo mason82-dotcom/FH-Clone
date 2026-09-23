@@ -70,25 +70,47 @@ export function Fh2Workspace() {
 
   useEffect(() => {
     let cancelled = false;
+    let controller: AbortController | undefined;
 
-    void fetch("/api/dji/topology", {
-      headers: { accept: "application/json" }
-    })
-      .then(async (response) => {
+    const refreshTopology = async () => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+
+      try {
+        const response = await fetch("/api/dji/topology", {
+          headers: { accept: "application/json" },
+          signal: request.signal
+        });
         if (!response.ok) {
           throw new Error(`Topology HTTP ${response.status}`);
         }
-        return response.json() as Promise<Fh2OverlayTopology[]>;
-      })
-      .then((data) => {
-        if (!cancelled) setTopology(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (!cancelled) setTopology([]);
-      });
+        const data = (await response.json()) as Fh2OverlayTopology[];
+        if (!cancelled && controller === request) {
+          setTopology(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (
+          cancelled ||
+          request.signal.aborted ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        // Preserve the last known-good topology across transient HTTP errors.
+      }
+    };
+
+    void refreshTopology();
+    const timer = window.setInterval(
+      () => void refreshTopology(),
+      2_000
+    );
 
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      controller?.abort();
     };
   }, []);
 
@@ -101,6 +123,20 @@ export function Fh2Workspace() {
       }))
     );
   }, [topology]);
+
+  useEffect(() => {
+    if (
+      selectionSource === "user" &&
+      selectedPair &&
+      !pairs.some(
+        (pair) =>
+          `${pair.gatewaySn}::${pair.droneSn}` === selectedPair
+      )
+    ) {
+      setSelectionSource("auto");
+      setSelectedPair("");
+    }
+  }, [pairs, selectedPair, selectionSource]);
 
   useEffect(() => {
     if (selectionSource === "user") return;
