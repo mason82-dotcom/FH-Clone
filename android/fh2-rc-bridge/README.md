@@ -16,6 +16,9 @@ Implementiert:
 
 - MSDK-Initialisierung und Registrierung
 - Product Connect / Disconnect Status
+- authoritative MSDK-Geräteidentität über ProductKey
+- Product Type, Firmware, Flight-Controller-SN
+- Aircraft Location 3D (raw MSDK)
 - Virtual-Stick-State und Flight-Control-Authority
 - explizites Enable / Disable
 - normalisierte Stick-Eingabe `[-1, 1]`

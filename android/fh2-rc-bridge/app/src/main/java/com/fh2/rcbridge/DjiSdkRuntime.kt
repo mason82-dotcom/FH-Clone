@@ -41,6 +41,7 @@ object DjiSdkRuntime {
                             registrationError = null
                         )
                     }
+                    AircraftTelemetrySource.start()
                 }
 
                 override fun onRegisterFailure(error: IDJIError) {

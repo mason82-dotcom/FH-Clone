@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     private lateinit var sdkText: TextView
     private lateinit var controlText: TextView
+    private lateinit var telemetryText: TextView
     private lateinit var enableButton: Button
     private lateinit var disableButton: Button
 
@@ -31,6 +32,20 @@ class MainActivity : AppCompatActivity() {
 
             enableButton.isEnabled =
                 state.registered && state.productConnected
+        }
+    }
+
+    private val telemetryListener: (AircraftTelemetrySnapshot) -> Unit = { state ->
+        runOnUiThread {
+            telemetryText.text = buildString {
+                appendLine("Aircraft: ${state.productType}")
+                appendLine("Firmware: ${state.firmwareVersion ?: "-"}")
+                appendLine("FC-SN: ${state.flightControllerSerial ?: "-"}")
+                appendLine("FC verbunden: ${state.flightControllerConnected}")
+                appendLine("Lat: ${state.latitude ?: "-"}")
+                appendLine("Lon: ${state.longitude ?: "-"}")
+                append("Altitude(raw): ${state.altitudeM ?: "-"} m")
+            }
         }
     }
 
@@ -58,6 +73,9 @@ class MainActivity : AppCompatActivity() {
             textSize = 18f
         }
         controlText = TextView(this).apply {
+            textSize = 18f
+        }
+        telemetryText = TextView(this).apply {
             textSize = 18f
         }
 
@@ -107,6 +125,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(32, 32, 32, 32)
             addView(notice, matchWidth())
             addView(sdkText, matchWidth(top = 24))
+            addView(telemetryText, matchWidth(top = 24))
             addView(controlText, matchWidth(top = 24))
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
@@ -125,11 +144,13 @@ class MainActivity : AppCompatActivity() {
         )
 
         DjiSdkRuntime.addListener(sdkListener)
+        AircraftTelemetrySource.addListener(telemetryListener)
         VirtualStickController.addListener(controlListener)
     }
 
     override fun onDestroy() {
         DjiSdkRuntime.removeListener(sdkListener)
+        AircraftTelemetrySource.removeListener(telemetryListener)
         VirtualStickController.removeListener(controlListener)
         super.onDestroy()
     }
