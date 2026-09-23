@@ -38,6 +38,8 @@ import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } fro
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 import { MsdkBridgeService, isMsdkBridgeSnapshot } from "./msdk-bridge.js";
+import { MsdkControlHub } from "./msdk-control.js";
+import { attachMsdkControlWebSocket } from "./msdk-control-ws.js";
 import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
 
 const devices = new DeviceRegistry();
@@ -63,6 +65,13 @@ const djiOptions = getDjiOptions(topologyPersistence, async (gatewaySn, drcState
 });
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const controlGuards = new RuntimeControlGuardRegistry();
+const msdkControl = new MsdkControlHub({
+  getAgent: (aircraftSn) => msdkBridge.getByAircraftSn(aircraftSn),
+  hasFc3: (aircraftSn) => controlGuards.hasFc3(aircraftSn),
+  hasLease: (aircraftSn, holder) =>
+    controlGuards.hasLease(aircraftSn, holder),
+  onAudit: (event) => console.info("[MSDK CONTROL]", event)
+});
 const drcRuntimeContext = new Map<
   string,
   { sessionId: string; aircraftSn: string; state: string }
@@ -181,7 +190,11 @@ const publicServer = createServer(async (request, response) => {
         },
         msdkBridge: {
           configured: msdkBridge.configured,
-          agents: msdkBridge.listAgents().length
+          agents: msdkBridge.listAgents().length,
+          controlSessions: msdkControl
+            .listSessions()
+            .filter((session) => session.state !== "closed")
+            .length
         }
       });
     }
@@ -429,6 +442,16 @@ const publicServer = createServer(async (request, response) => {
   }
 });
 
+const msdkControlWebSocket = attachMsdkControlWebSocket(
+  publicServer,
+  msdkBridge,
+  msdkControl
+);
+const msdkControlSweepTimer = setInterval(() => {
+  msdkControl.tick();
+}, 100);
+msdkControlSweepTimer.unref();
+
 const internalServer = createServer(async (request, response) => {
   try {
     if (request.method === "GET" && request.url === "/health") {
@@ -672,6 +695,8 @@ if (dji) {
 
 async function shutdown(): Promise<void> {
   clearInterval(missionSweepTimer);
+  clearInterval(msdkControlSweepTimer);
+  await msdkControlWebSocket.close();
   publicServer.close();
   internalServer.close();
   await drcSessions?.shutdown();
