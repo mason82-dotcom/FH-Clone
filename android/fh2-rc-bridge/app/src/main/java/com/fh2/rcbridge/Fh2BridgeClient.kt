@@ -41,6 +41,8 @@ object Fh2BridgeClient {
     ) {
         executor.execute {
             runCatching {
+                stopHeartbeat()
+                MsdkControlClient.disconnect("re_pair")
                 require(pairingToken.isNotBlank()) {
                     "pairing_token_required"
                 }
@@ -74,12 +76,18 @@ object Fh2BridgeClient {
                         expiresAt = expiresAt
                     )
                 }
+                MsdkControlClient.connect(
+                    baseUrl = baseUrl,
+                    agentToken = token,
+                    aircraftSn = aircraftSn
+                )
                 startHeartbeat()
             }.onSuccess {
                 onResult(Result.success(Unit))
             }.onFailure { error ->
                 agentToken = null
                 stopHeartbeat()
+                MsdkControlClient.disconnect("pairing_failed")
                 update {
                     copy(
                         status = "error",
@@ -94,6 +102,8 @@ object Fh2BridgeClient {
     fun disconnect() {
         executor.execute {
             stopHeartbeat()
+            MsdkControlClient.disconnect("bridge_disconnect")
+            NetworkControlArm.disarm()
             agentToken = null
             update { Fh2BridgeConnectionSnapshot() }
         }
@@ -153,6 +163,8 @@ object Fh2BridgeClient {
                         ) {
                             agentToken = null
                             stopHeartbeat()
+                            MsdkControlClient.disconnect("agent_token_expired")
+                            NetworkControlArm.disarm()
                             update {
                                 copy(
                                     status = "expired",
