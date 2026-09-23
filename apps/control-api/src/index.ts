@@ -1091,12 +1091,12 @@ function ingestMsdkSnapshot(
   receivedAt: number
 ): void {
   const normalized = normalizeMsdkBridgeSnapshot(snapshot, receivedAt);
-  const missionId = missions.getActive(snapshot.aircraft.serialNumber)?.missionId;
+  const missionId = missions.getActive(snapshot.aircraft.flightControllerSerial)?.missionId;
 
   telemetryStore.enqueueRaw(
     {
       adapterId: "msdk-v5",
-      deviceId: snapshot.aircraft.serialNumber,
+      deviceId: snapshot.aircraft.flightControllerSerial,
       receivedAt,
       channel: "fh2.msdk.v1",
       payload: snapshot
