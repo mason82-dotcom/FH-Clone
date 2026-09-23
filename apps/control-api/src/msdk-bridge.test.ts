@@ -31,8 +31,12 @@ function snapshot(
     sensors: [],
     rtk: {},
     control: {
-      enabled: false,
-      authorityOwner: "UNKNOWN"
+      networkArmed: false,
+      networkArmedAt: null,
+      virtualStick: {
+        enabled: false,
+        authorityOwner: "UNKNOWN"
+      }
     },
     capabilities: {
       camera: true,
@@ -189,4 +193,18 @@ test("validates optional payload-control state when present", () => {
     }),
     false
   );
+});
+
+
+test("requires explicit local network-control arm state in snapshot", () => {
+  const valid = snapshot();
+  assert.equal(isMsdkBridgeSnapshot(valid), true);
+
+  const missingArm = structuredClone(valid) as any;
+  delete missingArm.control.networkArmed;
+  assert.equal(isMsdkBridgeSnapshot(missingArm), false);
+
+  const malformedStick = structuredClone(valid) as any;
+  malformedStick.control.virtualStick.enabled = "yes";
+  assert.equal(isMsdkBridgeSnapshot(malformedStick), false);
 });
