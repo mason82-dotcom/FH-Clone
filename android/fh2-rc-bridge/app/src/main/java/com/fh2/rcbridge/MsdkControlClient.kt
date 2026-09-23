@@ -91,6 +91,10 @@ object MsdkControlClient {
                         webSocket: WebSocket,
                         response: Response
                     ) {
+                        if (socket !== webSocket) {
+                            webSocket.close(1000, "superseded_connection")
+                            return
+                        }
                         update {
                             copy(
                                 status = "connected",
@@ -104,6 +108,7 @@ object MsdkControlClient {
                         webSocket: WebSocket,
                         text: String
                     ) {
+                        if (socket !== webSocket) return
                         update {
                             copy(lastMessageAt = System.currentTimeMillis())
                         }
@@ -124,7 +129,8 @@ object MsdkControlClient {
                         code: Int,
                         reason: String
                     ) {
-                        if (socket === webSocket) socket = null
+                        if (socket !== webSocket) return
+                        socket = null
                         failClosed(
                             "socket_closed_$code:$reason",
                             notifyServer = false
@@ -139,7 +145,8 @@ object MsdkControlClient {
                         t: Throwable,
                         response: Response?
                     ) {
-                        if (socket === webSocket) socket = null
+                        if (socket !== webSocket) return
+                        socket = null
                         failClosed(
                             "socket_failure",
                             notifyServer = false
