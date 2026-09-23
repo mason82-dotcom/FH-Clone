@@ -121,7 +121,13 @@ echo "[8/13] Web prüfen"
 wait_http "http://127.0.0.1:$WEB_PORT/health" "Web/Proxy"
 
 echo "[9/13] Interne API darf nicht veröffentlicht sein"
-if docker compose --env-file .env port control-api 8081 2>/dev/null | grep -q .; then
+control_api_container="$(docker compose --env-file .env ps -q control-api)"
+if [ -z "$control_api_container" ]; then
+  echo "FEHLER: Control-API-Container für Portprüfung nicht gefunden."
+  exit 1
+fi
+port_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$control_api_container")"
+if printf '%s' "$port_bindings" | grep -Eq '"8081/tcp"[[:space:]]*:[[:space:]]*\['; then
   echo "FEHLER: interner Control-API-Port 8081 ist als Host-Port veröffentlicht."
   exit 1
 fi
