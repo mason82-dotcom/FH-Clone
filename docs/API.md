@@ -96,6 +96,41 @@ fordert keine Authority an.
 Zusätzlich wird `cloudControlEnabled` aus der kanonischen globalen
 Cloud-Control-Policy ausgegeben.
 
+### GET /ready
+
+Readiness unterscheidet pro Abhängigkeit drei Zustände:
+
+```text
+disabled    = nicht konfiguriert; blockiert Readiness nicht
+ready       = konfiguriert und erreichbar
+unavailable = konfiguriert, aber nicht bereit; blockiert Readiness
+```
+
+Beispiel:
+
+```json
+{
+  "status": "ready",
+  "service": "control-api",
+  "checks": {
+    "mqttBackend": {
+      "configured": false,
+      "ready": false,
+      "state": "disabled"
+    },
+    "topologyStore": {
+      "configured": true,
+      "ready": true,
+      "state": "ready"
+    }
+  }
+}
+```
+
+Im Root-Compose sind MQTT und PostgreSQL konfiguriert und deshalb weiterhin
+Pflicht für einen grünen Readiness-Status. Ein Minimal-/Entwicklungsstart ohne
+diese optionalen Integrationen kann dagegen bewusst `disabled` melden.
+
 ### GET /api/dji/control/runtime
 
 Read-only Sicht auf die zentrale DJI-Control-Runtime.
