@@ -241,6 +241,7 @@ jobs:
                  AND to_regclass('public.gateway_credentials') IS NOT NULL
                  AND to_regclass('public.dji_gateways') IS NOT NULL
                  AND to_regclass('public.dji_gateway_devices') IS NOT NULL
+                 AND to_regclass('public.media_assets') IS NOT NULL
                THEN 1 ELSE 0 END" 2>/dev/null || true)"
             if [ "$(printf '%s' "$schema_ready" | tr -d '[:space:]')" = "1" ]; then
               break
@@ -267,6 +268,23 @@ jobs:
           docker compose --env-file .env exec -T timescaledb \
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
             -c "SELECT 1 FROM dji_gateway_devices LIMIT 1;" >/dev/null
+
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM media_assets LIMIT 1;" >/dev/null
+
+          # Upgrade-Pfad prüfen: auf einem bestehenden Volume wird initdb nicht
+          # erneut ausgeführt. Der One-Shot-Migrator muss die Tabelle daher
+          # selbständig wiederherstellen können.
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "DROP TABLE media_assets;" >/dev/null
+
+          docker compose --env-file .env run --rm db-migrations >/dev/null
+
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM media_assets LIMIT 1;" >/dev/null
 
       - name: TimescaleDB-Logs bei Fehlern
         if: failure()
