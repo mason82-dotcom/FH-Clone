@@ -3,7 +3,6 @@ import path from "node:path";
 
 const root = process.cwd();
 const scope = process.env.FH2_HARDWARE_SCOPE === "all" ? "all" : "main";
-const hsiRequired = process.env.FH2_DRC_HSI_REQUIRED === "true";
 
 const results = [];
 
@@ -115,7 +114,6 @@ function sensitiveValueLeaked(value) {
 function requiredFor(level) {
   if (level === "REQUIRED_MAIN") return true;
   if (level === "REQUIRED_DRAFT") return scope === "all";
-  if (level === "CONDITIONAL_HSI") return hsiRequired;
   return false;
 }
 
@@ -197,37 +195,32 @@ add("M3T_RC_PRO", "REQUIRED_MAIN", "realer Thermal-R-JPEG-Metadatenbeleg",
   m3tExtraMediaPath);
 
 // ---------------------------------------------------------------------------
-// M4T + RC Plus 2 flight-control runtime
+// M4T + RC Plus 2 manual cloud control: globally disabled
 // ---------------------------------------------------------------------------
 const m4tPath = "docs/fixtures/m4t/hardware-evidence.json";
 const m4t = readJson(m4tPath);
-add("M4T_RC_PLUS2", "REQUIRED_MAIN", "reales redigiertes M4T/RC-Plus-2-Evidence", realEvidence(m4t), m4tPath);
+add(
+  "M4T_MANUAL_CONTROL",
+  "INFORMATIONAL",
+  "manuelle DJI-Cloud-Flugsteuerung ist global deaktiviert",
+  true,
+  "stick_control/drone_control werden von keinem Produktprofil aktiviert"
+);
+add(
+  "M4T_MANUAL_CONTROL",
+  "INFORMATIONAL",
+  "optionales reales M4T/RC-Plus-2-Protokoll-Evidence",
+  realEvidence(m4t),
+  m4tPath
+);
 if (realEvidence(m4t)) {
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "keine Secrets im öffentlichen M4T-Fixture", !sensitiveValueLeaked(m4t));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "RC Plus 2 update_topo auf thing/product/.../status",
+  add("M4T_MANUAL_CONTROL", "INFORMATIONAL", "keine Secrets im öffentlichen M4T-Fixture", !sensitiveValueLeaked(m4t));
+  add("M4T_MANUAL_CONTROL", "INFORMATIONAL", "RC Plus 2 update_topo beobachtet",
     hasMethod(m4t, "update_topo") && hasTopic(m4t, /^thing\/product\/[^/]+\/status$/));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Produktidentität RC Plus 2 174/0",
+  add("M4T_MANUAL_CONTROL", "INFORMATIONAL", "Produktidentität RC Plus 2 174/0",
     Boolean(findRecord(m4t, (v) => Number(v.type) === 174 && Number(v.sub_type ?? v.subType) === 0)));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Produktidentität M4T 99/1",
+  add("M4T_MANUAL_CONTROL", "INFORMATIONAL", "Produktidentität M4T 99/1",
     Boolean(findRecord(m4t, (v) => Number(v.type) === 99 && Number(v.sub_type ?? v.subType) === 1)));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Cloud-Control-Authority erfolgreich",
-    m4t.authority?.success === true &&
-    ["cloud_control_auth_notify", "cloud_control_auth_request"].includes(m4t.authority?.method));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "drc_mode_enter erfolgreich",
-    m4t.drcEnter?.method === "drc_mode_enter" && Number(m4t.drcEnter?.result) === 0);
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "DRC heartbeat down",
-    m4t.heartbeat?.down?.method === "heart_beat" &&
-    /^thing\/product\/[^/]+\/drc\/down$/.test(m4t.heartbeat?.down?.topic ?? ""));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "DRC heartbeat up",
-    m4t.heartbeat?.up?.method === "heart_beat" &&
-    /^thing\/product\/[^/]+\/drc\/up$/.test(m4t.heartbeat?.up?.topic ?? ""));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Heartbeat derselben Runtime-Session zugeordnet",
-    typeof m4t.heartbeat?.sessionIdHash === "string" &&
-    m4t.heartbeat.sessionIdHash.length >= 16 &&
-    m4t.heartbeat?.gatewayMatch === true);
-  add("M4T_RC_PLUS2", "CONDITIONAL_HSI", "realer hsi_info_push",
-    m4t.hsi?.method === "hsi_info_push" &&
-    /^thing\/product\/[^/]+\/drc\/up$/.test(m4t.hsi?.topic ?? ""));
 }
 
 const m4tMediaPath = "docs/fixtures/m4t/media-evidence.json";
@@ -385,7 +378,6 @@ const lines = [
   "# FH2 DJI Hardware Evidence",
   "",
   `Scope: **${scope}**`,
-  `DRC HSI required: **${hsiRequired}**`,
   "",
   "| Gate | Level | Check | Result | Detail |",
   "| --- | --- | --- | --- | --- |"
