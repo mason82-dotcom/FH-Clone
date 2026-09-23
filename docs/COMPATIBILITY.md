@@ -30,6 +30,22 @@ Die offiziellen DJI-Cloud-API-Demos werden seit dem 10. April 2025 nicht mehr
 gewartet. Sie dienen nur als Protokollreferenz und werden nicht als
 Produktionsbasis übernommen.
 
+## DJI WPML
+
+FH2 integriert DJI WPML read-only auf Basis der aktuellen DJI-Spezifikation:
+
+- KMZ als Archivformat,
+- `template.kml` für Planungs-/Template-Attribute,
+- `waylines.wpml` für Ausführungsdetails,
+- optionale `res/`-Ressourcen,
+- Common Elements für MissionConfig, Produkt-/Payload-Identität und Actions.
+
+WPML-Produktwerte, Pilot-`*_model_key` und MQTT-`payload_index` bleiben
+getrennte Identitätsverträge. Nicht eindeutig dokumentierte Produktwerte
+werden nicht geraten.
+
+Details: [WPML.md](WPML.md).
+
 ## Android Mobile SDK V5
 
 **Aktuell verifizierter Release: 5.18.0 vom 22. Mai 2026**

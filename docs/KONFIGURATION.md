@@ -40,6 +40,21 @@ sein.
 Wichtig: `DJI_MQTT_CLIENT_ID` ist die Client-ID des **Backend-Adapters**.
 Sie ist nicht mit der realen Client-ID einer DJI RC Pro gleichzusetzen.
 
+## DJI Pilot Waypoint Management – read-only
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `DJI_PILOT_WAYLINE_ENABLED` | `false` | aktiviert den read-only Pilot-Wayline-Katalog |
+| `DJI_PILOT_BASE_URL` | leer | Basis-URL des Pilot-to-Cloud-HTTPS-Servers |
+| `DJI_PILOT_WORKSPACE_ID` | leer | Workspace-ID für Waypoint-Dateien |
+| `DJI_PILOT_AUTH_TOKEN` | leer | serverseitiges `x-auth-token`; Secret |
+| `DJI_PILOT_TIMEOUT_MS` | `15000` | Request-Timeout |
+
+Der Token wird ausschließlich serverseitig verwendet. Dieser Pfad implementiert
+nur GET/List; STS, Upload, Download-Proxy und Missionsausführung bleiben gesperrt.
+
+Details: [WPML.md](WPML.md).
+
 ## EMQX-Authorizer
 
 | Variable | Standard | Bedeutung |

@@ -330,3 +330,33 @@ hochgestuft werden.
 `mode_code == 5` liefert nur die Aussage „Aircraft befindet sich in einem
 Wayline-Flug“. Ohne separaten Wayline-/Task-Vertrag bleibt die eigentliche
 Wayline-ID unbekannt.
+
+## WPML-Import und Wayline-Korrelation
+
+DJI WPML wird als read-only Missionsdateivertrag in den bestehenden
+Missionspfad integriert:
+
+```text
+KMZ
+ -> wpmz/template.kml
+ -> wpmz/waylines.wpml
+ -> Struktur-/Sicherheitsvalidierung
+ -> WpmlBundle
+ -> GroundStationMission / GroundStationRoute[]
+ -> MissionExternalReference(source=dji_wpml)
+```
+
+`template.kml` und `waylines.wpml` bleiben semantisch getrennt.
+Insbesondere werden `heightMode` der Planung und `executeHeightMode` der
+Ausführung nicht ineinander umgedeutet. `templateId` korreliert Template und
+ausführbare Route; `waylineId` bleibt die interne DJI-Wayline-ID des KMZ.
+
+Der Import erzeugt keine `mission.wayline`-Capability und startet keine
+Mission. Pilot-Wayline-Datei-IDs werden separat als
+`source=dji_pilot_wayline` geführt; WPML-Enumerationen,
+Pilot-`*_model_key` und MQTT-`payload_index` werden nicht heuristisch
+ineinander konvertiert. Der Pilot-Katalog liefert bei vorhandener DJI-Datei-ID
+direkt eine authoritative `MissionExternalReference(source=dji_pilot_wayline)`.
+
+Details: [WPML.md](WPML.md).
+

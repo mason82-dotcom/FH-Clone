@@ -88,6 +88,8 @@ Auf `main` sind unter anderem vorhanden:
 - Root-Compose für Control API, EMQX, Web und TimescaleDB
 - lokale Runtime-Verify-Suite
 - FlightHub-2-OpenAPI-V2-Client für Waylines und Flight Tasks (read-only)
+- DJI-WPML/KMZ-Parser mit `template.kml`/`waylines.wpml` und neutraler Mission-Projektion (read-only)
+- DJI-Pilot-Waypoint-Dateikatalog (read-only)
 - read-only Mission-/Wayline-/Capability-APIs
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:

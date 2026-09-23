@@ -60,6 +60,17 @@ Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
 - `DJI_MQTT_CLIENT_ID`
 - `DJI_CLOUD_API_VERSION`
 
+### DJI Pilot Waypoint-Dateien – read-only
+
+```http
+GET /api/dji/pilot/waylines/status
+GET /api/dji/pilot/waylines?page=1&page_size=10
+```
+
+Dieser Pfad listet DJI-Pilot-Waypoint-Dateien ausschließlich per GET und führt
+keine Mission aus. WPML/KMZ-Parsing bleibt eine getrennte read-only
+Import-/Validierungsschicht.
+
 ### FlightHub 2 OpenAPI
 
 - `FH2_ENABLED`
@@ -70,6 +81,16 @@ Wenn `TIMESCALE_URL` gesetzt ist, aktiviert die Control API den
 - `FH2_TIMEOUT_MS`
 
 Der FH2-Client ist read-only und folgt keinen HTTP-Redirects.
+
+### DJI Pilot Wayline-Katalog
+
+- `DJI_PILOT_WAYLINE_ENABLED`
+- `DJI_PILOT_BASE_URL`
+- `DJI_PILOT_WORKSPACE_ID`
+- `DJI_PILOT_AUTH_TOKEN`
+- `DJI_PILOT_TIMEOUT_MS`
+
+Der Token bleibt ausschließlich serverseitig.
 
 ### EMQX und Diagnose
 

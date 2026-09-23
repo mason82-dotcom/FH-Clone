@@ -138,6 +138,38 @@ Read-only Wayline-Beobachtung aus DJI-Telemetrie.
 Endpunkt erfindet keine Wayline-ID und aktiviert keine
 `mission.wayline`-Capability.
 
+### DJI Pilot Waypoint Management – read-only
+
+```http
+GET /api/dji/pilot/waylines/status
+GET /api/dji/pilot/waylines?page=1&page_size=10
+```
+
+Optionale Filter:
+
+```text
+key                 Wayline-Dateiname
+favorited
+order_by            name|update_time|create_time + asc|desc
+action_type         1 = AI Spot-Check
+template_type       wiederholbar; 0..3
+drone_model_keys    wiederholbar
+payload_model_key   wiederholbar
+```
+
+Dieser Pfad spiegelt ausschließlich die DJI Pilot-to-Cloud-Waypoint-Dateiliste.
+Er ist nicht mit `/api/fh2/waylines` gleichzusetzen und führt keine Mission aus.
+
+Der serverseitige `x-auth-token` wird nie an den Browser ausgegeben.
+Fehlende Konfiguration liefert `503 dji_pilot_waylines_not_configured`;
+Upstream-/Businessfehler werden als `502 dji_pilot_waylines_upstream_error`
+abgebildet.
+
+DJI-`drone_model_key`, `payload_model_key`, WPML-Produkt-Enums und
+MQTT-`payload_index` bleiben getrennte Identitätsverträge.
+
+Details: [WPML und Pilot-Waypoints](WPML.md).
+
 ### FlightHub 2 OpenAPI V2 – read-only
 
 ```http
