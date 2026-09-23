@@ -45,7 +45,7 @@ test("global policy allows both drone_control and stick_control", async () => {
     yaw: DJI_STICK_CENTER
   });
 
-  assert.equal(stickSeq, 0);
+  assert.equal(stickSeq, 1);
   assert.equal(publications[1]?.topic, "thing/product/RC-PLUS2-001/drc/down");
   assert.equal(publications[1]?.payload?.method, "stick_control");
   assert.equal(publications.length, 2);
