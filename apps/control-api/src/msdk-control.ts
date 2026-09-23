@@ -27,6 +27,7 @@ export interface MsdkControlSession {
   createdAt: number;
   updatedAt: number;
   lastSeq: number;
+  lastFrameAt?: number | undefined;
   reason?: string | undefined;
 }
 
@@ -43,6 +44,7 @@ export interface MsdkControlHubOptions {
   agentFreshMs?: number | undefined;
   startTimeoutMs?: number | undefined;
   frameTtlMs?: number | undefined;
+  frameSilenceTimeoutMs?: number | undefined;
   onAudit?: ((event: Record<string, unknown>) => void) | undefined;
 }
 
@@ -58,12 +60,20 @@ export class MsdkControlHub {
   private readonly agentFreshMs: number;
   private readonly startTimeoutMs: number;
   private readonly frameTtlMs: number;
+  private readonly frameSilenceTimeoutMs: number;
 
   constructor(private readonly options: MsdkControlHubOptions) {
     this.now = options.now ?? Date.now;
     this.agentFreshMs = options.agentFreshMs ?? 3_000;
     this.startTimeoutMs = options.startTimeoutMs ?? 5_000;
     this.frameTtlMs = options.frameTtlMs ?? 250;
+    this.frameSilenceTimeoutMs =
+      options.frameSilenceTimeoutMs ?? 2_000;
+    if (this.frameSilenceTimeoutMs <= 0) {
+      throw new RangeError(
+        "msdk_frame_silence_timeout_must_be_positive"
+      );
+    }
   }
 
   registerPeer(
@@ -180,7 +190,8 @@ export class MsdkControlHub {
     this.sessions.set(aircraftSn, {
       ...session,
       updatedAt: now,
-      lastSeq: seq
+      lastSeq: seq,
+      lastFrameAt: now
     });
 
     return seq;
@@ -203,26 +214,43 @@ export class MsdkControlHub {
       reason
     });
 
+    let signalError: Error | undefined;
     if (peer) {
-      this.sendJson(peer, {
-        type: "neutral",
-        sessionId: session.sessionId,
-        reason
-      });
-      this.sendJson(peer, {
-        type: "session_stop",
-        sessionId: session.sessionId,
-        reason
-      });
+      try {
+        this.sendJson(peer, {
+          type: "neutral",
+          sessionId: session.sessionId,
+          reason
+        });
+        this.sendJson(peer, {
+          type: "session_stop",
+          sessionId: session.sessionId,
+          reason
+        });
+      } catch (error) {
+        signalError =
+          error instanceof Error
+            ? error
+            : new Error(String(error));
+      }
     }
 
-    this.sessions.set(aircraftSn, {
+    const closed = {
       ...session,
-      state: "closed",
+      state: "closed" as const,
       updatedAt: this.now(),
       reason
-    });
-    this.audit("session_closed", { ...session, reason });
+    };
+    this.sessions.set(aircraftSn, closed);
+    this.audit("session_closed", { ...closed });
+    if (signalError) {
+      this.audit("session_signal_failed", {
+        aircraftSn,
+        sessionId: session.sessionId,
+        reason,
+        error: signalError.message
+      });
+    }
   }
 
   handleAgentMessage(aircraftSn: string, text: string): void {
@@ -258,7 +286,8 @@ export class MsdkControlHub {
       this.sessions.set(aircraftSn, {
         ...session,
         state: "active",
-        updatedAt: now
+        updatedAt: now,
+        lastFrameAt: now
       });
       this.audit("session_active", { ...session });
       return;
@@ -286,15 +315,18 @@ export class MsdkControlHub {
         typeof message.sessionId === "string" &&
         message.sessionId === session.sessionId
       ) {
-        this.sessions.set(aircraftSn, {
+        const reason =
+          typeof message.reason === "string"
+            ? message.reason
+            : "agent_stopped";
+        const closed = {
           ...session,
-          state: "closed",
+          state: "closed" as const,
           updatedAt: this.now(),
-          reason:
-            typeof message.reason === "string"
-              ? message.reason
-              : "agent_stopped"
-        });
+          reason
+        };
+        this.sessions.set(aircraftSn, closed);
+        this.audit("session_closed", { ...closed });
       }
       return;
     }
@@ -321,6 +353,15 @@ export class MsdkControlHub {
         now - session.createdAt > this.startTimeoutMs
       ) {
         this.closeSession(aircraftSn, "session_start_timeout");
+        continue;
+      }
+
+      if (
+        session.state === "active" &&
+        now - (session.lastFrameAt ?? session.updatedAt) >=
+          this.frameSilenceTimeoutMs
+      ) {
+        this.closeSession(aircraftSn, "stick_frame_timeout");
         continue;
       }
 

@@ -14,7 +14,8 @@ data class NormalizedStickFrame(
 class RemoteControlSession(
     private val degradeAfterMs: Long = 500,
     private val closeAfterMs: Long = 2_000,
-    private val checkIntervalMs: Long = 100
+    private val checkIntervalMs: Long = 100,
+    private val onDeadmanTimeout: (() -> Unit)? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
 
@@ -37,6 +38,7 @@ class RemoteControlSession(
                 VirtualStickController.neutral()
                 VirtualStickController.disable { }
                 active = false
+                onDeadmanTimeout?.invoke()
                 return
             }
 
