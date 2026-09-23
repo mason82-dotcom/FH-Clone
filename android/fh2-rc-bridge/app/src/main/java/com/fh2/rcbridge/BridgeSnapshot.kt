@@ -101,6 +101,10 @@ private fun RemoteControllerIdentitySnapshot.toJson() =
         put("connected", connected)
         putNullable("serialNumber", serialNumber)
         putNullable("firmwareVersion", firmwareVersion)
+        put("rcGpsValid", rcGpsValid)
+        putNullable("rcLatitude", rcLatitude)
+        putNullable("rcLongitude", rcLongitude)
+        putNullable("rcAccuracyM", rcAccuracyM)
         put("componentIndex", componentIndex)
     }
 
