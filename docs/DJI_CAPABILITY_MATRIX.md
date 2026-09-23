@@ -88,7 +88,7 @@ Es gibt keinen Environment- oder Runtime-Schalter zur Reaktivierung.
 | Kamera-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.camera`-Werbung |
 | Gimbal-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.gimbal`-Werbung |
 | Payload-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `payload.control`-Werbung |
-| Flugsteuerung / Stick | nicht für M3-Pilot-Cloud | DJI dokumentiert | M4: spezialisierter ControlCoordinator/DRC-Pfad implementiert; keine generische Adapter-Capability |
+| Flugsteuerung / Stick | nicht für M3-Pilot-Cloud | DJI dokumentiert | **global deaktiviert**; kein Produktprofil darf Cloud-Stick-/manuelle DRC-Flugsteuerung aktivieren |
 | Return-to-Home | nicht freigegeben | DJI dokumentiert `return_home` / `return_home_cancel` | nicht implementiert |
 | FlyTo | nicht freigegeben | DJI dokumentiert | M4: `DrcController.flyToPoint()` implementiert |
 | Pointing Flight | nicht freigegeben | DJI dokumentiert | nicht implementiert |
@@ -134,15 +134,16 @@ DJI beschreibt hinter RC Plus 2:
 - Return-to-Home
 - weitere Live-Flight-Control-Kommandos
 
-FH2 V3 implementiert für M4E/M4T aktuell:
+FH2 kennt für M4E/M4T die DJI-Protokolle, aktiviert manuelle Cloud-Flugsteuerung
+aber global nicht:
 
 ```text
-ControlCoordinator / DRC-Sitzungsaufbau
-Stick-Control
-Neutral-Control
-Heartbeat
-Emergency Stop
-FlyTo
+Stick-Control / stick_control = DISABLED
+Legacy drone_control          = DISABLED
+DrcProfile                    = none
+flightControl                 = false
+
+FlyTo                         = separat verfügbar, sofern freigegeben
 ```
 
 Nicht implementiert sind in V3:

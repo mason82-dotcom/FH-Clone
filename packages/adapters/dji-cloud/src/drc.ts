@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import { DjiServiceError } from "./service.js";
+import { DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED } from "./capabilities.js";
 
 export type MqttQos = 0 | 1;
 
@@ -244,6 +245,9 @@ export class DrcController {
    * require the legacy profile.
    */
   async sendControl(gatewaySn: string, axes: DrcAxes): Promise<number> {
+    if (!DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED) {
+      throw new Error("dji_cloud_manual_flight_control_disabled");
+    }
     assertFiniteRange("x", axes.x, -17, 17);
     assertFiniteRange("y", axes.y, -17, 17);
     assertFiniteRange("h", axes.h, -4, 5);
@@ -280,6 +284,9 @@ export class DrcController {
     gatewaySn: string,
     channels: DrcStickChannels
   ): Promise<number> {
+    if (!DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED) {
+      throw new Error("dji_cloud_manual_flight_control_disabled");
+    }
     assertFiniteRange("roll", channels.roll, DJI_STICK_MIN, DJI_STICK_MAX);
     assertFiniteRange("pitch", channels.pitch, DJI_STICK_MIN, DJI_STICK_MAX);
     assertFiniteRange("throttle", channels.throttle, DJI_STICK_MIN, DJI_STICK_MAX);

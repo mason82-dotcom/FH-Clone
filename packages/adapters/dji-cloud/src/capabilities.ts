@@ -1,6 +1,8 @@
 import type { Capability } from "@fh-clone/aircraft-core";
 import type { DjiGatewayTopology, DjiProductRef } from "./topology.js";
 
+export const DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED = false as const;
+
 export type DjiDrcProfile =
   | "none"
   | "pilot-m4-stick";
@@ -84,13 +86,13 @@ export function getDjiCloudControlProfile(
   if (isMatrice4Enterprise(aircraft)) {
     const supportedGateway = isRcPlus2(gateway);
     return {
-      flightControl: supportedGateway,
+      flightControl: false,
       flyTo: supportedGateway,
       pointingFlight: false,
       orbitFlight: false,
       payloadControl: false,
       requiresCloudControlAuthority: supportedGateway,
-      drcProfile: supportedGateway ? "pilot-m4-stick" : "none",
+      drcProfile: "none",
       // M4 flight control is implemented through the dedicated
       // ControlCoordinator/DRC runtime, not AircraftAdapter.execute().
       // Payload control is documented by DJI but not implemented as a
@@ -98,8 +100,8 @@ export function getDjiCloudControlProfile(
       // advertised to CapabilityRouter here.
       capabilities: [],
       reason: supportedGateway
-        ? "FH2 V3 implements Matrice 4 stick/DRC and FlyTo through the dedicated ControlCoordinator/DRC path. DJI also documents RTH, pointing/orbit and payload control, but those paths are not implemented in FH2 V3 and therefore remain disabled."
-        : "Matrice 4 runtime control is only enabled after a supported RC Plus 2 gateway is identified."
+        ? "FH2 globally disables DJI cloud manual flight control (stick_control and legacy drone_control). FlyTo remains a separate service capability behind RC Plus 2; other documented M4 controls remain disabled unless explicitly implemented."
+        : "Matrice 4 runtime control requires a supported RC Plus 2 gateway; cloud manual flight control remains globally disabled regardless of gateway."
     };
   }
 

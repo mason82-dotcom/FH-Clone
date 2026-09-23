@@ -24,20 +24,20 @@ test("M3E/M3T/M3TA behind RC Pro are payload-control only", () => {
   }
 });
 
-test("Matrice 4E/4T behind RC Plus 2 expose documented live-control set", () => {
+test("Matrice 4E/4T keep cloud manual flight control globally disabled", () => {
   for (const subType of [0, 1]) {
     const profile = getDjiCloudControlProfile(
       { domain: 0, type: 99, subType },
       rcPlus2
     );
 
-    assert.equal(profile.flightControl, true);
+    assert.equal(profile.flightControl, false);
     assert.equal(profile.flyTo, true);
     assert.equal(profile.pointingFlight, false);
     assert.equal(profile.orbitFlight, false);
     assert.equal(profile.payloadControl, false);
     assert.equal(profile.requiresCloudControlAuthority, true);
-    assert.equal(profile.drcProfile, "pilot-m4-stick");
+    assert.equal(profile.drcProfile, "none");
 
     assert.deepEqual(profile.capabilities, []);
   }
@@ -116,11 +116,11 @@ test("documented product support does not imply generic adapter execution", () =
   assert.deepEqual(m3.capabilities, []);
 
   assert.equal(m4.payloadControl, false);
-  assert.equal(m4.flightControl, true);
+  assert.equal(m4.flightControl, false);
   assert.equal(m4.flyTo, true);
   assert.equal(m4.pointingFlight, false);
   assert.equal(m4.orbitFlight, false);
-  assert.equal(m4.drcProfile, "pilot-m4-stick");
+  assert.equal(m4.drcProfile, "none");
   assert.deepEqual(m4.capabilities, []);
 });
 
@@ -138,8 +138,8 @@ test("unimplemented DJI-documented controls stay disabled in V3 runtime", () => 
   assert.equal(m4.payloadControl, false);
   assert.deepEqual(m4.capabilities, []);
 
-  // Existing specialized runtime paths remain available.
-  assert.equal(m4.flightControl, true);
+  // FlyTo remains separate; manual cloud stick/velocity control is globally disabled.
+  assert.equal(m4.flightControl, false);
   assert.equal(m4.flyTo, true);
 });
 

@@ -439,3 +439,26 @@ projektweit deaktiviert. Es existiert deshalb kein aktives
 PSDK-bezogene DRC-Methoden (`drc_psdk_*`) sind ebenfalls global gesperrt.
 Diese Sperren besitzen keinen Runtime-Schalter und können nicht über
 Umgebungsvariablen aktiviert werden.
+
+
+## Globale Sperre der Cloud-Stick-Flugsteuerung
+
+FH2 deaktiviert die manuelle DJI-Cloud-Flugsteuerung projektweit und fail-closed.
+
+```text
+stick_control  = DISABLED
+drone_control  = DISABLED
+```
+
+Die Sperre gilt unabhängig von Produkt, Gateway, FC3, Control Lease, DJI
+Control Authority oder DRC-Sitzungsstatus. Sie besitzt keinen Environment-
+oder Runtime-Schalter.
+
+Der Produktvertrag darf weiterhin dokumentieren, dass DJI eine Funktion
+herstellerseitig unterstützt. FH2 meldet daraus jedoch keine
+`flightControl`-Runtimefähigkeit und `DrcController` verwirft direkte
+manuelle Flugkommandos vor jedem MQTT-Publish.
+
+Nicht Teil dieser Sperre sind getrennte, nicht-manuelle Servicepfade wie
+`fly_to_point`, sofern diese separat freigegeben und abgesichert sind.
+
