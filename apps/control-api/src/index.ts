@@ -6,6 +6,7 @@ import {
 } from "@fh-clone/aircraft-core";
 import {
   DjiCloudAdapter,
+  DJI_CLOUD_CONTROL_ENABLED,
   DrcSessionManager,
   InMemoryDrcSessionStore,
   isDjiM3mMediaInput,
@@ -226,7 +227,7 @@ const publicServer = createServer(async (request, response) => {
       const state = dji.getCloudControlAuthority(gatewaySn);
       return json(response, 200, {
         gatewaySn,
-        cloudControlEnabled: true,
+        cloudControlEnabled: DJI_CLOUD_CONTROL_ENABLED,
         state: state ?? {
           gatewaySn,
           status: "unknown",
