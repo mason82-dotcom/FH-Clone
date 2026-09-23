@@ -109,5 +109,8 @@ object RemoteControllerIdentitySource {
         snapshot = snapshot.transform()
         val current = snapshot
         listeners.forEach { it(current) }
+        if (current.connected && !current.serialNumber.isNullOrBlank()) {
+            Fh2BridgeClient.tryResume()
+        }
     }
 }
