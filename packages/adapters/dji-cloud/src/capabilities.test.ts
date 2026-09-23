@@ -13,6 +13,7 @@ test("M3E/M3T/M3TA behind RC Pro expose drone_control and payload control", () =
       rcPro
     );
 
+    assert.equal(profile.cloudControl, true);
     assert.equal(profile.flightControl, true);
     assert.equal(profile.stickControl, false);
     assert.equal(profile.droneControl, true);
@@ -31,6 +32,7 @@ test("Matrice 4E/4T behind RC Plus 2 expose stick and drone control", () => {
       rcPlus2
     );
 
+    assert.equal(profile.cloudControl, true);
     assert.equal(profile.flightControl, true);
     assert.equal(profile.stickControl, true);
     assert.equal(profile.droneControl, true);
@@ -52,6 +54,7 @@ test("wrong domains or gateways stay fail-closed", () => {
   ];
 
   for (const profile of profiles) {
+    assert.equal(profile.cloudControl, false);
     assert.equal(profile.flightControl, false);
     assert.equal(profile.stickControl, false);
     assert.equal(profile.droneControl, false);
@@ -69,8 +72,10 @@ test("specialized product controls do not become generic execute capabilities", 
     rcPlus2
   );
 
+  assert.equal(m3.cloudControl, true);
   assert.equal(m3.payloadControl, true);
   assert.equal(m3.drcProfile, "pilot-m3-drone");
+  assert.equal(m4.cloudControl, true);
   assert.equal(m4.drcProfile, "pilot-m4-stick");
   assert.deepEqual(m3.capabilities, []);
   assert.deepEqual(m4.capabilities, []);
