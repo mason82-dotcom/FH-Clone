@@ -144,6 +144,29 @@ test("valid signed token re-authenticates transport after service restart", () =
   );
 });
 
+test("revoked agent token is rejected without changing identity semantics", () => {
+  const revoked = new Set<string>();
+  const service = new MsdkBridgeService({
+    pairingToken: "pair-secret",
+    signingSecret: "sign-secret",
+    tokenTtlMs: 60_000,
+    now: () => 10_000,
+    isAgentTokenRevoked: (token) => revoked.has(token)
+  });
+
+  const paired = service.pair("pair-secret", snapshot());
+  assert.ok(paired);
+
+  const identity = service.authenticateAgent(paired.agentToken);
+  assert.ok(identity);
+  service.unpairAgent(identity);
+  revoked.add(paired.agentToken);
+
+  assert.equal(service.authenticateAgent(paired.agentToken), undefined);
+  assert.equal(service.heartbeat(paired.agentToken, snapshot()), false);
+  assert.equal(service.getByAircraftSn("M3T-001"), undefined);
+});
+
 test("rejects expired agent tokens", () => {
   let now = 10_000;
   const service = new MsdkBridgeService({

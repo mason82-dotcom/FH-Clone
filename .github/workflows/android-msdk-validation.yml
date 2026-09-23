@@ -119,4 +119,5 @@ jobs:
           node --test \
             apps/control-api/dist/msdk-bridge.test.js \
             apps/control-api/dist/msdk-control.test.js \
-            apps/control-api/dist/msdk-normalizer.test.js
+            apps/control-api/dist/msdk-normalizer.test.js \
+            apps/control-api/dist/msdk-token-revocations.test.js

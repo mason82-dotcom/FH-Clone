@@ -344,6 +344,25 @@ export class MsdkControlHub {
     return [...this.sessions.values()].map((entry) => ({ ...entry }));
   }
 
+  disconnectAgent(
+    aircraftSn: string,
+    reason = "agent_unpaired"
+  ): void {
+    const current = this.peers.get(aircraftSn);
+    if (!current) return;
+
+    this.closeSession(aircraftSn, reason);
+    if (this.peers.get(aircraftSn)?.peer !== current.peer) return;
+
+    this.peers.delete(aircraftSn);
+    current.peer.close(4004, reason);
+    this.audit("peer_closed", {
+      aircraftSn,
+      gatewaySn: current.identity.gatewaySn,
+      reason
+    });
+  }
+
   private requireLivePeer(aircraftSn: string): PeerRecord {
     const current = this.peers.get(aircraftSn);
     if (!current) throw new Error("msdk_agent_socket_not_connected");

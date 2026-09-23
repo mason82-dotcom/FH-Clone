@@ -131,6 +131,7 @@ export interface MsdkBridgeServiceOptions {
   tokenTtlMs?: number | undefined;
   snapshotMaxAgeMs?: number | undefined;
   snapshotFutureSkewMs?: number | undefined;
+  isAgentTokenRevoked?: ((token: string) => boolean) | undefined;
   now?: (() => number) | undefined;
 }
 
@@ -140,6 +141,7 @@ export class MsdkBridgeService {
   private readonly tokenTtlMs: number;
   private readonly snapshotMaxAgeMs: number;
   private readonly snapshotFutureSkewMs: number;
+  private readonly isAgentTokenRevoked: (token: string) => boolean;
   private readonly now: () => number;
   private readonly agents = new Map<string, MsdkAgentRecord>();
 
@@ -149,6 +151,8 @@ export class MsdkBridgeService {
     this.tokenTtlMs = options.tokenTtlMs ?? 86_400_000;
     this.snapshotMaxAgeMs = options.snapshotMaxAgeMs ?? 15_000;
     this.snapshotFutureSkewMs = options.snapshotFutureSkewMs ?? 5_000;
+    this.isAgentTokenRevoked =
+      options.isAgentTokenRevoked ?? (() => false);
     this.now = options.now ?? Date.now;
   }
 
@@ -264,6 +268,10 @@ export class MsdkBridgeService {
     };
   }
 
+  unpairAgent(identity: MsdkAgentIdentity): void {
+    this.agents.delete(agentKey(identity.gatewaySn, identity.aircraftSn));
+  }
+
   private isFreshSnapshot(
     snapshot: MsdkBridgeSnapshot,
     now: number
@@ -292,6 +300,8 @@ export class MsdkBridgeService {
 
   private verify(token: string): MsdkTokenPayload | undefined {
     if (!this.signingSecret) return undefined;
+    if (this.isAgentTokenRevoked(token)) return undefined;
+
     const [encoded, signature, extra] = token.split(".");
     if (!encoded || !signature || extra !== undefined) return undefined;
 
