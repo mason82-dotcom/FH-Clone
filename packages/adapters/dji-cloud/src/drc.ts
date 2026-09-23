@@ -126,6 +126,8 @@ export interface DrcControllerOptions {
   postEmergencyStopCooldownMs?: number;
   /** Heartbeat period. DJI exits an idle DRC link after prolonged heartbeat absence. */
   heartbeatIntervalMs?: number;
+  /** Runtime error sink for heartbeat publish failures. */
+  onHeartbeatError?: (error: Error) => void | Promise<void>;
 }
 
 function assertFiniteRange(name: string, value: number, min: number, max: number): void {
@@ -389,9 +391,9 @@ export class DrcController {
 
   startHeartbeat(gatewaySn: string): void {
     this.stopHeartbeat();
-    void this.sendHeartbeat(gatewaySn);
+    this.publishHeartbeat(gatewaySn);
     this.heartbeatTimer = setInterval(() => {
-      void this.sendHeartbeat(gatewaySn);
+      this.publishHeartbeat(gatewaySn);
     }, this.heartbeatIntervalMs);
   }
 
@@ -434,6 +436,22 @@ export class DrcController {
       throw new DjiServiceError(method, reply.result, reply);
     }
     return reply;
+  }
+
+  private publishHeartbeat(gatewaySn: string): void {
+    void this.sendHeartbeat(gatewaySn).catch((error: unknown) => {
+      this.stopHeartbeat();
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
+      void Promise.resolve(
+        this.options.onHeartbeatError?.(normalized)
+      ).catch((callbackError: unknown) => {
+        console.error(
+          "DJI DRC heartbeat error callback failed",
+          callbackError
+        );
+      });
+    });
   }
 
   private async waitForControlSlot(): Promise<void> {
