@@ -103,21 +103,23 @@ export class DjiCloudControlAuthorityRegistry {
     const data = messageData(message);
     if (!data) return undefined;
 
-    // Current DJI Pilot Cloud property contract:
-    // cloud_control_auth: ["flight", ...]
-    const controlKeys = stringArray(data.cloud_control_auth);
-
-    // Compatibility with older/alternate state payloads seen in previous code.
-    const legacyAuthorized =
+    // DJI Pilot Cloud documents the gateway state property as:
+    // is_cloud_control_auth: boolean
+    const documentedAuthorized =
       typeof data.is_cloud_control_auth === "boolean"
         ? data.is_cloud_control_auth
         : undefined;
 
-    if (!controlKeys && legacyAuthorized === undefined) return undefined;
+    // Compatibility only: keep accepting an observed/alternate key-list shape
+    // without treating it as the documented Pilot 2 contract.
+    const controlKeys = stringArray(data.cloud_control_auth);
 
-    const authorized = controlKeys
-      ? controlKeys.includes("flight")
-      : legacyAuthorized ?? false;
+    if (documentedAuthorized === undefined && !controlKeys) return undefined;
+
+    const authorized =
+      documentedAuthorized ??
+      controlKeys?.includes("flight") ??
+      false;
 
     const current = this.states.get(gatewaySn);
 
