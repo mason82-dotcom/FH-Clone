@@ -5,9 +5,10 @@ Fluggeräte, FlightHub-2-nahe Funktionen, DJI Cloud API, RTK, Medien,
 Multispektral-Verarbeitung und Groundstation-Anbindung.
 
 Der freigegebene Basisstand ist **FH2 V3.0.0**. Der Release ist als
-Software-/FC0-Basisstand definiert: hardwareabhängige FC3-, DRC-, Dock-,
-Pilot-2-, Thermal- und produktive Multispektralpfade benötigen zusätzlich
-ihre jeweils dokumentierte reale Hardwareabnahme.
+Software-/FC0-Basisstand definiert. DJI Dock 1–3, Multi-Dock, PSDK-Payloads
+sowie manuelle DJI-Cloud-Flugsteuerung (`stick_control`/`drone_control`)
+sind projektweit deaktiviert; verbleibende Thermal-, Multispektral- und
+Pilot-2-Hardwareprofile benötigen ihre jeweils dokumentierte reale Abnahme.
 
 ## Projektziel
 
@@ -92,8 +93,8 @@ Auf `main` sind unter anderem vorhanden:
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 
-- M4E/M4T FC3-/DRC-Flugsteuerung ohne reale Hardwareabnahme
-- Dock3/M4D/M4TD
+- manuelle DJI-Cloud-Flugsteuerung (`stick_control` / `drone_control`): global deaktiviert
+- DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: global deaktiviert
 - Pilot-2-JSBridge
 - vollständige WPML/Pilot-Wayline-Integration aus offenen Drafts
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
@@ -181,9 +182,9 @@ npm run typecheck
 npm test
 ```
 
-Der vollständige V3-Gesamtstart wird erst als Release-Gate freigegeben, wenn
-Root-Compose, EMQX, TimescaleDB, Control API und Weboberfläche gemeinsam
-reproduzierbar starten.
+Der V3-Gesamtstart ist als Release-Gate automatisiert: Root-Compose, EMQX,
+TimescaleDB, Control API und Weboberfläche müssen gemeinsam reproduzierbar
+starten und `scripts/verify.sh` bestehen.
 
 ## Dokumentation
 
