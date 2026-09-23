@@ -59,6 +59,11 @@ erfolgreich sind, andernfalls `503`.
 FlightHub 2 OpenAPI ist optional und blockiert die allgemeine Readiness
 nicht, wenn `FH2_ENABLED=false` gesetzt ist.
 
+Die Readiness prüft außerdem den konfigurierten MediaStore. Wenn
+`TIMESCALE_URL` gesetzt ist, muss die Tabelle `media_assets` erreichbar
+sein; andernfalls meldet `/ready` den Check `mediaStore=unavailable` und
+liefert HTTP 503.
+
 ### POST /api/msdk/pair
 
 Pairing-Endpunkt für die native FH2 RC Bridge auf DJI MSDK V5.
