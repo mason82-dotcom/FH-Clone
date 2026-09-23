@@ -61,6 +61,7 @@ import { MsdkControlHub } from "./msdk-control.js";
 import { attachMsdkControlWebSocket } from "./msdk-control-ws.js";
 import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
 import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
+import { queryInt } from "./http-query.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -1049,22 +1050,6 @@ async function readJson<T>(request: IncomingMessage, limit: number): Promise<T> 
   }
 
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as T;
-}
-
-function queryInt(
-  url: URL,
-  name: string,
-  fallback: number,
-  min: number,
-  max: number
-): number {
-  const raw = url.searchParams.get(name);
-  if (raw === null || raw === "") return fallback;
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value) || value < min || value > max) {
-    throw new Error(`invalid_query_${name}`);
-  }
-  return value;
 }
 
 function envInt(name: string, fallback: number): number {
