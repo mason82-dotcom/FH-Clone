@@ -11,10 +11,16 @@ Herstellerunterlagen direkt vergleichbar bleiben.
 
 Die Dokumentation unterscheidet drei Zustände:
 
-- **Implementiert** – auf `main` vorhanden.
-- **V3-Ziel** – für V3.0 verbindlich, aber noch nicht vollständig umgesetzt.
+- **Implementiert** – auf `main` vorhanden und Teil des aktuellen Softwarestands.
+- **Optional/Ziel** – bewusst nicht Teil der 3.0.0-Software-Basis oder noch
+  nicht als ausführbarer FH2-Pfad implementiert.
 - **Real zu verifizieren** – Hardware- oder Herstellerverhalten muss noch mit
   echter DJI-Hardware bestätigt werden.
+
+Historische Überschriften mit „V3-Ziel“ oder „vor V3-RC“ sind kein aktueller
+Software-Blocker, wenn `RELEASE_STATUS.md` und
+`TESTS_UND_ABNAHME.md` den betreffenden Softwarepfad bereits als geschlossen
+führen.
 
 Zielarchitektur darf nicht als bereits bestandene Laufzeit- oder
 Hardwareabnahme missverstanden werden.

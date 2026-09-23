@@ -4,6 +4,11 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
+> Die 3.0.0-Software-Baseline wurde mit Commit `58b82f9` festgelegt.
+> Ein `v3.0.0`-Tag und ein GitHub Release sind noch nicht veröffentlicht;
+> alle nachfolgenden Integrationen bleiben deshalb bis zur endgültigen
+> Artefaktgrenze unter `Unreleased`.
+
 - M3E/M3T/M3TA + RC Pro auf den offiziell dokumentierten Cloud-Payload-Control-Vertrag korrigiert; Cloud-Flugsteuerung (`stick_control`/`drone_control`) bleibt für M3 aus.
 - M4E/M4T + RC Plus 2 bleibt das separate Cloud-Flight-Control-Profil.
 - `ControlCoordinator` wird im Control-API-Prozess tatsächlich instanziiert; Runtime-Status ist read-only sichtbar, öffentliche Flight-Control-Schreibendpunkte bleiben deaktiviert.
@@ -15,6 +20,9 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - MediaStore-/Readiness-Integration aus #69 bleibt vollständig erhalten: Persistenz, Startup-Rehydration, `mediaStore.ping()` und Shutdown-Cleanup.
 - Persistente Telemetriehistorie ergänzt: sanitierte Raw-Messages und vollständige normalisierte Parameter werden mit Adapter-Provenienz in TimescaleDB gespeichert; ausgewählte fusionierte Flug-/RTK-Werte werden zusätzlich missionsbezogen in `telemetry` projiziert.
 - TelemetryStore ist fail-closed an `/ready`, Root-Compose-Migration, Upgrade-Test und deterministischen Shutdown angebunden.
+- MSDK-Capability-Status präzisiert: der authentifizierte Agent-Controltransport ist implementiert, während eine öffentliche Operator-/Browser-Control-API weiterhin ausdrücklich deaktiviert bleibt.
+- Veraltete Vor-Release-Abnahmecheckliste durch den tatsächlichen post-release Software-Regressionsvertrag ersetzt.
+- Öffentliche M3T-Fixture-Metadaten veröffentlichen keine historischen Git-Commit-/Blob-IDs oder entfernten Rohdateipfade mehr; der verpflichtende Control-Policy-Audit verhindert Regressionen.
 
 ## 3.0.0 – 2026-09-23
 

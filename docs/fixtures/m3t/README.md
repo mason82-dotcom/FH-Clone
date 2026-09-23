@@ -109,8 +109,16 @@ Reale Hardwaredaten fehlen weiterhin für:
 
 Der Fixture-Status bleibt deshalb `partial_real_hardware_fixture`.
 
-## History-Hinweis
+## Git-History und Datenschutz
 
-Frühere Commits können die inzwischen entfernten Rohdateien weiterhin
-enthalten. Vor V3-Release muss deshalb ein separater Git-History-Purge
-durchgeführt und anschließend geprüft werden.
+Die normalen Datei-Pfade der ursprünglichen DJI-Rohfixtures sind aus der
+aktuellen `main`-Historie entfernt und `.gitignore` blockiert erneutes
+Einchecken. Das öffentliche Manifest veröffentlicht keine Commit-, Blob- oder
+Rohdateipfad-Referenzen mehr.
+
+Ein früherer Git-Objektstand ist bei GitHub jedoch weiterhin direkt über eine
+bereits bekannte Objekt-ID erreichbar. Das ist **kein Laufzeit- oder
+Hardware-Gate**, aber ein Repository-Datenschutzpunkt. Vollständige Entfernung
+aus GitHubs Objekt-/Cachebestand erfordert die separate Sensitive-Data-Removal-
+Prozedur des Hosters. Bis deren Abschluss dürfen alte Commit-/Blob-IDs nicht
+weiter dokumentiert oder verteilt werden.

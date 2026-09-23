@@ -1,126 +1,91 @@
-# Tests und V3-Abnahme
+# Tests und Abnahme
+
+Stand: 23.09.2026
 
 ## Zweck
 
-Dieses Dokument beschreibt den tatsächlichen Teststand auf `main` und die
-verbindlichen V3-Abnahmeschritte.
+Dieses Dokument beschreibt den aktuellen Software-Abnahmestand von FH2 auf
+`main`. Reale DJI-Hardware-Evidence wird getrennt geführt und ist keine
+Voraussetzung für die Software-/FC0-Basisfreigabe.
 
-Es unterscheidet:
+Verbindliche Hardware-Nachweise stehen in
+[HARDWARE_EVIDENCE.md](HARDWARE_EVIDENCE.md).
 
-- bereits vorhandene automatisierte Tests
-- lokale Integrationsprüfungen
-- reale Hardwaretests
-- finale Direktor-CI
+## Software-Basisstand
 
-## Aktuell vorhandene automatisierte Tests
+FH2 V3.0.0 ist als Software-/FC0-Basisrelease freigegeben. Änderungen nach der
+3.0.0-Basis werden weiterhin durch dieselben automatischen Regressionsgates
+abgesichert.
 
-Im Repository vorhanden:
+Die Standard-Safety-Stufe bleibt FC0. Ein grüner Build oder ein erkanntes
+Produktprofil erzeugt keine Flight-Control-Berechtigung.
+
+## Automatische Direktor-CI
+
+Workflow:
 
 ```text
-apps/control-api/src/authz.test.ts
-apps/control-api/src/mission-session.test.ts
-apps/control-api/src/fh2-openapi.test.ts
-packages/aircraft-core/src/mission.test.ts
-packages/aircraft-core/src/safety.test.ts
-packages/aircraft-core/src/authority.test.ts
-packages/adapters/dji-cloud/src/drc-session.test.ts
+.github/workflows/director-v3-validation.yml
 ```
 
-### AuthZ
+Trigger:
 
-`authz.test.ts` prüft die EMQX-/DJI-Autorisierungslogik.
+- Pull Requests gegen `main`
+- Pushes auf `main`
+- manueller `workflow_dispatch` für zusätzliche Abnahmeparameter
 
-Schwerpunkt:
+Der Workflow prüft softwareseitig:
 
-- Gateway-/Topic-Regeln
-- Default-Deny
-- dynamische Topologie
-- erlaubte und verweigerte Aktionen
+- Repository-/Release-Struktur
+- reproduzierbares `npm ci` mit npm 11.19.1
+- TypeScript-/Web-Build
+- Typecheck
+- Node-/Workspace-Tests
+- Pilot-2-JSBridge-Safety-Scan
+- UgCS-Bridge-Build
+- TimescaleDB-Schema und Migrationen
+- Upgrade-Pfad für bestehende Volumes
+- Root-Compose und `scripts/verify.sh`
+- deutsche Pflichtdokumentation und Control-Policy
+- separat ausgewiesene Hardware-Evidence
 
-### Missionssitzung
+Fehlende reale Hardware-Evidence wird nicht durch synthetische Fixtures ersetzt.
 
-`mission-session.test.ts` prüft die Erkennung und Verwaltung aktiver
-Missionssitzungen.
+## Build- und Testgate
 
-### FH2 OpenAPI
-
-`fh2-openapi.test.ts` prüft:
-
-- Wayline-`size`-Parameter,
-- Flight-Task-`page_size`,
-- erforderliche FH2-Header,
-- ausschließlich GET,
-- Redirect-Ablehnung,
-- DJI-Businesscode-Fehler.
-
-### Core Mission/Safety/Authority
-
-Der `aircraft-core` führt seine kompilierten `*.test.js` jetzt über das
-Workspace-`test`-Script aus. Damit werden Mission-Referenzvertrag, SafetyGate
-und ControlAuthority nicht mehr von Root-`npm test --workspaces --if-present`
-übersprungen.
-
-### DRC-Sitzung
-
-`drc-session.test.ts` prüft die serverseitige DRC-Sitzungslogik einschließlich
-Dead-Man-/Sitzungszuständen.
-
-## Lokale Standardprüfung
-
-Aus dem Repository-Root:
+Aktueller Softwarevertrag:
 
 ```bash
-npm install
+npm ci
 npm run build
 npm run typecheck
 npm test
+npm run test:pilot2-jsbridge
+npm run verify:pilot2-jsbridge
 ```
 
-Zusätzlich:
+Die automatisierte Suite deckt unter anderem ab:
 
-```bash
-npm run test:authz
-```
-
-Ein fehlgeschlagener Schritt blockiert die V3-Abnahme.
-
-## Noch fehlende automatisierte Tests für V3
-
-Vor dem Release Candidate müssen mindestens ergänzt oder nachweislich
-abgedeckt sein:
-
-- SafetyGate
-- ControlAuthority
-- DjiTopologyRegistry
-- DJI-Normalizer
-- Service-/Reply-Korrelation
-- EMQX AuthN
-- Gateway-Credential-Bindung
-- AuthZ mit trusted `gateway_sn`
-- Basic Link ohne permanente DRC-Rechte
-- Credential-Deaktivierung
-- Pair/Unpair-Rechteentzug
-- RTK-Fix-Interpretation
-- RTK-Fix-Verlust
-- Media-/NDVI-Validierung
-- Persistenz-/Restart-Verhalten
-- offene automatische Mission wird bei Service-Neustart mit `service_restart` abgeschlossen
-- TimescaleDB-Schema und Initialisierung sind idempotent
-
-## Build-Gate
-
-Erforderlich:
-
-- [ ] `npm install` reproduzierbar
-- [ ] `npm run build` erfolgreich
-- [ ] `npm run typecheck` erfolgreich
-- [ ] `npm test` erfolgreich
-- [ ] Web-Build erfolgreich
-- [ ] optionale UgCS-Bridge separat baubar
+- SafetyGate und ControlAuthority
+- Device-/ParameterRegistry
+- DJI-Normalisierung und Telemetriefusion
+- TopologyRegistry und AuthZ
+- EMQX AuthN und Gateway-Credential-Bindung
+- Default-Deny und Basic-Link-/DRC-Trennung
+- DRC Session Manager und Dead-Man-Verhalten
+- ControlCoordinator-Guards
+- MSDK Pairing, Heartbeat, WSS-Control und Unpair/Revocation
+- MSDK Normalisierung und Hardware-Evidence-Validator
+- Mission-/Wayline-Beobachtung
+- RTK-/GNSS-Normalisierung und Zustandswechsel
+- Media-/M3M-/NDVI-Verträge
+- MediaStore, TelemetryStore und Persistenzgrenzen
+- Shutdown-/Cleanup-Verhalten
+- Web-/Proxy-Grenzen
 
 ## Runtime-Gate
 
-Der finale Root-Compose muss gemeinsam starten:
+Der Root-Compose startet gemeinsam:
 
 ```text
 control-api
@@ -129,169 +94,98 @@ web
 timescaledb
 ```
 
-Zu prüfen:
+Optional:
 
-- [ ] Health aller Pflichtdienste
-- [ ] Readiness
-- [ ] Neustart ohne Verlust persistenter Daten
-- [ ] offene automatische Missionszeilen werden beim Neustart sicher abgeschlossen, nicht still als aktive Sitzung rehydriert
-- [ ] interner Port 8081 nicht öffentlich
-- [ ] WebUI ohne MQTT-Credentials
-- [ ] Standard-Safety-Stufe FC0
+```text
+ugcs-bridge
+```
+
+`scripts/verify.sh` prüft insbesondere:
+
+- Health und Readiness
+- interne Service-Erreichbarkeit
+- EMQX und TimescaleDB
+- öffentliche Weboberfläche
+- Nicht-Exposition des internen Ports 8081
+- Default-Deny
+- FC0 als Default
+- keine öffentliche Flight-Control-Write-API
+- kontrollierten Cleanup beim Abbruch oder Fehler
+
+## Persistenz- und Restart-Gate
+
+Automatisiert abgesichert:
+
+- offene automatische Missionen werden nach Dienstneustart mit
+  `service_restart` abgeschlossen
+- historische Topologie erzeugt keine aktuelle AuthZ-Berechtigung
+- DRC-Sessions, FC-Stufe, Lease und DJI-Authority werden nicht aus PostgreSQL
+  rehydriert
+- Gateway-Credentials und Token-Revocations bleiben getrennt von
+  Runtime-Control-Rechten
+- MediaAssets werden persistiert und read-only rehydriert
+- sanitierte Raw-Messages werden in `raw_messages` persistiert
+- normalisierte Parameter werden mit Adapter-Provenienz in
+  `normalized_parameters` persistiert
+- ausgewählte fusionierte Missionswerte werden in `telemetry` projiziert
+- bestehende Volumes erhalten neue Tabellen über den idempotenten
+  One-Shot-Migrator
+- konfigurierte, aber nicht erreichbare Persistenz macht `/ready` fail-closed
+
+Retention und Backup-/Restore-Kapazitätsplanung bleiben Betriebsaufgaben und
+keine Quelle für Runtime-Autorisierung.
 
 ## MQTT-Sicherheits-Gate
 
-Zu prüfen:
+Automatisiert abgesichert:
 
-- [ ] unbekannter Principal -> deny
-- [ ] falsches Passwort -> deny
-- [ ] deaktivierter Principal -> deny
-- [ ] fehlende `gateway_sn`-Bindung -> deny
-- [ ] fremdes Gateway-Topic -> deny
-- [ ] fremdes Aircraft-Topic -> deny
-- [ ] gültiges Sub-Device aus aktueller Topologie -> nur bestätigte Rechte
-- [ ] entferntes Sub-Device verliert Rechte
-- [ ] Basic Link enthält keine permanenten DRC-Rechte
-- [ ] Ausfall des dynamischen Auth-Backends führt nicht zu breiter Freigabe
+- unbekannter Principal -> deny
+- falsches oder deaktiviertes Credential -> deny
+- Credential ist serverseitig an `gateway_sn` gebunden
+- MQTT-`clientid` ist keine Security Identity
+- fremde Gateway-/Aircraft-Topics -> deny
+- Topologie-Bootstrap nur über den kanonisch erlaubten Statuspfad
+- entfernte Runtime-Topologie erzeugt keine historischen Rechte
+- Basic Link besitzt keine permanenten DRC-Rechte
+- dynamische AuthN/AuthZ-Backendfehler bleiben fail-closed
+- Audit speichert keine Auth-Secrets
 
-## RC-Pro-Hardware-Gate
+## MSDK-Softwaregate
 
-Mit echter Hardware bestätigen:
-
-- [ ] Broker-Verbindung
-- [ ] reale MQTT-Client-ID
-- [ ] reale Username-/Credential-Semantik
-- [ ] `update_topo`
-- [ ] Aircraft OSD/State
-- [ ] Reconnect
-- [ ] Controller-Neustart
-- [ ] Pilot-2-Neustart
-- [ ] Pair/Unpair
-- [ ] Credential-Fehler
-- [ ] tatsächlich notwendige Topic-Matrix
-
-Die Beobachtung `clientid == gateway_sn` darf die V3-Security nicht auf diese
-Annahme reduzieren.
-
-## Native MSDK Pairing-/Transport-Gate
-
-Für die RC-Pro-Enterprise-App auf `agent/android-msdk-v5` wird der native
-HTTPS/WSS-Pfad separat vom Pilot-2-/MQTT-Gate abgenommen.
-
-Mit echter RC Pro Enterprise + unterstütztem M3-Aircraft prüfen:
-
-- [ ] Pairing liefert genau eine `gatewaySn + aircraftSn`-Bindung
-- [ ] Heartbeat wird nach dem Pairing etabliert
-- [ ] Agent-Control-WebSocket verbindet sich mit demselben Agent-Token
-- [ ] Control-API-Neustart führt zu neuem WSS, nicht zur Übernahme einer alten
-      Control-Session
-- [ ] App-Neustart resümiert nur bei identischer RC-/Aircraft-SN
-- [ ] Identity-Mismatch bleibt fail-closed
-- [ ] Unpair widerruft den Agent-Token serverseitig
-- [ ] Unpair beendet eine laufende Control-Session fail-closed
-- [ ] serverseitiger Unpair-Fehler löscht den lokalen Keystore-Datensatz nicht
-- [ ] nach erfolgreichem Unpair erfolgt nach App-Neustart kein automatisches
-      Resume ohne neues Pairing
-- [ ] Hardware-Evidence enthält keine Pairing-/Bearer-/DJI-App-Secrets
-
-Der Hardware-Nachweis erfolgt mit `fh2-msdk-evidence-<timestamp>.json`.
-Zusätzlich zum unveränderten `fh2.msdk.v1`-Snapshot enthält die Datei unter
-`evidence` den begrenzten, secret-freien Transport-Trace
-`fh2.pairing-transport-evidence.v1`.
-
-Der konkrete alte Bearer-Token wird für die Hardware-Abnahme nicht exportiert.
-Die serverseitige Ablehnung widerrufener Tokens bleibt daher automatisiert
-getestet; auf der RC wird nach Unpair nur geprüft, dass ohne neues Pairing kein
-Resume mehr entsteht.
-
-
-## RTK-Gate
-
-Zu prüfen:
-
-- [ ] GPS-only erzeugt keine RTK-Capability
-- [ ] `rtk_number` wird als RTK-spezifische Telemetrie erkannt
-- [ ] `quality == 10` + konsistenter Fixstatus ergibt RTK fixed
-- [ ] `is_fixed == 2` allein ergibt **nicht** RTK fixed
-- [ ] widersprüchliche Quality-/Fixwerte bleiben fail-closed
-- [ ] Fix-Wechsel korrekt
-- [ ] Stale-Status korrekt
-- [ ] Reconnect
-- [ ] Missionskontext
-- [ ] keine NTRIP-Secrets in API/Logs/Persistenz
-
-## Multispektral-/Media-Gate
-
-Zu prüfen:
-
-- [ ] Sensorquelle eindeutig
-- [ ] Payload-Zuordnung eindeutig
-- [ ] Red-Band authoritative identifiziert
-- [ ] NIR-Band authoritative identifiziert
-- [ ] `NDVI_READY` nur bei vollständigem Vertrag
-- [ ] `NDVI_PARTIAL` bei unvollständigem Datensatz
-- [ ] widersprüchliche Metadaten erzeugen keinen stillen Erfolg
-- [ ] heuristische Zuordnung bleibt als heuristisch gekennzeichnet
-
-## Safety-Gate
-
-Zu prüfen:
-
-- [ ] Default FC0
-- [ ] kein öffentlicher Flight-Control-Endpunkt im Defaultbetrieb
-- [ ] Control Lease erforderlich
-- [ ] DJI Control Authority separat erforderlich
-- [ ] DRC-Sitzung separat erforderlich
-- [ ] Dead-Man
-- [ ] neutraler/geschlossener Zustand nach Sitzungsende
-- [ ] Kill Switch
-
-## GitHub-CI
-
-Die manuelle Direktor-CI liegt unter:
+Der native RC-Bridge-Pfad ist softwareseitig integriert:
 
 ```text
-.github/workflows/director-v3-validation.yml
+Pair
+ -> Heartbeat
+ -> authentifizierter WSS-Agent-Kanal
+ -> FC3 + Lease + lokales Arm + VirtualStick-Support
+ -> Session
+ -> Neutralisierung / Stop
+ -> Unpair / Token-Revocation
 ```
 
-Sie wird ausschließlich über `workflow_dispatch` gestartet.
-
-Das Vorhandensein des Workflows ist noch kein bestandener CI-Nachweis. Der
-Direktor startet ihn erst nach belegten lokalen V3-Gates.
-
-## Freigabe
-
-Die Reihenfolge ist verbindlich:
+Die Control API meldet deshalb:
 
 ```text
-Build
- -> lokale Tests
- -> Runtime
- -> Security
- -> RC-Pro-Hardware
- -> Multispektral
- -> Safety
- -> Dokumentationsprüfung
- -> TimescaleDB-/Restart-Abnahme
- -> Direktor-CI
- -> V3.0 Release
+networkControlImplemented = true
+publicOperatorControlApiEnabled = false
 ```
 
-Nach erfolgreicher V3.0-Freigabe werden die V3-Arbeitspakete geschlossen und
-das Projekt gestoppt.
+Das bedeutet: Der authentifizierte Backend-zu-Agent-Controltransport ist
+implementiert. Es existiert weiterhin absichtlich **kein** öffentlicher
+Browser-/Operator-Schreibendpunkt, der eine Control-Session öffnet oder
+Stickwerte einspeist.
 
-## Mission/Wayline/Capabilities
+## Mission, WPML und Wayline
 
-Vor V3-RC lokal prüfen:
+Softwareseitig gilt:
 
-- [ ] `mode_code == 5` setzt `lastActivity=wayline` und `waylineObserved=true`.
-- [ ] Wechsel aus Wayline in einen anderen aktiven Modus erhält `waylineObserved=true`.
-- [ ] Standby-Grace meldet nicht fälschlich `currentlyFlyingWayline=true`.
-- [ ] `/api/devices/{device_sn}/wayline` erfindet keine Wayline-ID.
-- [ ] `/api/devices/{device_sn}/capabilities` trennt Adapter-Capabilities und DJI-Control-Profil.
-- [ ] DJI-Produktsupport erzeugt ohne `AircraftAdapter.execute()`-Pfad keine generische Schreib-Capability.
-- [ ] `mission.wayline` bleibt für den DJI-Cloud-Adapter in V3 nicht beworben.
-- [ ] Wayline-Beobachtung aktiviert weder FC2 noch Mission Execution.
+- `mode_code == 5` ist Wayline-Telemetrieevidenz
+- beobachtete Wayline erzeugt keine erfundene Wayline-ID
+- WPML/KMZ-Parser ist read-only integriert
+- Pilot-Wayline-Katalog ist read-only integriert
+- `mission.wayline` wird nicht allein aus Produktsupport beworben
+- Upload, Collect und Mission Execution sind nicht Teil des V3.0.0-Basisumfangs
 
 Verbindliche Invariante:
 
@@ -302,3 +196,35 @@ Wayline Management implementiert
   !=
 mission.wayline ausführbar
 ```
+
+## Hardwareprofil-Gates
+
+Reale Hardware-Nachweise bleiben getrennt offen. Dazu gehören unter anderem:
+
+- RC Pro Enterprise / M3E-M3T-M3TA MQTT- und Payload-Pfade
+- RC Plus 2 / M4E-M4T DRC-/Authority-Kette
+- M3M Narrow-Band-/Radiometrie-Fixtures
+- M3T/M4T Thermal-/Tele-Medienfixtures
+- Pilot-2-JSBridge-Session
+- Pilot-2-WPML-/Workspace-Fixtures
+- MSDK-KeyManager- und Pairing-/Transport-Evidence
+
+Diese Punkte verändern den Softwarestatus nicht und dürfen vor einer konkreten
+Hardware-Supportzusage nicht als bestätigt dargestellt werden.
+
+## Freigaberegel
+
+Für Softwareänderungen nach der V3.0.0-Basis gilt:
+
+```text
+PR basiert auf aktuellem main
++ Build/Typecheck/Tests grün
++ Root-Runtime grün
++ Migrationen grün
++ Doku/Policy grün
++ Safety-Grenzen unverändert oder explizit geprüft
+= softwareseitig integrierbar
+```
+
+Für eine konkrete Hardware-Supportzusage kommt zusätzlich das passende reale
+Hardwareprofil-Gate hinzu.

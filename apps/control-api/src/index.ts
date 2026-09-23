@@ -1224,7 +1224,8 @@ function getDeviceCapabilityView(deviceId: string) {
           lastSeenAt: msdkAgent.lastSeenAt,
           capabilities: msdkDevice.capabilities,
           reportedCapabilities: msdkAgent.snapshot.capabilities,
-          networkControlImplemented: false,
+          networkControlImplemented: true,
+          publicOperatorControlApiEnabled: false,
           networkControlArmed:
             msdkAgent.snapshot.control.networkArmed,
           localVirtualStickState: {

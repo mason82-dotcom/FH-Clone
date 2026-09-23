@@ -8,7 +8,9 @@ konvergieren.
 V3.0 ist kein Neuaufbau. Vorhandene Bausteine auf `main` werden integriert,
 gehärtet, getestet und dokumentiert.
 
-Die Versionsnummer `3.0.0` wird erst beim Release Candidate gesetzt.
+Die Versionsnummer `3.0.0` ist gesetzt; dieses Dokument bleibt als
+Architektur- und Safety-Referenz des freigegebenen Software-/FC0-Basisstands
+erhalten.
 
 ## Abschlussziel
 
@@ -81,9 +83,9 @@ timescaledb
 
 UgCS bleibt ein optionaler Adapterdienst.
 
-**Aktueller Status:** Root-Compose und die vier Pflichtdienste sind implementiert.
-Der reale gemeinsame Build-/Start-/Restart-Nachweis bleibt wegen des offenen
-R1-Lockfile-/Toolchain-Gates ausstehend.
+**Aktueller Status:** Root-Compose und die vier Pflichtdienste sind
+implementiert. Reproduzierbarer Lockfile-, Build-, Start-, Readiness- und
+Restart-Nachweis sind Bestandteil der automatischen Direktor-CI.
 
 ## Persistenz-Ziel
 
@@ -98,7 +100,9 @@ PostgreSQL soll mindestens persistieren:
 - Medienmetadaten
 - Missions-/RTK-Kontext
 
-**Aktueller Status:** SQL-Schema und automatische Missionspersistenz sind implementiert; Telemetrie-, Raw-, Audit-, Topologie- und Medienpersistenz sind noch nicht vollständig abgenommen.
+**Aktueller Status:** Missions-, Raw-/Normalparameter-, Audit-, Topologie- und
+Medienpersistenz sind implementiert. Historische Daten bleiben ausdrücklich
+keine Runtime-Autorisierungsquelle.
 
 ## DJI MQTT
 
@@ -229,35 +233,21 @@ Missionsausführung erfordert mindestens FC2 und eine gesonderte Freigabe.
 
 ## Release-Gates
 
-### Gate 1 – Build
+### Gate 1 – Build: SOFTWARE PASS
 
-- [ ] reproduzierbare Installation
-- [ ] TypeScript-Build
-- [ ] Typecheck
-- [ ] Web-Build
-- [ ] optionaler UgCS-Bridge-Build
+Reproduzierbare Installation, TypeScript-/Web-Build, Typecheck und
+UgCS-Bridge-Build werden durch die Direktor-CI abgesichert.
 
-### Gate 2 – Runtime
+### Gate 2 – Runtime: SOFTWARE PASS
 
-- [ ] Root Compose startet
-- [ ] Control API gesund
-- [ ] EMQX gesund
-- [ ] PostgreSQL gesund
-- [ ] Weboberfläche erreichbar
-- [ ] Neustart ohne Datenverlust
+Root-Compose, Control API, EMQX, TimescaleDB, Web, Readiness und Restart werden
+durch `scripts/verify.sh` und die Direktor-CI abgesichert.
 
-### Gate 3 – Tests
+### Gate 3 – Tests: SOFTWARE PASS
 
-- [ ] SafetyGate
-- [ ] ControlAuthority
-- [ ] TopologyRegistry
-- [ ] DJI-Normalizer
-- [ ] Service-/Reply-Korrelation
-- [ ] EMQX AuthN
-- [ ] EMQX AuthZ
-- [ ] Default-Deny
-- [ ] Basic Link ohne DRC-Rechte
-- [ ] Media-/NDVI-Validierung
+Safety/Authority, Topologie, Normalisierung, Service-Korrelation, AuthN/AuthZ,
+Default-Deny, Basic-Link-/DRC-Trennung sowie Media-/NDVI-Verträge sind
+automatisiert abgedeckt.
 
 ### Gate 4 – RC Pro
 
@@ -293,10 +283,11 @@ Missionsausführung erfordert mindestens FC2 und eine gesonderte Freigabe.
 - [x] Betriebs- und Fehlerhinweise vollständig
 - [x] keine widersprüchlichen Altstände
 
-### Gate 8 – Direktor-CI
+### Gate 8 – Direktor-CI: AKTIV
 
-Erst nach lokaler Erfüllung der vorherigen Gates startet der Direktor die
-zentrale CI und bewertet den Release Candidate.
+Die Direktor-CI läuft automatisch für Pull Requests gegen `main` und Pushes
+auf `main`. Ein manueller Lauf bleibt für zusätzliche Hardware-Evidence-
+Parameter verfügbar.
 
 ## Feature-Freeze
 
