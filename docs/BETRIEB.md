@@ -295,3 +295,20 @@ Prüfen:
 
 Nach der finalen V3-Abnahme bleibt `main` als freigegebener Abschlussstand
 bestehen. Es gibt keine Folgeentwicklung ohne neuen Auftrag.
+
+
+## Readiness-Semantik
+
+`GET /health` zeigt, ob der HTTP-Prozess läuft. `GET /ready` prüft die
+konfigurierten Runtime-Abhängigkeiten.
+
+Für jede Abhängigkeit gilt:
+
+- `disabled`: nicht konfiguriert; blockiert die Readiness nicht
+- `ready`: konfiguriert und erreichbar
+- `unavailable`: konfiguriert, aber nicht erreichbar/bereit; HTTP 503
+
+Damit wird ein bewusst ohne DJI-MQTT oder Persistenz gestarteter
+Entwicklungsprozess nicht mit einem ausgefallenen Produktionsdienst
+verwechselt. Im Root-Compose sind EMQX und TimescaleDB konfiguriert; dort
+bleiben sie zwingende Readiness-Voraussetzungen.
