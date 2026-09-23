@@ -226,6 +226,32 @@ test("stale heartbeat closes an active session fail-closed", () => {
   );
 });
 
+test("expired agent token closes the transport and active session fail-closed", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.setNow(60_001);
+  f.hub.tick();
+
+  assert.deepEqual(f.peer.closed, {
+    code: 4003,
+    reason: "agent_token_expired"
+  });
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "agent_transport_lost"
+  );
+});
+
 test("wrong lease holder cannot inject stick frames", () => {
   const f = fixture();
   const session = f.hub.openSession("M3T-001", "operator-a");
