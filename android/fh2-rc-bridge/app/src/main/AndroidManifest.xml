@@ -17,6 +17,11 @@
             android:value="${DJI_API_KEY}" />
 
         <activity
+            android:name=".VideoActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
+        <activity
             android:name=".MapActivity"
             android:exported="false"
             android:screenOrientation="landscape" />
