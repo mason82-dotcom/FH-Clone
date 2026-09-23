@@ -7,10 +7,10 @@ Stand: 23.09.2026
 FH2 V3.0.0 ist als **Software-/FC0-Basisrelease freigegeben**.
 
 Der freigegebene Basisumfang ist fail-closed: Standardstufe ist FC0.
-Die Existenz interner FC2-/FC3-/DRC-Bausteine aktiviert keine reale
-Flugsteuerung. DJI `stick_control` ist projektweit deaktiviert.
-Der separate M4-/RC-Plus-2-`drone_control`-Pfad bleibt hinter
-FC3, Control Lease, DJI Control Authority, aktiver DRC-Sitzung und
+Cloud-Control ist für explizit unterstützte Pilot-to-Cloud-Produktprofile
+wieder aktiviert. `cloud_control`, `stick_control` und `drone_control`
+heben die lokalen Safety-Gates nicht auf: Flugsteuerung bleibt hinter FC3,
+Control Lease, DJI Control Authority, aktiver DRC-Sitzung, Dead-Man und
 Hardware-Evidence gegatet.
 
 ## Versionsstand
@@ -91,17 +91,16 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 ## Globale Produkt-Policy
 
 Seit dem Policy-Update sind **DJI Dock 1, Dock 2, Dock 3, Multi-Dock und
-PSDK-Payloads projektweit deaktiviert**. Zusätzlich ist DJI `stick_control`
-global deaktiviert. Der getrennte `drone_control`-Pfad bleibt für M4 + RC
-Plus 2 vorhanden, ist aber ohne reale Hardwareabnahme nicht Teil der
-Hardware-Supportzusage. Die globalen Sperren besitzen keinen
-Konfigurationsschalter.
+PSDK-Payloads projektweit deaktiviert**. Cloud-Control selbst ist dagegen für
+die explizit unterstützten RC-Pro-/RC-Plus-2-Produktprofile aktiviert.
+`stick_control` und `drone_control` bleiben produktabhängig und werden nur
+innerhalb der bestehenden Safety-/Authority-/DRC-Kette verwendet.
 
 ## Nicht als Hardwarefunktion freigegeben
 
 Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
-- M4E/M4T FC3-/DRC-Flugsteuerung ohne reale Abnahme
+- M3E/M3T/M3TA- und M4E/M4T-Cloud-Control ohne reale RC-/DRC-/Authority-Abnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: **global deaktiviert**
 - Pilot-2-JSBridge
 - WPML/Pilot-Wayline-Integration aus den offenen Drafts
