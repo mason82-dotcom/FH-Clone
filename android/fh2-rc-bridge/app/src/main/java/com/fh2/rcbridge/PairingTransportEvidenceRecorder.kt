@@ -182,7 +182,6 @@ object PairingTransportEvidenceRecorder {
     ): JSONObject =
         JSONObject().apply {
             put("status", state.status)
-            putNullable("baseUrl", state.baseUrl)
             putNullable("gatewaySn", state.gatewaySn)
             putNullable("aircraftSn", state.aircraftSn)
             putNullable("expiresAt", state.expiresAt)
