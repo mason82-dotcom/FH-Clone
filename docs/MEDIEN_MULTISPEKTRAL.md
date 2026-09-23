@@ -122,22 +122,53 @@ Für den aktuellen Datensatz nicht verfügbar.
 
 ## Kamera-/Payload-Felder
 
-Zu verifizieren beziehungsweise zu normalisieren:
+### DJI Cloud API Live-Telemetrie
 
-- Payload-Identität
-- Kamera-/Sensor-Identität
-- Lens-/Video-Quelle
-- ISO
-- Verschlusszeit
-- Belichtung
-- Brennweite/FOV
-- Zoom
-- Thermal-/IR-Quelle
-- Gimbal Pitch/Roll/Yaw
-- Capture-/Recording-Status
-- Speicher-/Medienstatus
+Für den Pilot-to-Cloud-Aircraft-Pfad werden die von DJI dokumentierten
+`cameras[]`-Felder nur bei gültigem
+`payload_index={type-subtype-gimbalindex}` kanonisch normalisiert:
 
-Unbekannte DJI-Felder bleiben als Rohdaten erhalten.
+| DJI Raw-Feld | FH2 Key | Einheit |
+| --- | --- | --- |
+| `payload_index` | `camera.<payload_index>.payload_index` | – |
+| `camera_mode` | `camera.<payload_index>.mode.code` | – |
+| `photo_state` | `camera.<payload_index>.capture.photo_state_code` | – |
+| `recording_state` | `camera.<payload_index>.recording.state_code` | – |
+| `remain_photo_num` | `camera.<payload_index>.storage.remaining_photos` | – |
+| `remain_record_duration` | `camera.<payload_index>.storage.remaining_record_seconds` | s |
+| `record_time` | `camera.<payload_index>.recording.elapsed_seconds` | s |
+| `zoom_factor` | `camera.<payload_index>.zoom.factor` | – |
+| `ir_zoom_factor` | `camera.<payload_index>.thermal.zoom_factor` | – |
+
+Payload-gebundene Gimbalwinkel werden als:
+
+- `gimbal.<payload_index>.pitch_deg`
+- `gimbal.<payload_index>.roll_deg`
+- `gimbal.<payload_index>.yaw_deg`
+
+normalisiert. DJI dokumentiert diese Achsen in Grad.
+
+Der Normalizer akzeptiert für diese dokumentierten numerischen Felder nur
+endliche Zahlen. Fehlende, malformed oder nicht eindeutig einem gültigen
+`payload_index` zuordenbare Werte bleiben ausschließlich im Raw-Datensatz.
+Das originale `cameras[]`-Array wird parallel als
+`raw.dji-cloud.cameras` erhalten; unbekannte zukünftige Felder gehen dadurch
+nicht verloren.
+
+Diese Telemetrie erzeugt nur `telemetry.camera` bzw.
+`telemetry.gimbal`. Sie erzeugt **keine** `media.read`-, Livestream- oder
+`control.*`-Capability.
+
+### Nicht aus diesem Cloud-Telemetriepfad abgeleitet
+
+ISO, Verschlusszeit, Belichtungsparameter, Brennweite/FOV und eine konkrete
+Spektralbandidentität werden nicht erfunden, wenn der aktuelle DJI-Cloud-
+Property-Vertrag sie nicht liefert. Solche Werte stammen – sofern vorhanden –
+aus ihrer jeweils authoritative Quelle, etwa MSDK oder Datei-EXIF/XMP.
+
+Lens-/Video-Quelle und M3M-Bandidentität bleiben ebenfalls getrennte
+Identitätsräume. Ein `payload_index` allein identifiziert kein
+Multispektralband.
 
 ## M3M-Fachvertrag
 
