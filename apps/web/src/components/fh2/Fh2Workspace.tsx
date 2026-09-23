@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RtkDashboard } from "../rtk/RtkDashboard.js";
 import { useFh2 } from "../../fh2/Fh2Provider.js";
 import { useFh2CesiumViewer } from "../../fh2/useFh2CesiumViewer.js";
+import { useDjiPilotBridge } from "../../pilot-bridge/DjiPilotBridgeProvider.js";
 import {
   Fh2OverlayController,
   type Fh2OverlayTopology
@@ -29,6 +30,22 @@ interface DevicePair {
   label: string;
 }
 
+
+function pilotBridgeLabel(
+  state: "unavailable" | "unverified" | "ready" | "error"
+): string {
+  switch (state) {
+    case "unavailable":
+      return "nicht in Pilot 2";
+    case "unverified":
+      return "nicht verifiziert";
+    case "ready":
+      return "bereit";
+    case "error":
+      return "Fehler";
+  }
+}
+
 function productName(type: number, subType: number): string {
   if (type === 144 && subType === 0) return "RC Pro Enterprise";
   if (type === 174 && subType === 0) return "RC Plus 2";
@@ -41,10 +58,13 @@ function productName(type: number, subType: number): string {
 
 export function Fh2Workspace() {
   const { config, state } = useFh2();
+  const pilotBridge = useDjiPilotBridge();
   const cesiumViewer = useFh2CesiumViewer("global");
   const [view, setView] = useState<WorkspaceView>("project");
   const [topology, setTopology] = useState<Fh2OverlayTopology[]>([]);
   const [selectedPair, setSelectedPair] = useState("");
+  const [selectionSource, setSelectionSource] =
+    useState<"auto" | "user">("auto");
   const [waylineId, setWaylineId] = useState(config.defaultWaylineId);
   const [flightPathId, setFlightPathId] = useState(config.defaultFlightPathId);
 
@@ -83,6 +103,31 @@ export function Fh2Workspace() {
   }, [topology]);
 
   useEffect(() => {
+    if (selectionSource === "user") return;
+
+    const pilotGatewaySn =
+      pilotBridge.snapshot.identity.remoteControllerSn;
+    const pilotDroneSn =
+      pilotBridge.snapshot.identity.aircraftSn;
+
+    if (
+      pilotBridge.state === "ready" &&
+      pilotGatewaySn &&
+      pilotDroneSn
+    ) {
+      const pilotPair = pairs.find(
+        (pair) =>
+          pair.gatewaySn === pilotGatewaySn &&
+          pair.droneSn === pilotDroneSn
+      );
+      if (pilotPair) {
+        const value =
+          `${pilotPair.gatewaySn}::${pilotPair.droneSn}`;
+        if (selectedPair !== value) setSelectedPair(value);
+        return;
+      }
+    }
+
     if (selectedPair) return;
 
     const configured =
@@ -103,10 +148,25 @@ export function Fh2Workspace() {
     config.defaultDroneSn,
     config.defaultGatewaySn,
     pairs,
-    selectedPair
+    pilotBridge.snapshot.identity.aircraftSn,
+    pilotBridge.snapshot.identity.remoteControllerSn,
+    pilotBridge.state,
+    selectedPair,
+    selectionSource
   ]);
 
   const [gatewaySn = "", droneSn = ""] = selectedPair.split("::");
+  const pilotGatewaySn =
+    pilotBridge.snapshot.identity.remoteControllerSn;
+  const pilotDroneSn =
+    pilotBridge.snapshot.identity.aircraftSn;
+  const pilotTopologyMatch =
+    Boolean(pilotGatewaySn && pilotDroneSn) &&
+    pairs.some(
+      (pair) =>
+        pair.gatewaySn === pilotGatewaySn &&
+        pair.droneSn === pilotDroneSn
+    );
 
   return (
     <section className="fh2-workspace">
@@ -139,6 +199,19 @@ export function Fh2Workspace() {
           <span className="fh2-runtime-pill">
             Cesium {cesiumViewer ? "bereit" : "–"}
           </span>
+          <span
+            className={`fh2-runtime-pill fh2-runtime-pill--${pilotBridge.state}`}
+            title={
+              pilotBridge.error ??
+              (pilotTopologyMatch
+                ? "Pilot-2-Identität entspricht exakt der FH2-Topologie"
+                : "Pilot-2-Identität erzeugt keine Sicherheitsfreigabe")
+            }
+          >
+            Pilot JSBridge {pilotBridgeLabel(pilotBridge.state)}
+            {pilotBridge.state === "ready" &&
+              (pilotTopologyMatch ? " · Topologie bestätigt" : " · ohne Match")}
+          </span>
         </div>
       </div>
 
@@ -147,7 +220,10 @@ export function Fh2Workspace() {
           <span>Gateway + Aircraft</span>
           <select
             value={selectedPair}
-            onChange={(event) => setSelectedPair(event.target.value)}
+            onChange={(event) => {
+              setSelectionSource("user");
+              setSelectedPair(event.target.value);
+            }}
           >
             {!selectedPair && <option value="">Keine Topologie erkannt</option>}
             {pairs.map((pair) => {

@@ -228,3 +228,21 @@ Pflichtprüfungen:
 - DRC ohne aktive Session verweigert
 - Auth-Backend-Fehler fail-closed
 - keine Secrets in API/Logs
+
+
+## Pilot 2 JSBridge
+
+`window.djiBridge` ist eine separate Pilot-2-WebView-Sicherheitsdomäne und
+wird nicht mit `window.FH2`, MQTT-AuthN/AuthZ oder dem MSDK-Controlpfad
+gleichgesetzt.
+
+Der integrierte Browserpfad ist read-only. Er darf keine Gateway-/MQTT-,
+API-/WS-, EMQX-, DRC- oder Backend-Secrets erhalten oder auslesen.
+Insbesondere sind License-/App-Key-, Token- und Passwortwerte als
+`VITE_*`-Buildvariablen für diesen Pfad unzulässig.
+
+Eine verifizierte Pilot-2-Identität dient ausschließlich der UI-Kontextwahl,
+wenn RC- und Aircraft-SN gemeinsam exakt mit der bekannten FH2-Topologie
+übereinstimmen. Daraus entstehen keine Safety- oder Control-Rechte.
+
+Der CI-Guard `scripts/verify-pilot2-jsbridge.mjs` erzwingt diese Grenze.

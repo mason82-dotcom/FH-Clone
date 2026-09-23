@@ -210,34 +210,33 @@ verlustfrei behandelt, wenn sie im realen WPML vorkommen. WPML-Payload-Enums,
 Pilot-`payload_model_key` und MQTT-`payload_index` bleiben getrennte
 Identitätsräume.
 
-## 6. Pilot 2 JSBridge — REQUIRED_DRAFT für PR #46
+## 6. Pilot 2 JSBridge — REQUIRED_HARDWARE
 
-Erforderlich ist ein redigierter Runtime-Trace aus dem Pilot-2-WebView:
+Der read-only JSBridge-Softwarepfad ist integriert. Eine reale
+Pilot-2-Hardware-/WebView-Supportzusage benötigt weiterhin ein redigiertes
+Runtime-Fixture unter `docs/fixtures/pilot2/jsbridge-session.json`.
 
-1. JSBridge vorhanden,
-2. License-Verifikation erfolgreich,
-3. Versionsinformation,
-4. RC- und Aircraft-Identität als redigierte/Hash-Werte,
-5. exakter Pair-Match gegen die FH2-`update_topo`-Identität,
-6. Thing-Modul geladen und MQTT-Connect-Callback erfolgreich,
-7. API-/WS-Module für die Funktionen geladen, die sie voraussetzen,
-8. Workspace-ID/Plattforminfo gesetzt,
-9. modulabhängige Features nur nach ihren dokumentierten Voraussetzungen,
-10. Secret-Scan des Browser-Bundles: keine statischen Gateway-/MQTT-/API-/WS-
-    Credentials.
+Erforderlich:
 
-DJI bezeichnet das Cloud-Modul in JSBridge als `thing`. Die kombinierte
-Abhängigkeit aus JSBridge-API und den jeweiligen Feature-Flows wird wie folgt
-geprüft:
+1. `window.djiBridge` ist in einer realen Pilot-2-WebView vorhanden,
+2. `platformIsVerified() == true`,
+3. Pilot-2-Version ist erfasst,
+4. RC- und Aircraft-Identität werden im Fixture ausschließlich als SHA-256
+   veröffentlicht,
+5. RC + Aircraft entsprechen zusammen exakt einem FH2-`update_topo`-Paar,
+6. der read-only Status der DJI-Module wurde erfasst,
+7. der Browser-Safety-/Secret-Scan ist grün,
+8. im veröffentlichten Fixture befinden sich keine produktiven Secrets.
 
-- Map: `thing` + Workspace + API + WS + Map-Modul,
-- TSA: `thing` + Workspace + API + WS + TSA-Modul,
-- Mission/Wayline: `thing` + Workspace + API + WS + Mission-Modul,
-- Media: `thing` + Workspace + API + Media-Modul,
-- Live: Live-Modul, sofern der Livestream-Pfad im Draft aktiviert wird.
+Der integrierte Softwarepfad führt **keine** License-Verifikation, keine
+Modulkonfiguration und keine MQTT/API/WS-Anmeldung aus. Deshalb sind
+Thing-Verbindung, Workspace-Konfiguration oder Feature-Module kein Pflichtbeleg
+für diesen read-only Runtimeblock.
 
-Damit wird weder eine schwächere Feature-Anleitung noch eine einzelne
-JSBridge-Note isoliert als vollständiger Modulvertrag interpretiert.
+Ein späterer schreibender Pilot-2-Bootstrap benötigt einen eigenen
+authentisierten Backendvertrag und eine neue Abnahme.
+
+Details: [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md).
 
 ## 7. MSDK KeyManager — REQUIRED_HARDWARE
 

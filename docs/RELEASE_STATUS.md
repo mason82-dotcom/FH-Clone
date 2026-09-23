@@ -73,7 +73,7 @@ Noch nicht vollständig real belegt:
 - M4T Thermal-Medienfixture
 - realer M3M Narrow-Band-Capture-Satz
 - reales Pilot-2-WPML-KMZ / Workspace-Katalog
-- reale Pilot-2-JSBridge-Session
+- reale Pilot-2-JSBridge-Session für Hardwarefreigabe
 
 Diese fehlenden Nachweise werden in der CI als Hardwarestatus sichtbar
 geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
@@ -97,6 +97,7 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
 - Android MSDK V5 KeyManager-Runtimeinventar mit read-only Hardware-Probes
+- Pilot 2 JSBridge read-only Runtime für Verifikation, Identität und Modulstatus
 - zentrale DJI-`ControlCoordinator`-Runtime im Serverprozess
 - read-only Control-Runtime-Status; keine öffentliche Flight-Control-Write-API
 - Weboberfläche und lokale Root-Compose-Runtime
@@ -117,7 +118,7 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 - M3E/M3T/M3TA Cloud-Payload-Control ohne reale RC-Pro-/Payload-Abnahme
 - M4E/M4T Cloud-Flight-Control ohne reale RC-Plus-2-/DRC-/Authority-Abnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: **global deaktiviert**
-- Pilot-2-JSBridge
+- Pilot-2-JSBridge-Hardwarefreigabe ohne reales WebView-Evidence-Fixture
 - reale Pilot-2-WPML-/Workspace-Hardwarefreigabe ohne passendes reales KMZ-/Workspace-Fixture
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - M3T/M4T Thermal-Auswertung ohne passendes reales Thermal-Fixture
@@ -126,8 +127,6 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 ## Offene Draft-PRs
 
 Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
-
-- #46 Pilot2 JSBridge: noch nicht releasefähig; reales Pilot-2-Runtime-Fixture offen
 
 WPML/Pilot-Waylines aus #51 sind als read-only Softwarepfad integriert. Die älteren WPML-Drafts #45/#47/#49 wurden darin konsolidiert. Die reale Pilot-2-WPML-/Workspace-Hardwarefreigabe bleibt separat offen.
 

@@ -287,3 +287,24 @@ FH-Clone-DRC-Publishes. Das native DJI Virtual Cockpit ist ein eigener
 FlightHub-Control-Pfad und standardmäßig deaktiviert.
 
 Details: [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md).
+
+
+### DJI Pilot 2 JSBridge
+
+Zusätzlich kann die Weboberfläche in einer DJI-Pilot-2-WebView die offizielle
+`window.djiBridge`-Runtime read-only beobachten. Dieser Pfad liest nur:
+
+- Verifikationsstatus,
+- Pilot-Version,
+- RC-/Aircraft-Identität,
+- geladenen Modulstatus,
+- Thing-/WS-Verbindungsstatus bei bereits geladenen Modulen.
+
+RC + Aircraft dürfen nur bei exaktem Match gegen die serverseitig bekannte
+FH2-Topologie als UI-Kontext priorisiert werden. Der Match erzeugt weder
+Broker-Principal noch Control Authority, Lease, FC-Freigabe oder DRC-Session.
+
+Credential- und Write-fähige JSBridge-Aufrufe sind im Browsercode durch CI
+verboten.
+
+Details: [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md).

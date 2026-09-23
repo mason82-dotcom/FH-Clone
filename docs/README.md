@@ -41,6 +41,7 @@ Hardwareabnahme missverstanden werden.
 | [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK- und Produktstände | Referenz |
 | [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md) | DJI MSDK V5 KeyManager-Runtime, Operationsflags, Probes und Lifecycle | Implementiert/Hardware real zu verifizieren |
 | [DJI_CAPABILITY_MATRIX.md](DJI_CAPABILITY_MATRIX.md) | DJI-Produkt-/Funktionsmatrix und FH2-Freigaben | Implementiert/Referenz |
+| [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md) | DJI Pilot 2 `window.djiBridge` als read-only UI-/Identitätsruntime | Implementiert/Hardware real zu verifizieren |
 | [LIVESTREAM.md](LIVESTREAM.md) | Self-Hosted DJI-Livestream über MediaMTX/RTMP/WebRTC | V3-Ziel |
 
 ## Missionen, Medien und Verarbeitung
