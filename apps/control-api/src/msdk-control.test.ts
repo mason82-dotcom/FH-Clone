@@ -60,7 +60,11 @@ class FakePeer implements MsdkControlPeer {
   }
 }
 
-function fixture(expiresAt = 60_000) {
+function fixture(
+  expiresAt = 60_000,
+  frameSilenceTimeoutMs = 2_000,
+  agentFreshMs = 3_000
+) {
   let now = 10_000;
   let fc3 = true;
   let lease = true;
@@ -77,9 +81,9 @@ function fixture(expiresAt = 60_000) {
     hasFc3: () => fc3,
     hasLease: () => lease,
     now: () => now,
-    agentFreshMs: 3_000,
+    agentFreshMs,
     startTimeoutMs: 5_000,
-    frameSilenceTimeoutMs: 2_000
+    frameSilenceTimeoutMs
   });
 
   const peer = new FakePeer();
@@ -202,7 +206,7 @@ test("guard loss emits neutral before session_stop", () => {
 });
 
 test("stale heartbeat closes an active session fail-closed", () => {
-  const f = fixture();
+  const f = fixture(60_000, 10_000);
   const session = f.hub.openSession("M3T-001", "operator-a");
 
   f.hub.handleAgentMessage(
@@ -362,7 +366,7 @@ test("wrong lease holder cannot inject stick frames", () => {
 
 
 test("backend frame dead-man closes an active session after 2 seconds", () => {
-  const f = fixture();
+  const f = fixture(60_000, 2_000, 10_000);
   const session = f.hub.openSession("M3T-001", "operator-a");
   f.hub.handleAgentMessage(
     "M3T-001",
@@ -392,7 +396,7 @@ test("backend frame dead-man closes an active session after 2 seconds", () => {
 });
 
 test("stick traffic refreshes backend frame dead-man", () => {
-  const f = fixture();
+  const f = fixture(60_000, 2_000, 10_000);
   const session = f.hub.openSession("M3T-001", "operator-a");
   f.hub.handleAgentMessage(
     "M3T-001",
