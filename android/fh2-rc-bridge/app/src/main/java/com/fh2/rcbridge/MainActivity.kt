@@ -46,10 +46,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bridgeText: TextView
     private lateinit var payloadControlText: TextView
     private lateinit var waylineText: TextView
+    private lateinit var networkControlText: TextView
     private lateinit var baseUrlInput: EditText
     private lateinit var pairingTokenInput: EditText
     private lateinit var pairButton: Button
     private lateinit var unpairButton: Button
+    private lateinit var armNetworkButton: Button
+    private lateinit var disarmNetworkButton: Button
 
     private val sdkListener: (DjiSdkSnapshot) -> Unit = { state ->
         runOnUiThread {
@@ -229,6 +232,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val networkArmListener:
+        (NetworkControlArmSnapshot) -> Unit = { state ->
+        runOnUiThread {
+            networkControlText.text = buildString {
+                appendLine("Netzwerk-Control")
+                appendLine("Lokal freigegeben: ${state.armed}")
+                append(
+                    "Freigabezeit: " +
+                        (state.armedAt?.toString() ?: "-")
+                )
+            }
+            armNetworkButton.isEnabled = !state.armed
+            disarmNetworkButton.isEnabled = state.armed
+        }
+    }
+
     private val controlListener: (VirtualStickSnapshot) -> Unit = { state ->
         runOnUiThread {
             controlText.text = buildString {
@@ -274,6 +293,9 @@ class MainActivity : AppCompatActivity() {
             textSize = 18f
         }
         waylineText = TextView(this).apply {
+            textSize = 18f
+        }
+        networkControlText = TextView(this).apply {
             textSize = 18f
         }
         baseUrlInput = EditText(this).apply {
@@ -480,6 +502,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        armNetworkButton = Button(this).apply {
+            text = "Netzwerk-Control lokal freigeben"
+            setOnClickListener {
+                NetworkControlArm.arm()
+            }
+        }
+
+        disarmNetworkButton = Button(this).apply {
+            text = "Netzwerk-Control sperren"
+            isEnabled = false
+            setOnClickListener {
+                NetworkControlArm.disarm()
+                RemoteControlSessionRegistry.stopAll()
+            }
+        }
+
         val notice = TextView(this).apply {
             text =
                 "MSDK-Modus: DJI Pilot 2 muss auf RC Pro Enterprise beendet " +
@@ -513,6 +551,9 @@ class MainActivity : AppCompatActivity() {
             addView(pairingTokenInput, matchWidth(top = 12))
             addView(pairButton, matchWidth(top = 12))
             addView(unpairButton, matchWidth(top = 12))
+            addView(networkControlText, matchWidth(top = 24))
+            addView(armNetworkButton, matchWidth(top = 12))
+            addView(disarmNetworkButton, matchWidth(top = 12))
             addView(controlText, matchWidth(top = 24))
             addView(enableButton, matchWidth(top = 24))
             addView(disableButton, matchWidth(top = 12))
@@ -540,6 +581,7 @@ class MainActivity : AppCompatActivity() {
         SensorInventorySource.addListener(sensorListener)
         RtkTelemetrySource.addListener(rtkListener)
         Fh2BridgeClient.addListener(bridgeListener)
+        NetworkControlArm.addListener(networkArmListener)
         WaylineMissionController.addListener(waylineListener)
         CameraGimbalController.addListener(payloadControlListener)
         VirtualStickController.addListener(controlListener)
@@ -552,6 +594,7 @@ class MainActivity : AppCompatActivity() {
         SensorInventorySource.removeListener(sensorListener)
         RtkTelemetrySource.removeListener(rtkListener)
         Fh2BridgeClient.removeListener(bridgeListener)
+        NetworkControlArm.removeListener(networkArmListener)
         WaylineMissionController.removeListener(waylineListener)
         CameraGimbalController.removeListener(payloadControlListener)
         VirtualStickController.removeListener(controlListener)
