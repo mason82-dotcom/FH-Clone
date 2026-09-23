@@ -11,6 +11,7 @@ Die Einteilung lautet:
 - **REQUIRED_MAIN**: muss vor dem V3-Basisrelease belegt sein, weil `main`
   diese Runtime-/Hardwarefunktion bereits beansprucht.
 - **REQUIRED_DRAFT**: muss vor Promotion des betreffenden Draft-PRs belegt sein.
+- **REQUIRED_HARDWARE**: Softwarepfad ist integriert, die konkrete Produkt-/Firmware-Supportzusage benötigt aber noch reale Hardwareevidenz.
 - **CONDITIONAL**: nur erforderlich, wenn das konkrete Einsatzprofil oder die
   betreffende Hardware tatsächlich verwendet/freigegeben wird.
 - **INFORMATIONAL**: nützlich, aber kein Release-Gate.
