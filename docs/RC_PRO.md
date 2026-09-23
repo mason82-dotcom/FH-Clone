@@ -130,9 +130,19 @@ M3M gehört nicht automatisch in dieses Pilot-to-Cloud-Live-Control-Profil.
 
 Das Capability-Profil entscheidet produktbezogen.
 
-Der aktuelle FH2-Sicherheitsstand behandelt die Mavic-3-Enterprise-Familie im
-Pilot-Cloud-Kontext als Payload-/Kamera-/Gimbal-orientiert; eine
-`control.flight`-Capability wird nicht automatisch vergeben.
+FH2 aktiviert für M3E/M3T/M3TA hinter einer bestätigten RC Pro Enterprise den
+DJI-Pilot-DRC-Pfad:
+
+- `flightControl = true`
+- `stickControl = false`
+- `droneControl = true`
+- `payloadControl = true`
+- `DjiDrcProfile = pilot-m3-drone`
+- `flyTo = false`
+
+Der Flugsteuerpfad verwendet `drone_control`; `stick_control` bleibt für
+M3 deaktiviert. FC3, Control Lease, DJI Cloud-Control-Authority, aktive
+DRC-Sitzung und Dead-Man bleiben Pflicht.
 
 ## Matrice 4 / RC Plus 2
 
@@ -148,8 +158,8 @@ Für FH2 gilt für M4 + RC Plus 2:
 - beide Pfade bleiben FC3/Lease/Authority/Session/Dead-Man-gated
 - FlyTo bleibt als separater Servicepfad unabhängig davon bewertbar
 
-Für M3E/M3T/M3TA hinter RC Pro Enterprise bleibt Cloud-Flugsteuerung weiterhin
-deaktiviert, da dieses Pilot-Cloud-Profil sie nicht unterstützt.
+M3E/M3T/M3TA verwenden den separaten RC-Pro-`drone_control`-Pfad und nicht
+den M4-`stick_control`-Pfad.
 
 ## Reale V3-Prüfpunkte
 
