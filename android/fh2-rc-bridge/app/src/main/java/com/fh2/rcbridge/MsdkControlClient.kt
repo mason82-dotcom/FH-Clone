@@ -46,6 +46,9 @@ object MsdkControlClient {
     private var lastConnectAttemptAt = 0L
 
     @Volatile
+    private var connectionGeneration = 0L
+
+    @Volatile
     private var sessionId: String? = null
 
     @Volatile
@@ -65,6 +68,7 @@ object MsdkControlClient {
         aircraftSn: String
     ) {
         disconnect("reconnect")
+        val generation = connectionGeneration
         lastConnectAttemptAt = SystemClock.elapsedRealtime()
 
         if (!armListenerRegistered) {
@@ -91,6 +95,11 @@ object MsdkControlClient {
                         webSocket: WebSocket,
                         response: Response
                     ) {
+                        if (generation != connectionGeneration) {
+                            webSocket.close(1000, "stale_connection")
+                            return
+                        }
+
                         update {
                             copy(
                                 status = "connected",
@@ -104,6 +113,8 @@ object MsdkControlClient {
                         webSocket: WebSocket,
                         text: String
                     ) {
+                        if (generation != connectionGeneration) return
+
                         update {
                             copy(lastMessageAt = System.currentTimeMillis())
                         }
@@ -124,7 +135,14 @@ object MsdkControlClient {
                         code: Int,
                         reason: String
                     ) {
-                        if (socket === webSocket) socket = null
+                        if (
+                            generation != connectionGeneration ||
+                            socket !== webSocket
+                        ) {
+                            return
+                        }
+
+                        socket = null
                         failClosed(
                             "socket_closed_$code:$reason",
                             notifyServer = false
@@ -139,7 +157,14 @@ object MsdkControlClient {
                         t: Throwable,
                         response: Response?
                     ) {
-                        if (socket === webSocket) socket = null
+                        if (
+                            generation != connectionGeneration ||
+                            socket !== webSocket
+                        ) {
+                            return
+                        }
+
+                        socket = null
                         failClosed(
                             "socket_failure",
                             notifyServer = false
@@ -176,6 +201,7 @@ object MsdkControlClient {
     }
 
     fun disconnect(reason: String = "operator_disconnect") {
+        connectionGeneration += 1
         val current = socket
         failClosed(reason, notifyServer = current != null)
         socket = null
