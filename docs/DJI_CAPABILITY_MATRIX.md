@@ -88,8 +88,8 @@ Es gibt keinen Environment- oder Runtime-Schalter zur Reaktivierung.
 | Kamera-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.camera`-Werbung |
 | Gimbal-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `control.gimbal`-Werbung |
 | Payload-Steuerung | DJI dokumentiert | DJI dokumentiert | noch kein ausführbarer FH2-Pfad; **keine** `payload.control`-Werbung |
-| Stick-Control | nicht für M3-Pilot-Cloud | DJI dokumentiert | M4 + RC Plus 2: aktiviert, FC3/Lease/Authority/Session/Dead-Man-gated |
-| `drone_control` | nicht für M3-Pilot-Cloud | DJI dokumentiert | M4 + RC Plus 2: separat aktiviert, weiterhin FC3/Lease/Authority/Session-gated |
+| Stick-Control | für M3/RC Pro nicht verwendet | DJI dokumentiert | M3: aus; M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
+| `drone_control` | DJI Pilot-to-Cloud dokumentiert | DJI dokumentiert | M3 + RC Pro und M4 + RC Plus 2: an, FC3/Lease/Authority/Session/Dead-Man-gated |
 | Return-to-Home | nicht freigegeben | DJI dokumentiert `return_home` / `return_home_cancel` | nicht implementiert |
 | FlyTo | nicht freigegeben | DJI dokumentiert | M4: `DrcController.flyToPoint()` implementiert |
 | Pointing Flight | nicht freigegeben | DJI dokumentiert | nicht implementiert |
@@ -110,17 +110,24 @@ DJI beschreibt für den Pilot-to-Cloud-Live-Control-Pfad:
 - Zoom
 - Infrarot-Funktionen bei geeigneter Kamera
 
-DJI beschreibt **keine Cloud-Flugsteuerung** für die Mavic-3-Enterprise-Serie
-in diesem Pfad. Die physische RC kann während der Cloud-Payload-Steuerung
-weiterhin das Aircraft fliegen.
+DJI Pilot-to-Cloud dokumentiert für die Mavic-3-Enterprise-Serie einen
+DRC-Live-Control-Pfad und nennt `drone_control` als Flight-Control-Methode,
+die Flight-Control-Authority benötigt. Zusätzlich sind Payload-/Kamera-/
+Gimbal-Kommandos dokumentiert.
 
-DJI-seitig ist dieser Payload-Support bestätigt. FH2 V3 implementiert jedoch
-noch keinen routbaren Kamera-/Gimbal-/Payload-Command-Pfad. Deshalb werden
-diese Schreib-Capabilities **nicht** in `AdapterDevice.capabilities[]`
-gemeldet.
+FH2 aktiviert hinter RC Pro Enterprise:
 
-Der Produktvertrag bleibt dokumentiert, ohne eine ausführbare Funktion
-vorzutäuschen.
+```text
+flightControl  = true
+stickControl   = false
+droneControl   = true
+payloadControl = true
+DrcProfile     = pilot-m3-drone
+FlyTo          = false
+```
+
+Die spezialisierten Runtime-Fähigkeiten werden nicht automatisch als
+generische `AircraftAdapter.execute()`-Capabilities ausgegeben.
 
 ## Matrice 4 Series
 
