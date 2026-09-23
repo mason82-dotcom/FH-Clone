@@ -171,6 +171,39 @@ Die Antwort trennt:
 DJI-Produktsupport erzeugt nicht automatisch eine ausführbare
 `AircraftAdapter.execute()`-Capability.
 
+### DJI Pilot Waypoint Management – read-only
+
+```http
+GET /api/dji/pilot/waylines/status
+GET /api/dji/pilot/waylines?page=1&page_size=10
+```
+
+Optionale Filter:
+
+```text
+key
+favorited
+order_by            name|update_time|create_time + asc|desc
+action_type         1 = AI Spot-Check
+template_type       wiederholbar; 0..3
+drone_model_keys    wiederholbar
+payload_model_key   wiederholbar
+```
+
+Dieser Pfad spiegelt ausschließlich die DJI Pilot-to-Cloud-Waypoint-Dateiliste.
+Er ist nicht mit `/api/fh2/waylines` gleichzusetzen und führt keine Mission
+aus.
+
+Der serverseitige `x-auth-token` wird nicht an den Browser ausgegeben.
+Fehlende Konfiguration liefert
+`503 dji_pilot_waylines_not_configured`; Upstream-/Businessfehler werden als
+`502 dji_pilot_waylines_upstream_error` abgebildet.
+
+DJI-`drone_model_key` und `payload_model_keys` bleiben eigene
+Produktidentitäten und werden nicht in MQTT-`payload_index` umgedeutet.
+
+Details: [WPML und Pilot-Waypoints](WPML.md).
+
 ### GET /api/missions/active
 
 Liefert alle aktuell erkannten Missionssitzungen.
