@@ -41,16 +41,23 @@ import { MsdkBridgeService, isMsdkBridgeSnapshot } from "./msdk-bridge.js";
 import { MsdkControlHub } from "./msdk-control.js";
 import { attachMsdkControlWebSocket } from "./msdk-control-ws.js";
 import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
+import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 const fh2 = createFh2OpenApiFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
+const msdkTokenRevocations = new MsdkTokenRevocationStore({
+  connectionString: process.env.DATABASE_URL
+});
+await msdkTokenRevocations.initialize();
+
 const msdkBridge = new MsdkBridgeService({
   pairingToken: process.env.MSDK_PAIRING_TOKEN,
   signingSecret: process.env.MSDK_BRIDGE_TOKEN_SECRET,
-  tokenTtlMs: envInt("MSDK_BRIDGE_TOKEN_TTL_SECONDS", 86_400) * 1_000
+  tokenTtlMs: envInt("MSDK_BRIDGE_TOKEN_TTL_SECONDS", 86_400) * 1_000,
+  isAgentTokenRevoked: (token) => msdkTokenRevocations.isRevoked(token)
 });
 
 const topologyStore = await createTopologyStore();
@@ -246,6 +253,29 @@ const publicServer = createServer(async (request, response) => {
 
       ingestMsdkSnapshot(body, Date.now());
       return json(response, 200, pairing);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/msdk/unpair") {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+
+      const token = readBearerToken(request);
+      const identity = token
+        ? msdkBridge.authenticateAgent(token)
+        : undefined;
+      if (!token || !identity) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      await msdkTokenRevocations.revoke(token, identity.expiresAt);
+      msdkBridge.unpairAgent(identity);
+      msdkControl.disconnectAgent(identity.aircraftSn, "agent_unpaired");
+      return json(response, 200, {
+        unpaired: true,
+        gatewaySn: identity.gatewaySn,
+        aircraftSn: identity.aircraftSn
+      });
     }
 
     if (request.method === "POST" && url.pathname === "/api/msdk/heartbeat") {
@@ -704,6 +734,7 @@ async function shutdown(): Promise<void> {
   await ugcs?.stop();
   await authzAudit.shutdown();
   await gatewayCredentials?.close();
+  await msdkTokenRevocations.close();
   await missionStore.close();
   await topologyPersistence.flush();
   await topologyStore?.close();
