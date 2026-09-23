@@ -73,6 +73,12 @@ export class AuthzAuditWriter {
         max: 2,
         idleTimeoutMillis: 30_000
       });
+      this.pool.on("error", (error) => {
+        console.warn(
+          "[AuthZ Audit] PostgreSQL pool connection lost; next flush will retry:",
+          error.message
+        );
+      });
       this.writeBatch = (records) => this.insertBatch(records);
     }
 
