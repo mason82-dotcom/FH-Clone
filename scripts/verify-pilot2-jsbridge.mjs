@@ -28,7 +28,7 @@ const FORBIDDEN_CALLS = [
 ];
 
 const FORBIDDEN_VITE_SECRET =
-  /\bVITE_[A-Z0-9_]*(APP_KEY|LICENSE|TOKEN|PASSWORD|SECRET|MQTT|EMQX|DRC)[A-Z0-9_]*\b/;
+  /\bVITE_(?:DJI|PILOT)[A-Z0-9_]*(APP_KEY|LICENSE|TOKEN|PASSWORD|SECRET|MQTT|EMQX|DRC)[A-Z0-9_]*\b/;
 
 const REQUIRED_CALLS = [
   ["platformIsVerified", /\.platformIsVerified\s*\(/],
