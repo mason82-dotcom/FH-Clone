@@ -107,6 +107,8 @@ export interface MsdkBridgeServiceOptions {
   pairingToken?: string | undefined;
   signingSecret?: string | undefined;
   tokenTtlMs?: number | undefined;
+  snapshotMaxAgeMs?: number | undefined;
+  snapshotFutureSkewMs?: number | undefined;
   now?: (() => number) | undefined;
 }
 
@@ -114,6 +116,8 @@ export class MsdkBridgeService {
   private readonly pairingToken: string | undefined;
   private readonly signingSecret: string | undefined;
   private readonly tokenTtlMs: number;
+  private readonly snapshotMaxAgeMs: number;
+  private readonly snapshotFutureSkewMs: number;
   private readonly now: () => number;
   private readonly agents = new Map<string, MsdkAgentRecord>();
 
@@ -121,6 +125,8 @@ export class MsdkBridgeService {
     this.pairingToken = options.pairingToken;
     this.signingSecret = options.signingSecret;
     this.tokenTtlMs = options.tokenTtlMs ?? 86_400_000;
+    this.snapshotMaxAgeMs = options.snapshotMaxAgeMs ?? 15_000;
+    this.snapshotFutureSkewMs = options.snapshotFutureSkewMs ?? 5_000;
     this.now = options.now ?? Date.now;
   }
 
@@ -136,10 +142,11 @@ export class MsdkBridgeService {
     if (!presentedPairingToken || !this.pairingToken) return undefined;
     if (!safeEqual(presentedPairingToken, this.pairingToken)) return undefined;
 
+    const now = this.now();
+    if (!this.isFreshSnapshot(snapshot, now)) return undefined;
+
     const identity = snapshotIdentity(snapshot);
     if (!identity) return undefined;
-
-    const now = this.now();
     const expiresAt = now + this.tokenTtlMs;
     const payload: MsdkTokenPayload = {
       v: 1,
@@ -169,6 +176,9 @@ export class MsdkBridgeService {
     agentToken: string,
     snapshot: MsdkBridgeSnapshot
   ): boolean {
+    const now = this.now();
+    if (!this.isFreshSnapshot(snapshot, now)) return false;
+
     const identity = snapshotIdentity(snapshot);
     if (!identity) return false;
 
@@ -181,7 +191,6 @@ export class MsdkBridgeService {
       return false;
     }
 
-    const now = this.now();
     const key = agentKey(identity.gatewaySn, identity.aircraftSn);
     const current = this.agents.get(key);
     this.agents.set(key, {
@@ -214,6 +223,17 @@ export class MsdkBridgeService {
           snapshot: structuredClone(record.snapshot)
         }
       : undefined;
+  }
+
+  private isFreshSnapshot(
+    snapshot: MsdkBridgeSnapshot,
+    now: number
+  ): boolean {
+    const age = now - snapshot.timestampMs;
+    return (
+      age <= this.snapshotMaxAgeMs &&
+      age >= -this.snapshotFutureSkewMs
+    );
   }
 
   private sign(payload: MsdkTokenPayload): string {
