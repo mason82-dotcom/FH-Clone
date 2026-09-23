@@ -24,6 +24,7 @@ import {
   MediaOverlayRegistry,
   isMediaAsset
 } from "./media-overlay.js";
+import { MediaStore } from "./media-store.js";
 import {
   evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest
@@ -142,6 +143,11 @@ const missionStore = new MissionStore({
     ? { rtkProvider: process.env.RTK_SOURCE_PROVIDER }
     : {})
 });
+const mediaStore = new MediaStore({
+  ...(process.env.TIMESCALE_URL
+    ? { connectionString: process.env.TIMESCALE_URL }
+    : {})
+});
 const rtk = new RtkTelemetryService({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId),
   resolveMissionId: (deviceId) => missions.getActive(deviceId)?.missionId
@@ -163,6 +169,23 @@ if (missionStore.enabled) {
   } catch (error) {
     console.error(
       "[Mission] Recovery offener Sessions fehlgeschlagen:",
+      errorMessage(error)
+    );
+  }
+}
+
+if (mediaStore.enabled) {
+  try {
+    const persistedAssets = await mediaStore.list();
+    persistedAssets.forEach((asset) => mediaOverlays.upsert(asset));
+    if (persistedAssets.length > 0) {
+      console.info(
+        `[Media] ${persistedAssets.length} persistierte Asset(s) rehydriert.`
+      );
+    }
+  } catch (error) {
+    console.error(
+      "[Media] Rehydration persistierter Assets fehlgeschlagen:",
       errorMessage(error)
     );
   }
@@ -213,7 +236,8 @@ const publicServer = createServer(async (request, response) => {
           configured: Boolean(ugcs)
         },
         mediaOverlays: {
-          assets: mediaOverlays.size()
+          assets: mediaOverlays.size(),
+          persistenceEnabled: mediaStore.enabled
         },
         controlRuntime: {
           configured: Boolean(controlCoordinator),
@@ -235,7 +259,8 @@ const publicServer = createServer(async (request, response) => {
         topologyStoreReady,
         gatewayCredentialStoreReady,
         msdkTokenRevocationStoreReady,
-        missionStoreReady
+        missionStoreReady,
+        mediaStoreReady
       ] = await Promise.all([
         topologyStore
           ? topologyStore.assertReady().then(() => true).catch(() => false)
@@ -248,6 +273,9 @@ const publicServer = createServer(async (request, response) => {
           : Promise.resolve(false),
         missionStore.enabled
           ? missionStore.ping()
+          : Promise.resolve(false),
+        mediaStore.enabled
+          ? mediaStore.ping()
           : Promise.resolve(false)
       ]);
 
@@ -267,6 +295,10 @@ const publicServer = createServer(async (request, response) => {
         missionStore: {
           configured: missionStore.enabled,
           ready: missionStoreReady
+        },
+        mediaStore: {
+          configured: mediaStore.enabled,
+          ready: mediaStoreReady
         }
       });
       const msdkTokenRevocationStore = {
@@ -661,6 +693,7 @@ const internalServer = createServer(async (request, response) => {
         }
 
         const normalized = normalizeDjiM3mMediaMetadata(body);
+        await mediaStore.upsert(normalized.asset);
         const overlay = mediaOverlays.upsert(normalized.asset);
 
         return json(response, 200, {
@@ -669,7 +702,8 @@ const internalServer = createServer(async (request, response) => {
           conflicts: normalized.conflicts,
           radiometry: normalized.radiometry,
           sourceKeys: normalized.sourceKeys,
-          overlayed: Boolean(overlay)
+          overlayed: Boolean(overlay),
+          persisted: mediaStore.enabled
         });
       } catch (error) {
         return json(response, 400, {
@@ -697,6 +731,8 @@ const internalServer = createServer(async (request, response) => {
           return json(response, 400, { error: "invalid_media_asset" });
         }
 
+        await mediaStore.upsertMany(assets);
+
         let overlayed = 0;
         for (const asset of assets) {
           if (mediaOverlays.upsert(asset)) overlayed += 1;
@@ -704,7 +740,8 @@ const internalServer = createServer(async (request, response) => {
 
         return json(response, 200, {
           accepted: assets.length,
-          overlayed
+          overlayed,
+          persisted: mediaStore.enabled
         });
       } catch (error) {
         return json(response, 400, {
@@ -889,6 +926,10 @@ const shutdown = onceAsync(async () => {
     {
       name: "mission_store",
       run: () => missionStore.close()
+    },
+    {
+      name: "media_store",
+      run: () => mediaStore.close()
     },
     {
       name: "topology_queue",
