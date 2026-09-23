@@ -9,13 +9,17 @@ const RAW_BEARER = /Bearer\s+(?!<redacted>)[A-Za-z0-9._~+/=-]+/i;
 
 export function validateEvidenceDocuments(
   documents,
-  { acceptance = false } = {}
+  { acceptance = false, keyManager = false } = {}
 ) {
   const errors = [];
   const summaries = [];
   const allMarkers = [];
   let reconnectObserved = false;
   let unpairCompleted = false;
+  let keyManagerObserved = false;
+  let keyManagerSupportedObserved = false;
+  let keyManagerWritableMetadataObserved = false;
+  let keyManagerLensScopedObserved = false;
 
   for (const entry of documents) {
     const name = entry.name ?? "<memory>";
@@ -76,6 +80,48 @@ export function validateEvidenceDocuments(
       unpairCompleted = true;
     }
 
+    if (keyManager) {
+      const runtime = document.keyManager;
+      if (!isObject(runtime)) {
+        errors.push(`${name}: keymanager_missing`);
+      } else {
+        if (runtime.active !== true) {
+          errors.push(`${name}: keymanager_not_active`);
+        }
+        if (runtime.productConnected !== true) {
+          errors.push(`${name}: keymanager_product_not_connected`);
+        }
+
+        const keys = Array.isArray(runtime.keys) ? runtime.keys : [];
+        if (!Array.isArray(runtime.keys) || keys.length === 0) {
+          errors.push(`${name}: keymanager_keys_missing`);
+        } else {
+          keyManagerObserved = true;
+          for (const descriptor of keys) {
+            if (!isValidKeyDescriptor(descriptor)) {
+              errors.push(`${name}: keymanager_descriptor_invalid`);
+              continue;
+            }
+            if (descriptor.runtimeStatus === "supported") {
+              keyManagerSupportedObserved = true;
+            }
+            if (
+              descriptor.operations.canSet === true ||
+              descriptor.operations.canPerformAction === true
+            ) {
+              keyManagerWritableMetadataObserved = true;
+            }
+            if (
+              typeof descriptor.cameraLensType === "string" &&
+              descriptor.cameraLensType.length > 0
+            ) {
+              keyManagerLensScopedObserved = true;
+            }
+          }
+        }
+      }
+    }
+
     summaries.push({
       name,
       markers,
@@ -105,6 +151,21 @@ export function validateEvidenceDocuments(
     }
     if (!unpairCompleted) {
       errors.push("acceptance_unpair_not_completed");
+    }
+  }
+
+  if (keyManager) {
+    if (!keyManagerObserved) {
+      errors.push("keymanager_acceptance_missing_inventory");
+    }
+    if (!keyManagerSupportedObserved) {
+      errors.push("keymanager_acceptance_missing_supported_key");
+    }
+    if (!keyManagerWritableMetadataObserved) {
+      errors.push("keymanager_acceptance_missing_write_metadata");
+    }
+    if (!keyManagerLensScopedObserved) {
+      errors.push("keymanager_acceptance_missing_lens_scoped_key");
     }
   }
 
@@ -146,6 +207,37 @@ function scanSecrets(value, currentPath, fileName, errors) {
   }
 }
 
+function isValidKeyDescriptor(value) {
+  if (!isObject(value)) return false;
+  if (typeof value.identifier !== "string" || value.identifier.length === 0) {
+    return false;
+  }
+  if (typeof value.family !== "string" || value.family.length === 0) {
+    return false;
+  }
+  if (!isObject(value.operations)) return false;
+  for (const key of [
+    "canGet",
+    "canSet",
+    "canListen",
+    "canPerformAction"
+  ]) {
+    if (typeof value.operations[key] !== "boolean") return false;
+  }
+  if (
+    ![
+      "supported",
+      "unsupported_on_product",
+      "temporarily_unavailable",
+      "disconnected",
+      "error"
+    ].includes(value.runtimeStatus)
+  ) {
+    return false;
+  }
+  return typeof value.probeMode === "string" && value.probeMode.length > 0;
+}
+
 function isObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -174,7 +266,7 @@ function printResult(result) {
 
 function usage() {
   console.error(
-    "Usage: node scripts/verify-msdk-evidence.mjs [--acceptance] <evidence.json> [...]"
+    "Usage: node scripts/verify-msdk-evidence.mjs [--acceptance] [--keymanager] <evidence.json> [...]"
   );
 }
 
@@ -185,7 +277,10 @@ const invokedDirectly =
 if (invokedDirectly) {
   const args = process.argv.slice(2);
   const acceptance = args.includes("--acceptance");
-  const files = args.filter((arg) => arg !== "--acceptance");
+  const keyManager = args.includes("--keymanager");
+  const files = args.filter(
+    (arg) => arg !== "--acceptance" && arg !== "--keymanager"
+  );
 
   if (files.length === 0) {
     usage();
@@ -194,7 +289,7 @@ if (invokedDirectly) {
     try {
       const result = validateEvidenceDocuments(
         loadEvidenceFiles(files),
-        { acceptance }
+        { acceptance, keyManager }
       );
       printResult(result);
       if (!result.ok) process.exitCode = 1;

@@ -96,6 +96,7 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - UgCS Groundstation Adapter / Bridge
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
+- Android MSDK V5 KeyManager-Runtimeinventar mit read-only Hardware-Probes
 - zentrale DJI-`ControlCoordinator`-Runtime im Serverprozess
 - read-only Control-Runtime-Status; keine öffentliche Flight-Control-Write-API
 - Weboberfläche und lokale Root-Compose-Runtime
@@ -120,12 +121,12 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 - reale Pilot-2-WPML-/Workspace-Hardwarefreigabe ohne passendes reales KMZ-/Workspace-Fixture
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - M3T/M4T Thermal-Auswertung ohne passendes reales Thermal-Fixture
+- MSDK-KeyManager-Hardwarematrix ohne reales Runtime-Evidence-Fixture
 
 ## Offene Draft-PRs
 
 Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
 
-- #44 MSDK KeyManager-Vertrag: Vertrags-/Dokumentationsstand; nach V3.0 verschoben
 - #46 Pilot2 JSBridge: noch nicht releasefähig; reales Pilot-2-Runtime-Fixture offen
 
 WPML/Pilot-Waylines aus #51 sind als read-only Softwarepfad integriert. Die älteren WPML-Drafts #45/#47/#49 wurden darin konsolidiert. Die reale Pilot-2-WPML-/Workspace-Hardwarefreigabe bleibt separat offen.

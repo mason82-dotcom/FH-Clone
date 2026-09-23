@@ -70,6 +70,25 @@ function snapshot(): MsdkBridgeSnapshot {
         authorityOwner: "UNKNOWN"
       }
     },
+    keyManager: {
+      active: true,
+      productConnected: true,
+      probedAt: 1_000,
+      keys: [
+        {
+          identifier: "ControlMode",
+          family: "remote_controller",
+          operations: {
+            canGet: true,
+            canSet: true,
+            canListen: false,
+            canPerformAction: false
+          },
+          probeMode: "cache+hardware_read",
+          runtimeStatus: "supported"
+        }
+      ]
+    },
     capabilities: {
       camera: true,
       gimbal: true,
@@ -97,6 +116,15 @@ test("normalizes MSDK snapshot into common device and telemetry registries", () 
   );
   assert.equal(
     normalized.device.capabilities.includes("control.flight"),
+    false
+  );
+  // A writable DJI key remains adapter evidence only. It must not create
+  // any FH2 control capability without an explicit routed implementation
+  // and the existing safety/authority chain.
+  assert.equal(
+    normalized.device.capabilities.some((capability) =>
+      capability.startsWith("control.")
+    ),
     false
   );
 

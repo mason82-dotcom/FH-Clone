@@ -5,6 +5,41 @@ import {
 
 const SAFE_ID = /^[A-Za-z0-9._:-]{3,128}$/;
 
+export type MsdkKeyRuntimeStatus =
+  | "supported"
+  | "unsupported_on_product"
+  | "temporarily_unavailable"
+  | "disconnected"
+  | "error";
+
+export interface MsdkKeyDescriptor {
+  identifier: string;
+  family: string;
+  componentIndex?: string | null | undefined;
+  cameraLensType?: string | null | undefined;
+  subComponentType?: number | null | undefined;
+  operations: {
+    canGet: boolean;
+    canSet: boolean;
+    canListen: boolean;
+    canPerformAction: boolean;
+  };
+  isEvent?: boolean | null | undefined;
+  valueType?: string | null | undefined;
+  concreteKeyType?: string | null | undefined;
+  probeMode: string;
+  runtimeStatus: MsdkKeyRuntimeStatus;
+  lastObservedAt?: number | null | undefined;
+  lastError?: string | null | undefined;
+}
+
+export interface MsdkKeyManagerSnapshot {
+  active: boolean;
+  productConnected: boolean;
+  probedAt?: number | null | undefined;
+  keys: MsdkKeyDescriptor[];
+}
+
 export interface MsdkSensorSnapshot {
   index: string;
   cameraConnected: boolean;
@@ -83,6 +118,7 @@ export interface MsdkBridgeSnapshot {
     uploadedAt?: number | null | undefined;
     lastError?: string | null | undefined;
   } | undefined;
+  keyManager?: MsdkKeyManagerSnapshot | undefined;
   control: {
     networkArmed: boolean;
     networkArmedAt?: number | null | undefined;
@@ -371,6 +407,10 @@ export function isMsdkBridgeSnapshot(
     if (!finiteNumber(value.wayline.uploadProgress)) return false;
   }
 
+  if (value.keyManager !== undefined) {
+    if (!isMsdkKeyManagerSnapshot(value.keyManager)) return false;
+  }
+
   if (!isRecord(value.control)) return false;
   if (typeof value.control.networkArmed !== "boolean") return false;
   if (
@@ -398,6 +438,103 @@ export function isMsdkBridgeSnapshot(
   }
 
   return true;
+}
+
+const MSDK_KEY_RUNTIME_STATES = new Set<MsdkKeyRuntimeStatus>([
+  "supported",
+  "unsupported_on_product",
+  "temporarily_unavailable",
+  "disconnected",
+  "error"
+]);
+
+function isMsdkKeyManagerSnapshot(
+  value: unknown
+): value is MsdkKeyManagerSnapshot {
+  if (!isRecord(value)) return false;
+  if (typeof value.active !== "boolean") return false;
+  if (typeof value.productConnected !== "boolean") return false;
+  if (
+    value.probedAt !== undefined &&
+    value.probedAt !== null &&
+    !finiteNumber(value.probedAt)
+  ) {
+    return false;
+  }
+  if (!Array.isArray(value.keys)) return false;
+  return value.keys.every(isMsdkKeyDescriptor);
+}
+
+function isMsdkKeyDescriptor(value: unknown): value is MsdkKeyDescriptor {
+  if (!isRecord(value)) return false;
+  if (!nonEmptyString(value.identifier, 256)) return false;
+  if (!nonEmptyString(value.family, 128)) return false;
+  if (!nonEmptyString(value.probeMode, 64)) return false;
+  if (
+    typeof value.runtimeStatus !== "string" ||
+    !MSDK_KEY_RUNTIME_STATES.has(
+      value.runtimeStatus as MsdkKeyRuntimeStatus
+    )
+  ) {
+    return false;
+  }
+  if (!isRecord(value.operations)) return false;
+  for (const key of [
+    "canGet",
+    "canSet",
+    "canListen",
+    "canPerformAction"
+  ]) {
+    if (typeof value.operations[key] !== "boolean") return false;
+  }
+
+  for (const key of [
+    "componentIndex",
+    "cameraLensType",
+    "valueType",
+    "concreteKeyType",
+    "lastError"
+  ]) {
+    const entry = value[key];
+    if (
+      entry !== undefined &&
+      entry !== null &&
+      typeof entry !== "string"
+    ) {
+      return false;
+    }
+  }
+  if (
+    value.subComponentType !== undefined &&
+    value.subComponentType !== null &&
+    !Number.isInteger(value.subComponentType)
+  ) {
+    return false;
+  }
+  if (
+    value.isEvent !== undefined &&
+    value.isEvent !== null &&
+    typeof value.isEvent !== "boolean"
+  ) {
+    return false;
+  }
+  if (
+    value.lastObservedAt !== undefined &&
+    value.lastObservedAt !== null &&
+    !finiteNumber(value.lastObservedAt)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function nonEmptyString(value: unknown, maxLength: number): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= maxLength
+  );
 }
 
 function snapshotIdentity(

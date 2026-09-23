@@ -157,3 +157,98 @@ test("redacted bearer text is allowed", () => {
 
   assert.equal(result.ok, true);
 });
+
+
+test("KeyManager acceptance requires real runtime inventory evidence", () => {
+  const document = fixture({
+    extra: {
+      keyManager: {
+        active: true,
+        productConnected: true,
+        probedAt: 100,
+        keys: [
+          {
+            identifier: "ControlMode",
+            family: "remote_controller",
+            operations: {
+              canGet: true,
+              canSet: true,
+              canListen: false,
+              canPerformAction: false
+            },
+            probeMode: "cache+hardware_read",
+            runtimeStatus: "supported"
+          },
+          {
+            identifier: "CameraZoomRatios",
+            family: "camera",
+            componentIndex: "LEFT_OR_MAIN",
+            cameraLensType: "CAMERA_LENS_ZOOM",
+            operations: {
+              canGet: true,
+              canSet: true,
+              canListen: true,
+              canPerformAction: false
+            },
+            probeMode: "cache+hardware_read",
+            runtimeStatus: "unsupported_on_product"
+          }
+        ]
+      }
+    }
+  });
+
+  const result = validateEvidenceDocuments(
+    [{ name: "keymanager.json", document }],
+    { keyManager: true }
+  );
+
+  assert.equal(result.ok, true);
+});
+
+test("KeyManager acceptance rejects metadata-only or disconnected captures", () => {
+  const document = fixture({
+    extra: {
+      keyManager: {
+        active: true,
+        productConnected: false,
+        keys: [
+          {
+            identifier: "StartShootPhoto",
+            family: "camera",
+            operations: {
+              canGet: false,
+              canSet: false,
+              canListen: false,
+              canPerformAction: true
+            },
+            probeMode: "metadata_only",
+            runtimeStatus: "disconnected"
+          }
+        ]
+      }
+    }
+  });
+
+  const result = validateEvidenceDocuments(
+    [{ name: "keymanager-disconnected.json", document }],
+    { keyManager: true }
+  );
+
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.errors.includes(
+      "keymanager-disconnected.json: keymanager_product_not_connected"
+    )
+  );
+  assert.ok(
+    result.errors.includes(
+      "keymanager_acceptance_missing_supported_key"
+    )
+  );
+  assert.ok(
+    result.errors.includes(
+      "keymanager_acceptance_missing_lens_scoped_key"
+    )
+  );
+});

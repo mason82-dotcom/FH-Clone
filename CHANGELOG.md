@@ -8,6 +8,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - M4E/M4T + RC Plus 2 bleibt das separate Cloud-Flight-Control-Profil.
 - `ControlCoordinator` wird im Control-API-Prozess tatsächlich instanziiert; Runtime-Status ist read-only sichtbar, öffentliche Flight-Control-Schreibendpunkte bleiben deaktiviert.
 - read-only WPML/KMZ-Parser sowie serverseitiger Pilot-Wayline-Katalog integriert; kein Upload, Collect oder Missionsstart.
+- Android-MSDK-KeyManager-Runtimeinventar integriert: Operationsflags, read-only Cache-/Hardware-Probes, Component-/Lens-Kontext und Listener-Cleanup; Write-Metadaten erzeugen keine `control.*`-Capability.
 
 ## 3.0.0 – 2026-09-23
 

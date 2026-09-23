@@ -46,10 +46,12 @@ object DjiSdkRuntime {
                     SensorInventorySource.start()
                     RtkTelemetrySource.start()
                     CameraGimbalController.start()
+                    MsdkKeyManagerRuntime.start()
                     Fh2BridgeClient.tryResume()
                 }
 
                 override fun onRegisterFailure(error: IDJIError) {
+                    MsdkKeyManagerRuntime.stop()
                     update {
                         copy(
                             registered = false,
@@ -65,6 +67,7 @@ object DjiSdkRuntime {
                             productId = productId
                         )
                     }
+                    MsdkKeyManagerRuntime.onProductDisconnected()
                 }
 
                 override fun onProductConnect(productId: Int) {
@@ -74,6 +77,7 @@ object DjiSdkRuntime {
                             productId = productId
                         )
                     }
+                    MsdkKeyManagerRuntime.onProductConnected()
                     Fh2BridgeClient.tryResume()
                 }
 
