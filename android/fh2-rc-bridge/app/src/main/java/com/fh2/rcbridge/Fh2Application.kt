@@ -6,6 +6,7 @@ class Fh2Application : Application() {
     override fun onCreate() {
         super.onCreate()
         Fh2BridgeClient.initialize(this)
+        PairingTransportEvidenceRecorder.initialize()
         DjiSdkRuntime.start(this)
     }
 }
