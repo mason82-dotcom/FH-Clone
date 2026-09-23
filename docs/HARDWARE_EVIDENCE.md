@@ -143,29 +143,34 @@ Für NDVI reicht ein bloßes Vorhandensein von Red/NIR nicht als
 Kalibrierungsnachweis. DJI beschreibt zusätzlich Sonnenlichtsensor-,
 Empfindlichkeits-/Gain- und geometrische Korrekturen.
 
-## 4. Dock 3 + M4D/M4TD — REQUIRED_DRAFT für PR #43
+## 4. Global deaktivierte Funktionen
 
-Vor Promotion von PR #43:
+Die folgenden DJI-Funktionsfamilien sind in FH2 **projektweit deaktiviert** und
+besitzen deshalb weder Hardware-Gates noch freigabefähige Fixtures:
 
-1. reales Dock-3-`update_topo`,
-2. reales M4D oder M4TD `osd`,
-3. reales `state`,
-4. reales `cameras[]` mit dem beobachteten Payload,
-5. reale Form der dynamischen Kamera-/Gimbal-Property-Keys,
-6. `battery.batteries[]`,
-7. RTK Fixed + Nicht-Fixed, wenn der PR diese Semantik als validiert ausweist,
-8. Sanitization-Beleg: ein beobachtetes `secret_code` darf den öffentlichen
-   FH2-Rawpfad nicht erreichen.
+- DJI Dock 1
+- DJI Dock 2
+- DJI Dock 3
+- Multi-Dock
+- PSDK-Payloads und PSDK-Widget-/DRC-Kommandos
 
-### Nur CONDITIONAL
+Die Runtime behandelt die komplette DJI-Dock-Domain `domain=3` fail-closed.
+Ein erkanntes Dock-Gateway und seine Sub-Devices werden nicht in die aktive
+FH2-Topologie übernommen. PSDK-Methoden `psdk_*` und `drc_psdk_*` werden
+nicht ausgeführt; PSDK-spezifische Telemetriefelder werden vor Raw-Persistenz,
+Normalisierung und Frontend-Ausgabe entfernt.
 
-- `wireless_link_topo` und `best_link_gateway` sind harte Gates **nur für
-  Multi-Dock**. DJI beschreibt sie explizit im Multi-Dock-Vertrag.
-- PSDK-Arrays sind nur erforderlich, wenn tatsächlich PSDK-Hardware angeschlossen
-  ist oder FH2 diese Runtimeunterstützung freigibt.
-- `property/set` wird für PR #43 **nicht ausgeführt**. Der Draft ist read-only;
-  die DJI-`rw`-Kennzeichnung ist kein Grund, in CI schreibende Hardwaretests
-  zu starten.
+Multi-Dock-Felder wie `multi_dock_task`, `multi_dock_home_info`,
+`wireless_link_topo` und `best_link_gateway` werden ebenfalls verworfen
+beziehungsweise bei schreibenden Service-Anfragen abgelehnt.
+
+Diese Sperren haben **keinen Runtime-Schalter und keine Umgebungsvariable**.
+Eine spätere Reaktivierung erfordert eine bewusste Code- und Policy-Änderung
+mit neuer Review-/CI-Abnahme.
+
+Wichtig: Eingebaute DJI-Kameras wie M3T/M4T bleiben davon unberührt. Die
+globale PSDK-Sperre richtet sich gegen PSDK-spezifische Erweiterungspayloads,
+nicht gegen die dokumentierten nativen Kamera-`payload_index`-Werte.
 
 ## 5. WPML / Pilot Wayline — REQUIRED_DRAFT für PR #45
 
@@ -247,6 +252,7 @@ Die zentrale Direktor-CI besitzt zwei Evidence-Sichten:
 - `all`: zusätzlich müssen REQUIRED_DRAFT-Nachweise für die zu promotenden
   Drafts grün sein.
 
-CONDITIONAL-Nachweise werden nur aktiviert, wenn das entsprechende Profil
-explizit eingeschaltet wird. Fehlende Hardware wird nie durch synthetische
-Fixtures oder Annahmen ersetzt.
+CONDITIONAL-Nachweise werden nur für weiterhin unterstützte Profile aktiviert.
+Dock-, Multi-Dock- und PSDK-Nachweise sind ausdrücklich **keine** Conditional-
+Gates mehr, weil diese Funktionsfamilien global deaktiviert sind. Fehlende
+Hardware wird nie durch synthetische Fixtures oder Annahmen ersetzt.
