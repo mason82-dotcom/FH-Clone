@@ -25,6 +25,8 @@ Implementiert:
 - Payload-Port-Verbindungen + ProductName
 - RTKCenter System State und RTK-Location
 - RTK Solution, Source, Standardabweichungen und Satellitenzahlen
+- kanonischer FH2 BridgeSnapshot als JSON
+- Capability-Ableitung nur aus MSDK CameraType/Component-State
 - Virtual-Stick-State und Flight-Control-Authority
 - explizites Enable / Disable
 - normalisierte Stick-Eingabe `[-1, 1]`
@@ -99,3 +101,32 @@ SafetyGate + Control Lease
 ```
 
 Ein eigener Android-Schatten-Backendpfad wird nicht eingeführt.
+
+
+## BridgeSnapshot
+
+Die App bündelt den lokalen MSDK-Zustand in einen stabilen Snapshot:
+
+```text
+schema = fh2.msdk.v1
+sdk
+aircraft
+sensors[]
+rtk
+control
+capabilities
+```
+
+Die Capability-Ableitung verwendet ausschließlich von MSDK gemeldete
+CameraType-/Component-Werte. Es wird nicht aus frei formulierten Produktnamen
+oder Android-Gerätenamen geraten.
+
+Beispiele:
+
+- `CameraType.M3T` -> thermal
+- `CameraType.M3M` -> multispectral
+- verbundener Gimbal -> gimbal
+- RTK-Systemzustand vorhanden -> rtk
+
+Der JSON-Snapshot ist die Grundlage für das spätere HTTPS/WSS-Pairing mit der
+FH2 Control API.
