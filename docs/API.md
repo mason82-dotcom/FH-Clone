@@ -5,8 +5,8 @@
 Diese Referenz beschreibt die aktuell auf `main` vorhandenen HTTP-Endpunkte
 der FH2-Control-API.
 
-Nicht implementierte V3-Zielendpunkte werden ausdrücklich als Ziel
-gekennzeichnet.
+Nicht zum Basisumfang gehörende spätere Erweiterungen werden ausdrücklich als
+optional oder nicht implementiert gekennzeichnet.
 
 ## Basis
 
@@ -296,6 +296,26 @@ Die Antwort trennt:
 
 DJI-Produktsupport erzeugt nicht automatisch eine ausführbare
 `AircraftAdapter.execute()`-Capability.
+
+Für einen verbundenen MSDK-V5-Agent trennt die Antwort zusätzlich den
+implementierten Agent-Controltransport von einer öffentlichen
+Operator-Schnittstelle:
+
+```json
+{
+  "msdkV5": {
+    "networkControlImplemented": true,
+    "publicOperatorControlApiEnabled": false,
+    "networkControlArmed": false
+  }
+}
+```
+
+`networkControlImplemented=true` bedeutet ausschließlich, dass der
+authentifizierte Backend-zu-RC-Bridge-WSS-Pfad implementiert ist.
+`publicOperatorControlApiEnabled=false` hält fest, dass es weiterhin keinen
+öffentlichen Browser-/Operator-Endpunkt zum Start einer Control-Session oder
+zum Einspeisen von Stickwerten gibt.
 
 ### DJI Pilot Waypoint Management – read-only
 
