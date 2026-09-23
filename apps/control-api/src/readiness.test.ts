@@ -20,7 +20,8 @@ test("optional disabled dependencies do not make readiness fail", () => {
     mqttBackend: disabled(),
     topologyStore: disabled(),
     gatewayCredentialStore: disabled(),
-    missionStore: disabled()
+    missionStore: disabled(),
+    mediaStore: disabled()
   });
 
   assert.equal(result.ready, true);
@@ -33,7 +34,8 @@ test("configured but disconnected MQTT is not ready", () => {
     mqttBackend: unavailable(),
     topologyStore: disabled(),
     gatewayCredentialStore: disabled(),
-    missionStore: disabled()
+    missionStore: disabled(),
+    mediaStore: disabled()
   });
 
   assert.equal(result.ready, false);
@@ -45,7 +47,8 @@ test("configured persistence must actually be reachable", () => {
     mqttBackend: ready(),
     topologyStore: ready(),
     gatewayCredentialStore: unavailable(),
-    missionStore: ready()
+    missionStore: ready(),
+    mediaStore: ready()
   });
 
   assert.equal(result.ready, false);
@@ -60,7 +63,8 @@ test("fully configured runtime is ready only when every required dependency is r
     mqttBackend: ready(),
     topologyStore: ready(),
     gatewayCredentialStore: ready(),
-    missionStore: ready()
+    missionStore: ready(),
+    mediaStore: ready()
   });
 
   assert.equal(result.ready, true);
@@ -68,4 +72,18 @@ test("fully configured runtime is ready only when every required dependency is r
     Object.values(result.checks).map((check) => check.state),
     ["ready", "ready", "ready", "ready"]
   );
+});
+
+
+test("configured media persistence must be reachable", () => {
+  const result = evaluateControlApiReadiness({
+    mqttBackend: disabled(),
+    topologyStore: disabled(),
+    gatewayCredentialStore: disabled(),
+    missionStore: ready(),
+    mediaStore: unavailable()
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(result.checks.mediaStore.state, "unavailable");
 });
