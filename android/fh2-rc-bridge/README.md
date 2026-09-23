@@ -260,6 +260,10 @@ Transport-Lifecycle:
   aktive Session vorher mit `neutral` + `session_stop`
 - ein ersetzter Agent-Socket beendet eine laufende Session ebenfalls zuerst
   fail-closed; eine neue Verbindung übernimmt niemals eine alte Session
+- verspätete `onOpen`-/`onMessage`-/`onClosed`-/`onFailure`-Callbacks
+  eines bereits ersetzten Android-WebSockets werden über eine
+  Connection-Generation verworfen und dürfen den aktuellen Transportzustand
+  nicht mehr überschreiben
 
 Fail-closed:
 
