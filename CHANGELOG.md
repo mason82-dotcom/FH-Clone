@@ -4,10 +4,12 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
-> Die 3.0.0-Software-Baseline wurde mit Commit `58b82f9` festgelegt.
-> Ein `v3.0.0`-Tag und ein GitHub Release sind noch nicht veröffentlicht;
-> alle nachfolgenden Integrationen bleiben deshalb bis zur endgültigen
-> Artefaktgrenze unter `Unreleased`.
+> Der historische 3.0.0-Baseline-Commit ist **nicht** das geplante Ziel des
+> späteren `v3.0.0`-Tags. Ein `v3.0.0`-Tag und GitHub Release sind noch
+> nicht veröffentlicht. Die Einträge dieses Abschnitts werden bei der finalen
+> Veröffentlichung zusammen mit dem bestehenden 3.0.0-Abschnitt zur
+> tatsächlichen Release-Artefaktgrenze des dann aktuellen grünen `main`
+> konsolidiert.
 
 - M3E/M3T/M3TA + RC Pro auf den offiziell dokumentierten Cloud-Payload-Control-Vertrag korrigiert; Cloud-Flugsteuerung (`stick_control`/`drone_control`) bleibt für M3 aus.
 - M4E/M4T + RC Plus 2 bleibt das separate Cloud-Flight-Control-Profil.

@@ -71,6 +71,7 @@ Hardwareabnahme missverstanden werden.
 | [FEHLERSUCHE.md](FEHLERSUCHE.md) | systematische Diagnose |
 | [TESTS_UND_ABNAHME.md](TESTS_UND_ABNAHME.md) | Teststand und V3-Release-Gates |
 | [RELEASE_STATUS.md](RELEASE_STATUS.md) | aktueller V3-Release-Status und offene Gates |
+| [RELEASE_NOTES_3.0.0.md](RELEASE_NOTES_3.0.0.md) | vorbereitete finale Release Notes für V3.0.0 |
 | [GLOSSAR.md](GLOSSAR.md) | zentrale Begriffe und Abkürzungen |
 
 ## Komponentenunterlagen
