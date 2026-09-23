@@ -157,6 +157,113 @@ function inferCapability(rawKey: string): Capability | undefined {
   return undefined;
 }
 
+const DJI_PAYLOAD_INDEX = /^\d+-\d+-\d+$/;
+
+interface CameraFieldSpec {
+  key: string;
+  unit?: string;
+}
+
+const CAMERA_FIELDS: Record<string, CameraFieldSpec> = {
+  camera_mode: { key: "mode.code" },
+  photo_state: { key: "capture.photo_state_code" },
+  recording_state: { key: "recording.state_code" },
+  remain_photo_num: { key: "storage.remaining_photos" },
+  remain_record_duration: {
+    key: "storage.remaining_record_seconds",
+    unit: "s"
+  },
+  record_time: {
+    key: "recording.elapsed_seconds",
+    unit: "s"
+  },
+  zoom_factor: { key: "zoom.factor" },
+  ir_zoom_factor: { key: "thermal.zoom_factor" }
+};
+
+const GIMBAL_FIELDS: Record<string, CameraFieldSpec> = {
+  gimbal_pitch: { key: "pitch_deg", unit: "deg" },
+  gimbal_roll: { key: "roll_deg", unit: "deg" },
+  gimbal_yaw: { key: "yaw_deg", unit: "deg" }
+};
+
+function normalizeCameraTelemetry(
+  deviceId: string,
+  source: JsonRecord,
+  sampledAt: number
+): ParameterSample[] {
+  if (!Array.isArray(source.cameras)) return [];
+
+  const samples: ParameterSample[] = [];
+
+  for (const camera of source.cameras) {
+    if (!isRecord(camera)) continue;
+    const payloadIndex = camera.payload_index;
+    if (
+      typeof payloadIndex !== "string" ||
+      !DJI_PAYLOAD_INDEX.test(payloadIndex)
+    ) {
+      continue;
+    }
+
+    samples.push(
+      sample(
+        deviceId,
+        `camera.${payloadIndex}.payload_index`,
+        "cameras[].payload_index",
+        payloadIndex,
+        sampledAt
+      )
+    );
+
+    for (const [rawField, spec] of Object.entries(CAMERA_FIELDS)) {
+      if (!(rawField in camera)) continue;
+      samples.push(
+        sample(
+          deviceId,
+          `camera.${payloadIndex}.${spec.key}`,
+          `cameras[].${rawField}`,
+          camera[rawField],
+          sampledAt,
+          spec.unit
+        )
+      );
+    }
+  }
+
+  return samples;
+}
+
+function normalizeGimbalTelemetry(
+  deviceId: string,
+  source: JsonRecord,
+  sampledAt: number
+): ParameterSample[] {
+  const samples: ParameterSample[] = [];
+
+  for (const [payloadIndex, value] of Object.entries(source)) {
+    if (!DJI_PAYLOAD_INDEX.test(payloadIndex) || !isRecord(value)) {
+      continue;
+    }
+
+    for (const [rawField, spec] of Object.entries(GIMBAL_FIELDS)) {
+      if (!(rawField in value)) continue;
+      samples.push(
+        sample(
+          deviceId,
+          `gimbal.${payloadIndex}.${spec.key}`,
+          `${payloadIndex}.${rawField}`,
+          value[rawField],
+          sampledAt,
+          spec.unit
+        )
+      );
+    }
+  }
+
+  return samples;
+}
+
 function sample(
   deviceId: string,
   key: string,
@@ -203,6 +310,26 @@ export function normalizeDjiPayload(
       known?.unit
     );
   });
+
+  const cameraSamples = normalizeCameraTelemetry(
+    deviceId,
+    source,
+    sampledAt
+  );
+  if (cameraSamples.length > 0) {
+    capabilities.add("telemetry.camera");
+    samples.push(...cameraSamples);
+  }
+
+  const gimbalSamples = normalizeGimbalTelemetry(
+    deviceId,
+    source,
+    sampledAt
+  );
+  if (gimbalSamples.length > 0) {
+    capabilities.add("telemetry.gimbal");
+    samples.push(...gimbalSamples);
+  }
 
   const rtk = parseDjiRtkStatus(payload, sampledAt);
   if (rtk) {
