@@ -39,6 +39,7 @@ import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } fro
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
 import { ControlCoordinator } from "./control-coordinator.js";
+import { evaluateControlApiReadiness } from "./readiness.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -201,20 +202,34 @@ const publicServer = createServer(async (request, response) => {
         gatewayCredentials
           ? gatewayCredentials.assertReady().then(() => true).catch(() => false)
           : Promise.resolve(false),
-        missionStore.ping()
+        missionStore.enabled
+          ? missionStore.ping()
+          : Promise.resolve(false)
       ]);
 
-      const checks = {
-        mqttBackendConnected: dji?.isConnected ?? false,
-        topologyStoreReady,
-        gatewayCredentialStoreReady,
-        missionStoreReady
-      };
-      const ready = Object.values(checks).every(Boolean);
-      return json(response, ready ? 200 : 503, {
-        status: ready ? "ready" : "not_ready",
+      const readiness = evaluateControlApiReadiness({
+        mqttBackend: {
+          configured: Boolean(dji),
+          ready: dji?.isConnected ?? false
+        },
+        topologyStore: {
+          configured: Boolean(topologyStore),
+          ready: topologyStoreReady
+        },
+        gatewayCredentialStore: {
+          configured: Boolean(gatewayCredentials),
+          ready: gatewayCredentialStoreReady
+        },
+        missionStore: {
+          configured: missionStore.enabled,
+          ready: missionStoreReady
+        }
+      });
+
+      return json(response, readiness.ready ? 200 : 503, {
+        status: readiness.ready ? "ready" : "not_ready",
         service: "control-api",
-        checks
+        checks: readiness.checks
       });
     }
 
