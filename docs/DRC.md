@@ -16,6 +16,19 @@ Im Standardbetrieb unter FC0 existiert keine solche Sitzung; dadurch bleiben
 Persistierte Inventar-, Missions- oder Auditdaten dürfen eine DRC-Sitzung
 niemals wiederherstellen oder autorisieren.
 
+Der zentrale `ControlCoordinator` wird im laufenden Control-API-Prozess
+instanziiert, sobald DJI-Adapter und `DrcSessionManager` verfügbar sind.
+Das bedeutet **nicht**, dass öffentliche Flight-Control-Schreibendpunkte
+aktiv sind: FC3 bleibt standardmäßig aus und es existiert weiterhin kein
+öffentlicher HTTP-Pfad zum Setzen von FC3, zum Erzeugen eines Control Lease
+oder zum Senden von Stick-/Drone-Control-Frames.
+
+Der aktuelle Runtime-Status ist ausschließlich read-only sichtbar über:
+
+```text
+GET /api/dji/control/runtime
+```
+
 ## Trennung von Basic Link und DRC
 
 DRC ist keine dauerhafte Basic-Link-Berechtigung.
