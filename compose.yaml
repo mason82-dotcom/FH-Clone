@@ -92,8 +92,10 @@ services:
     environment:
       EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE:?EMQX_NODE_COOKIE fehlt}
       EMQX_NODE__DATA_DIR: /opt/emqx/data
-      EMQX_AUTHENTICATION__1__HEADERS__AUTHORIZATION: "\"Bearer ${EMQX_AUTHN_TOKEN:?EMQX_AUTHN_TOKEN fehlt}\""
-      EMQX_AUTHORIZATION__SOURCES__1__HEADERS__AUTHORIZATION: "\"Bearer ${EMQX_AUTHZ_TOKEN:?EMQX_AUTHZ_TOKEN fehlt}\""
+      EMQX_AUTHENTICATION__1: >-
+        {"mechanism":"password_based","backend":"http","enable":true,"method":"post","url":"http://control-api:8081/internal/emqx/authn","headers":{"Content-Type":"application/json","Authorization":"Bearer ${EMQX_AUTHN_TOKEN:?EMQX_AUTHN_TOKEN fehlt}"},"body":{"username":"${username}","password":"${password}","clientid":"${clientid}","peerhost":"${peerhost}"},"pool_size":8,"connect_timeout":"1s","request_timeout":"1s"}
+      EMQX_AUTHORIZATION__SOURCES__1: >-
+        {"type":"http","enable":true,"method":"post","url":"http://control-api:8081/internal/emqx/authz","headers":{"Content-Type":"application/json","Authorization":"Bearer ${EMQX_AUTHZ_TOKEN:?EMQX_AUTHZ_TOKEN fehlt}"},"body":{"username":"${username}","clientid":"${clientid}","peerhost":"${peerhost}","role":"${client_attrs.role}","gateway_sn":"${client_attrs.gateway_sn}","action":"${action}","topic":"${topic}","qos":"${qos}"},"pool_size":8,"request_timeout":"1s"}
     volumes:
       - ./infra/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
       - ./infra/emqx/acl.conf:/opt/emqx/etc/fh-clone-acl.conf:ro
