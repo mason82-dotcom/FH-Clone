@@ -153,8 +153,12 @@ test("parses DJI WPML template and execution documents without conflating height
     "narrow_band,visable"
   );
   assert.equal(
-    executionPoint?.actionGroups[0]?.actions[0]?.params.actionUUID,
+    templatePoint?.actionGroups[0]?.actions[0]?.params.actionUUID,
     "7f320139-4fbf-41d1-b3bb-3b9f6f7f334c"
+  );
+  assert.equal(
+    executionPoint?.actionGroups[0]?.actions[0]?.params.actionUUID,
+    undefined
   );
 });
 
