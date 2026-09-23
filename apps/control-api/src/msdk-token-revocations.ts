@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
-import { Pool } from "pg";
+import { Pool, type QueryResultRow } from "pg";
 
 export interface MsdkTokenRevocationStoreOptions {
   connectionString?: string | undefined;
   now?: (() => number) | undefined;
 }
 
-interface RevocationRow {
+interface RevocationRow extends QueryResultRow {
   token_hash: string;
   expires_at_ms: string | number;
 }
