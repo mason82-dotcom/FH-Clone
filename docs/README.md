@@ -72,6 +72,7 @@ Hardwareabnahme missverstanden werden.
 | [TESTS_UND_ABNAHME.md](TESTS_UND_ABNAHME.md) | Teststand und V3-Release-Gates |
 | [RELEASE_STATUS.md](RELEASE_STATUS.md) | aktueller V3-Release-Status und offene Gates |
 | [RELEASE_NOTES_3.0.0.md](RELEASE_NOTES_3.0.0.md) | vorbereitete finale Release Notes für V3.0.0 |
+| [GITHUB_SENSITIVE_DATA_REMOVAL.md](GITHUB_SENSITIVE_DATA_REMOVAL.md) | privater GitHub-Support-Handoff für den letzten History-/Cache-Cleanup |
 | [GLOSSAR.md](GLOSSAR.md) | zentrale Begriffe und Abkürzungen |
 
 ## Komponentenunterlagen
