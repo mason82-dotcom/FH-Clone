@@ -2,6 +2,7 @@ package com.fh2.rcbridge
 
 import dji.sdk.keyvalue.key.FlightControllerKey
 import dji.sdk.keyvalue.key.ProductKey
+import dji.sdk.keyvalue.value.common.LocationCoordinate2D
 import dji.sdk.keyvalue.value.common.LocationCoordinate3D
 import dji.sdk.keyvalue.value.product.ProductType
 import dji.v5.et.create
@@ -18,7 +19,10 @@ data class AircraftTelemetrySnapshot(
     val flightControllerSerial: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val altitudeM: Double? = null
+    val altitudeM: Double? = null,
+    val homeLatitude: Double? = null,
+    val homeLongitude: Double? = null,
+    val headingDeg: Double? = null
 )
 
 object AircraftTelemetrySource {
@@ -56,6 +60,18 @@ object AircraftTelemetrySource {
             .create()
             .listen(this) { location ->
                 location?.let(::updateLocation)
+            }
+
+        FlightControllerKey.KeyHomeLocation
+            .create()
+            .listen(this) { location ->
+                location?.let(::updateHomeLocation)
+            }
+
+        FlightControllerKey.KeyCompassHeading
+            .create()
+            .listen(this) { heading ->
+                update { copy(headingDeg = heading) }
             }
 
         refreshIdentity()
@@ -105,6 +121,15 @@ object AircraftTelemetrySource {
                 latitude = location.latitude,
                 longitude = location.longitude,
                 altitudeM = location.altitude
+            )
+        }
+    }
+
+    private fun updateHomeLocation(location: LocationCoordinate2D) {
+        update {
+            copy(
+                homeLatitude = location.latitude,
+                homeLongitude = location.longitude
             )
         }
     }
