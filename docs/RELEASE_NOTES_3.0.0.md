@@ -39,6 +39,8 @@ V3.0.0 enthält insbesondere:
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
 - Android MSDK V5 RC-Bridge mit Pairing, Heartbeat, WSS-Agent-Kanal,
   Unpair/Revocation und KeyManager-Runtimeinventar
+- fail-closed MediaManager-Lifecycle: fehlgeschlagenes Enable entfernt
+  registrierte Media-Listener vor einem späteren Retry
 - Pilot-2-JSBridge read-only Runtime
 - DJI Cloud/MSDK-Telemetriefusion mit Adapter-Provenienz
 - MediaStore-Persistenz
@@ -115,6 +117,7 @@ Android-MSDK-CI:
 
 - Workspace-Build
 - MSDK-Bridge-Tests
+- MSDK-Media-Lifecycle-Regressionstest
 - Hardware-Evidence-Validator-Tests
 - Android `assembleDebug`
 - Android Lint
