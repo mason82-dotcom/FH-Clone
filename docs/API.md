@@ -78,6 +78,20 @@ Bei Erfolg wird ein zeitlich begrenztes, HMAC-signiertes Agent-Token
 zurückgegeben. Das Token ist an genau diese `gatewaySn + aircraftSn`-
 Kombination gebunden und enthält keine Flight-Control-Rechte.
 
+### POST /api/msdk/unpair
+
+Widerruft das aktuell präsentierte MSDK-Agent-Token dauerhaft bis zu dessen
+Ablaufzeit und entfernt den zugehörigen Agent aus der Runtime.
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+FH2 speichert dafür nur den SHA-256-Token-Digest in
+`msdk_token_revocations`; der Bearer-Token selbst wird nicht persistiert.
+Eine laufende Control-Session wird zuerst fail-closed beendet und der
+zugehörige WSS-Agent-Transport mit Code `4004` geschlossen.
+
 ### POST /api/msdk/heartbeat
 
 Read-only Snapshot-/Heartbeat-Ingest der gepairten Android-App.
