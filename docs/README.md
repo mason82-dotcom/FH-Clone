@@ -39,6 +39,7 @@ Hardwareabnahme missverstanden werden.
 | [DRC.md](DRC.md) | DRC, DJI Authority, Dead-Man und Sitzungszustände | Implementiert, standardmäßig gesperrt |
 | [RTK_NTRIP.md](RTK_NTRIP.md) | RTK-/GNSS-Telemetrie und NTRIP-Zuständigkeitsgrenze | Implementiert |
 | [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK- und Produktstände | Referenz |
+| [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md) | DJI MSDK V5 KeyManager-Runtime, Operationsflags, Probes und Lifecycle | Implementiert/Hardware real zu verifizieren |
 | [DJI_CAPABILITY_MATRIX.md](DJI_CAPABILITY_MATRIX.md) | DJI-Produkt-/Funktionsmatrix und FH2-Freigaben | Implementiert/Referenz |
 | [LIVESTREAM.md](LIVESTREAM.md) | Self-Hosted DJI-Livestream über MediaMTX/RTMP/WebRTC | V3-Ziel |
 
