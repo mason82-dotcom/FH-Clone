@@ -54,6 +54,14 @@ function snapshot(): MsdkBridgeSnapshot {
       isRecording: true,
       lastAction: "start_record"
     },
+    wayline: {
+      supported: true,
+      selectedFileName: "inspection.kmz",
+      availableWaylineIds: [0, 1],
+      uploadState: "uploaded",
+      uploadProgress: 1,
+      uploadedAt: 1_500
+    },
     control: {
       enabled: false,
       authorityOwner: "UNKNOWN"
@@ -107,5 +115,13 @@ test("normalizes MSDK snapshot into common device and telemetry registries", () 
   assert.equal(
     values.get("raw.msdk.payload_control.last_action"),
     "start_record"
+  );
+  assert.equal(
+    values.get("raw.msdk.wayline.upload_state"),
+    "uploaded"
+  );
+  assert.deepEqual(
+    values.get("raw.msdk.wayline.available_ids"),
+    [0, 1]
   );
 });
