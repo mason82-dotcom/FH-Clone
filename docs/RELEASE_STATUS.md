@@ -95,6 +95,7 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - Media-/Multispektral-Core und NDVI-Vertrag
 - UgCS Groundstation Adapter / Bridge
 - FlightHub-2 OpenAPI V2 read-only
+- DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
 - zentrale DJI-`ControlCoordinator`-Runtime im Serverprozess
 - read-only Control-Runtime-Status; keine öffentliche Flight-Control-Write-API
 - Weboberfläche und lokale Root-Compose-Runtime
@@ -116,7 +117,7 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 - M4E/M4T Cloud-Flight-Control ohne reale RC-Plus-2-/DRC-/Authority-Abnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: **global deaktiviert**
 - Pilot-2-JSBridge
-- WPML/Pilot-Wayline-Integration aus den offenen Drafts
+- reale Pilot-2-WPML-/Workspace-Hardwarefreigabe ohne passendes reales KMZ-/Workspace-Fixture
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - M3T/M4T Thermal-Auswertung ohne passendes reales Thermal-Fixture
 
@@ -126,10 +127,8 @@ Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
 
 - #44 MSDK KeyManager-Vertrag: Vertrags-/Dokumentationsstand; nach V3.0 verschoben
 - #46 Pilot2 JSBridge: noch nicht releasefähig; reales Pilot-2-Runtime-Fixture offen
-- #51 aktuelle WPML-Integration: Draft; Parser-Test für `actionUUID` schlägt fehl und reales Pilot-2-WPML-/Workspace-Fixture fehlt
 
-Die älteren WPML-Drafts #45/#47/#49 wurden in #51 konsolidiert und gehören
-nicht zum V3.0.0-Release.
+WPML/Pilot-Waylines aus #51 sind als read-only Softwarepfad integriert. Die älteren WPML-Drafts #45/#47/#49 wurden darin konsolidiert. Die reale Pilot-2-WPML-/Workspace-Hardwarefreigabe bleibt separat offen.
 
 ## Release-Regel
 
