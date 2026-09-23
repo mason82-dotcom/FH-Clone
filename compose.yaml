@@ -15,11 +15,12 @@ services:
       - ./infra/timescale/sql/004_gateway_credentials.sql:/docker-entrypoint-initdb.d/004_gateway_credentials.sql:ro
       - ./infra/postgres/migrations/001_dji_gateway_registry.sql:/docker-entrypoint-initdb.d/005_dji_gateway_registry.sql:ro
       - ./infra/timescale/sql/005_msdk_token_revocations.sql:/docker-entrypoint-initdb.d/006_msdk_token_revocations.sql:ro
+      - ./infra/timescale/sql/006_media_assets.sql:/docker-entrypoint-initdb.d/007_media_assets.sql:ro
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U fhclone -d fhclone >/dev/null && psql -U fhclone -d fhclone -tAc \"SELECT CASE WHEN to_regclass('public.missions') IS NOT NULL AND to_regclass('public.telemetry') IS NOT NULL AND to_regclass('public.authz_audit') IS NOT NULL AND to_regclass('public.gateway_credentials') IS NOT NULL AND to_regclass('public.dji_gateways') IS NOT NULL AND to_regclass('public.dji_gateway_devices') IS NOT NULL AND to_regclass('public.msdk_token_revocations') IS NOT NULL THEN 1 ELSE 0 END\" | grep -qx 1"
+          "pg_isready -U fhclone -d fhclone >/dev/null && psql -U fhclone -d fhclone -tAc \"SELECT CASE WHEN to_regclass('public.missions') IS NOT NULL AND to_regclass('public.telemetry') IS NOT NULL AND to_regclass('public.authz_audit') IS NOT NULL AND to_regclass('public.gateway_credentials') IS NOT NULL AND to_regclass('public.dji_gateways') IS NOT NULL AND to_regclass('public.dji_gateway_devices') IS NOT NULL AND to_regclass('public.msdk_token_revocations') IS NOT NULL AND to_regclass('public.media_assets') IS NOT NULL THEN 1 ELSE 0 END\" | grep -qx 1"
         ]
       interval: 5s
       timeout: 5s
