@@ -4,12 +4,13 @@ Stand: 23.09.2026
 
 ## Release-Entscheidung
 
-FH2 V3.0.0 ist als **Software-/FC0-Basisrelease** vorbereitet.
+FH2 V3.0.0 ist als **Software-/FC0-Basisrelease freigegeben**.
 
 Der freigegebene Basisumfang ist fail-closed: Standardstufe ist FC0.
 Die Existenz interner FC2-/FC3-/DRC-Bausteine aktiviert keine reale
-Flugsteuerung. Der öffentliche Control-API stellt weiterhin keinen Endpoint
-bereit, der FC3 oder DJI Flight Control Authority automatisch freigibt.
+Flugsteuerung. Zusätzlich sind `stick_control` und das Legacy-
+`drone_control` projektweit fail-closed deaktiviert. Der öffentliche
+Control-API stellt keinen Endpoint bereit, der diese Sperre aufhebt.
 
 ## Versionsstand
 
@@ -58,7 +59,6 @@ Noch nicht vollständig real belegt:
 
 - M3T MQTT `update_topo` / OSD / State / `cameras[]` / Batterie / RTK-Paar
 - M3T Tele und Thermal-R-JPEG
-- M4T RC-Plus-2-DRC-Heartbeat-/Authority-Hardwarekette
 - M4T Thermal-Medienfixture
 - realer M3M Narrow-Band-Capture-Satz
 - reales Pilot-2-WPML-KMZ / Workspace-Katalog
@@ -88,15 +88,17 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 
 ## Globale Produkt-Policy
 
-Seit dem Policy-Update sind **DJI Dock 1, Dock 2, Dock 3, Multi-Dock und
-PSDK-Payloads projektweit deaktiviert**. Die Sperre ist fest im DJI-Adapter und
-in der CI verankert und besitzt keinen Konfigurationsschalter.
+Seit dem Policy-Update sind **DJI Dock 1, Dock 2, Dock 3, Multi-Dock,
+PSDK-Payloads sowie manuelle DJI-Cloud-Flugsteuerung
+(`stick_control`/`drone_control`) projektweit deaktiviert**. Die Sperren
+sind fest im DJI-Adapter und in der CI verankert und besitzen keinen
+Konfigurationsschalter.
 
 ## Nicht als Hardwarefunktion freigegeben
 
 Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
-- M4E/M4T FC3-/DRC-Flugsteuerung ohne reale Abnahme
+- manuelle DJI-Cloud-Flugsteuerung (`stick_control` / `drone_control`): **global deaktiviert**
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: **global deaktiviert**
 - Pilot-2-JSBridge
 - WPML/Pilot-Wayline-Integration aus den offenen Drafts
@@ -107,12 +109,12 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 
 Für den Basisrelease werden keine offenen Feature-Drafts übernommen.
 
-- #43 Dock3/M4D/M4TD: durch globale Dock-Policy obsolet; nicht mergefähig
-- #46 Pilot2 JSBridge: Build FAIL in Direktor-CI
-- #44 MSDK KeyManager-Vertrag: Build/Test PASS, nach V3.0 verschoben
-- #45 WPML/Pilot Waylines: Build/Test PASS, Realfixture offen
-- #47 WPML Parser-Importvertrag: Build/Test PASS, nach V3.0 verschoben
-- #49 WPML template.kml Reader: Build/Test PASS, nach V3.0 verschoben
+- #51 aktuelle WPML-Integration: Draft; 78/79 Adaptertests PASS, Parser verliert derzeit `actionUUID`; reales Pilot-2-WPML-Fixture zusätzlich offen
+- #46 Pilot2 JSBridge: noch nicht releasefähig; reales Pilot-2-Runtime-Fixture offen
+- #44 MSDK KeyManager-Vertrag: Vertrags-/Dokumentationsstand, nach V3.0 verschoben
+
+Die älteren WPML-Drafts #45/#47/#49 wurden durch #51 konsolidiert und sind
+kein Bestandteil des V3.0.0-Releases.
 
 ## Release-Regel
 
