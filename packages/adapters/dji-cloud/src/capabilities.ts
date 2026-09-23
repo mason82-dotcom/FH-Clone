@@ -3,6 +3,10 @@ import type { DjiGatewayTopology, DjiProductRef } from "./topology.js";
 
 export const DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED = false as const;
 
+/**
+ * Known Pilot DRC protocol profiles. Runtime selection is currently forced to
+ * "none" because cloud manual flight control is globally disabled.
+ */
 export type DjiDrcProfile =
   | "none"
   | "pilot-m4-stick";
@@ -93,11 +97,10 @@ export function getDjiCloudControlProfile(
       payloadControl: false,
       requiresCloudControlAuthority: supportedGateway,
       drcProfile: "none",
-      // M4 flight control is implemented through the dedicated
-      // ControlCoordinator/DRC runtime, not AircraftAdapter.execute().
-      // Payload control is documented by DJI but not implemented as a
-      // generic adapter command in V3. Therefore no write capability is
-      // advertised to CapabilityRouter here.
+      // DJI documents M4 cloud flight control, but FH2 keeps manual
+      // stick/velocity control globally disabled. FlyTo remains a separate
+      // service capability. Payload control is documented by DJI but not
+      // implemented as a generic adapter command in V3.
       capabilities: [],
       reason: supportedGateway
         ? "FH2 globally disables DJI cloud manual flight control (stick_control and legacy drone_control). FlyTo remains a separate service capability behind RC Plus 2; other documented M4 controls remain disabled unless explicitly implemented."

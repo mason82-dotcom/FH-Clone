@@ -136,14 +136,16 @@ Pilot-Cloud-Kontext als Payload-/Kamera-/Gimbal-orientiert; eine
 
 ## Matrice 4 / RC Plus 2
 
-Matrice 4 und RC Plus 2 besitzen ein anderes Produkt-/Control-Profil. Dafür
-existiert bereits Code für Stick-Control und Cloud-Control-Authority.
+Matrice 4 und RC Plus 2 besitzen ein anderes Produkt-/Control-Profil. DJI
+dokumentiert dort unter anderem Stick-Control und Cloud-Control-Authority.
 
-Trotzdem gilt:
+Für FH2 gilt jedoch global:
 
-- Capability-Erkennung aktiviert FC3 nicht
-- DRC bleibt sitzungsbasiert
-- reale Hardwareverifikation ist vor V3-Freigabe erforderlich
+- `flightControl = false`
+- `DjiDrcProfile = none`
+- `stick_control` und Legacy-`drone_control` werden nicht publiziert
+- kein Environment-/Runtime-Schalter kann diese Sperre aufheben
+- FlyTo bleibt als separater Servicepfad unabhängig davon bewertbar
 
 ## Reale V3-Prüfpunkte
 

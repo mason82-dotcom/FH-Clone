@@ -76,10 +76,13 @@ Cloud-Flight-Control unterstützt.
 Bereits vorhanden: zwei reale, redigiert dokumentierte M3T-Wide-Samples unter
 `docs/fixtures/m3t/`. Diese schließen Tele, Thermal und MQTT nicht.
 
-## 2. RC Plus 2 + M4T Flight Control — REQUIRED_MAIN
+## 2. RC Plus 2 + M4T Cloud-Control-Protokoll — OPTIONAL_REFERENCE
 
-Da der aktuelle FH2-Core für Matrice 4 einen Flight-Control-/DRC-Pfad besitzt,
-muss die reale Safety-Kette belegt werden. Die CI **führt keine Flugbefehle aus**;
+DJI dokumentiert für Matrice 4 Cloud-Flight-Control/DRC. FH2 deaktiviert die
+manuelle Cloud-Stick-/Velocity-Flugsteuerung jedoch global. Hardwarebelege
+dürfen den Herstellervertrag und read-only Status dokumentieren, sind aber
+keine Voraussetzung mehr für eine FH2-Stick-Control-Freigabe. Die CI **führt
+keine Flugbefehle aus**;
 sie analysiert ausschließlich vorher aufgezeichnete, redigierte Captures.
 
 Erforderlich:

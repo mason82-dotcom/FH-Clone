@@ -58,15 +58,15 @@ bleibt davon getrennt.
 
 ## Produktprofile
 
-Der DJI-Adapter unterscheidet produktspezifische DRC-Profile, zum Beispiel:
+Der DJI-Adapter kennt die DJI-Protokollprofile weiterhin als Typinformation.
+Die Runtime-Auswahl ist aktuell jedoch projektweit fest auf:
 
-```ts
-type DjiDrcProfile =
-  | "none"
-  | "pilot-m4-stick";
+```text
+DjiDrcProfile = none
 ```
 
-Die Auswahl basiert auf Topologie und bestätigten Produktfähigkeiten.
+`pilot-m4-stick` bleibt ausschließlich als Protokollreferenz im Code erhalten
+und wird von keinem Produktprofil aktiviert.
 
 ### Mavic 3 Enterprise + RC Pro Enterprise
 
@@ -85,10 +85,11 @@ Die Herstellerunterstützung bleibt in der Capability-Matrix dokumentiert.
 
 ### Matrice 4 + RC Plus 2
 
-Für diesen Pfad existieren Stick-Control- und Cloud-Control-Authority-
-Bausteine.
+DJI dokumentiert für diesen Pfad Stick-Control und Cloud-Control-Authority.
+FH2 hält die zugehörigen Protokollbausteine als Referenz vor, aktiviert
+`stick_control` beziehungsweise manuelle DRC-Flugsteuerung aber global nicht.
 
-Auch hier aktiviert Produktunterstützung niemals automatisch FC3.
+FlyTo bleibt davon als separater Servicepfad getrennt.
 
 ## DJI-Control-Authority
 
@@ -130,7 +131,8 @@ primäre Pilot-Cloud-Authority-Flow für Matrice 4 + RC Plus 2.
 
 DJI-Authority und FH2-Steuerhoheit sind getrennte Ebenen.
 
-Für eine aktive M4-Flug-DRC-Sitzung werden benötigt:
+Historisch vorgesehene M4-Flug-DRC-Sitzungen würden folgende Guards benötigen;
+die Runtime startet solche Stick-Sitzungen aktuell wegen der globalen Sperre nicht:
 
 ```text
 Produkt-Capability
@@ -144,8 +146,8 @@ Produkt-Capability
 
 DJI dokumentiert, dass DRC-Kommandos nicht pauschal an Flugsteuerungsrecht
 gebunden sind. Das aktuelle `stick_control` benötigt dieses Recht jedoch
-zwingend. FH-Clone bleibt für M4-Flugsteuerung deshalb strikt
-authority-gated.
+zwingend. FH2 aktiviert diesen manuellen Flugsteuerpfad unabhängig davon
+projektweit nicht.
 
 DJI dokumentiert M3E/M3T/M3TA im RC-Pro-Pilot-Cloud-Pfad als Payload-orientiert. FH2 V3 implementiert dafür derzeit keinen schreibenden Payload-Command-Pfad. M3M wird separat über MSDK/WPML/Media betrachtet und erhält kein automatisch abgeleitetes Pilot-Cloud-Control-Profil.
 
