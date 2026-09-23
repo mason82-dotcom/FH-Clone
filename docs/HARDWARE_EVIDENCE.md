@@ -41,14 +41,13 @@ die M3-Serie kommen OSD-Daten mit stabiler Frequenz und State-Daten bei
 
 Erforderlich:
 
-1. realer, redigierter `update_topo`-Capture mit RC Pro Enterprise und M3T.
-   DJI führt hierzu derzeit widersprüchliche offizielle Darstellungen:
-   die RC-Pro-spezifische Cloud-API-Repository-Doku nennt
-   `thing/product/{gateway_sn}/status`, eine generische RC-Seite nennt
-   `sys/product/{gateway_sn}/status`. Die CI akzeptiert deshalb **nur diese
-   beiden exakten Upstream-Varianten**, protokolliert den tatsächlich
-   beobachteten Topic und verlangt zusätzlich die dokumentierte Antwort auf
-   `sys/product/{gateway_sn}/status_reply`,
+1. realer, redigierter `update_topo`-Capture mit RC Pro Enterprise und M3T
+   auf dem kanonischen DJI-Pilot-to-Cloud-Upstream
+   `sys/product/{gateway_sn}/status`. Die CI akzeptiert für den
+   Topologie-Bootstrap **keine** `thing/.../status`-Variante und verlangt
+   zusätzlich die dokumentierte Antwort auf
+   `sys/product/{gateway_sn}/status_reply`. Maßgeblich ist die aktuelle
+   DJI-Cloud-API-Topicdefinition für Pilot-to-Cloud,
 2. realer M3T-`osd`-Capture mit den tatsächlich gelieferten Grundfeldern:
    - `attitude_head`, `attitude_roll`, `attitude_pitch`
    - Position/Höhen/Speed
@@ -89,7 +88,8 @@ aufgezeichnete, redigierte Captures.
 
 Erforderlich:
 
-1. `update_topo` für RC Plus 2 + M4T,
+1. `update_topo` für RC Plus 2 + M4T auf
+   `sys/product/{gateway_sn}/status`,
 2. erfolgreicher Cloud-Control-Authority-Nachweis,
 3. erfolgreicher `drc_mode_enter`-Nachweis,
 4. mindestens ein zusammengehöriges
