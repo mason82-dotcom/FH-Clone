@@ -59,14 +59,15 @@ bleibt davon getrennt.
 ## Produktprofile
 
 Der DJI-Adapter kennt die DJI-Protokollprofile weiterhin als Typinformation.
-Die Runtime-Auswahl ist aktuell jedoch projektweit fest auf:
+Die Runtime-Auswahl für den Stick-Pfad ist aktuell projektweit fest auf:
 
 ```text
 DjiDrcProfile = none
 ```
 
 `pilot-m4-stick` bleibt ausschließlich als Protokollreferenz im Code erhalten
-und wird von keinem Produktprofil aktiviert.
+und wird von keinem Produktprofil aktiviert. Das verhindert nicht den separat
+freigegebenen DJI-`drone_control`-Pfad.
 
 ### Mavic 3 Enterprise + RC Pro Enterprise
 
@@ -443,24 +444,27 @@ Diese Sperren besitzen keinen Runtime-Schalter und können nicht über
 Umgebungsvariablen aktiviert werden.
 
 
-## Globale Sperre der Cloud-Stick-Flugsteuerung
+## Cloud-Control-Policy
 
-FH2 deaktiviert die manuelle DJI-Cloud-Flugsteuerung projektweit und fail-closed.
+FH2 trennt `stick_control` und `drone_control` ausdrücklich:
 
 ```text
 stick_control  = DISABLED
-drone_control  = DISABLED
+drone_control  = ENABLED
 ```
 
-Die Sperre gilt unabhängig von Produkt, Gateway, FC3, Control Lease, DJI
-Control Authority oder DRC-Sitzungsstatus. Sie besitzt keinen Environment-
-oder Runtime-Schalter.
+`stick_control` bleibt projektweit fail-closed und besitzt keinen
+Environment-/Runtime-Schalter. Deshalb bleibt auch die generische
+`flightControl`-Capability für die WebUI auf `false`.
 
-Der Produktvertrag darf weiterhin dokumentieren, dass DJI eine Funktion
-herstellerseitig unterstützt. FH2 meldet daraus jedoch keine
-`flightControl`-Runtimefähigkeit und `DrcController` verwirft direkte
-manuelle Flugkommandos vor jedem MQTT-Publish.
+`drone_control` ist als eigener DJI-DRC-Methodenpfad wieder aktiv und bleibt
+an die vorhandenen FC3-/Control-Lease-/DJI-Authority-/DRC-Session-Guards
+gebunden.
 
-Nicht Teil dieser Sperre sind getrennte, nicht-manuelle Servicepfade wie
-`fly_to_point`, sofern diese separat freigegeben und abgesichert sind.
+Wichtig: DJI beschreibt `drone_control` selbst als Steuerung von
+Flugrichtung und Geschwindigkeit. Die Bezeichnung „nur manuelle
+Stick-Steuerung deaktiviert“ meint in FH2 daher technisch ausschließlich die
+Sperre des separaten `stick_control`-Pfads.
+
+`fly_to_point` bleibt als eigener Servicepfad davon unabhängig.
 

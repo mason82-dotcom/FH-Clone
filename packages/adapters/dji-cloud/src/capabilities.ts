@@ -1,7 +1,8 @@
 import type { Capability } from "@fh-clone/aircraft-core";
 import type { DjiGatewayTopology, DjiProductRef } from "./topology.js";
 
-export const DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED = false as const;
+export const DJI_CLOUD_STICK_CONTROL_ENABLED = false as const;
+export const DJI_DRONE_CONTROL_ENABLED = true as const;
 
 /**
  * Known Pilot DRC protocol profiles. Runtime selection is currently forced to
@@ -12,7 +13,10 @@ export type DjiDrcProfile =
   | "pilot-m4-stick";
 
 export interface DjiCloudControlProfile {
+  /** Manual cloud stick-control UI/runtime capability. Globally disabled. */
   flightControl: boolean;
+  /** DJI DRC method drone_control. Kept separate from stick_control. */
+  droneControl: boolean;
   flyTo: boolean;
   pointingFlight: boolean;
   orbitFlight: boolean;
@@ -72,6 +76,7 @@ export function getDjiCloudControlProfile(
     const supportedGateway = isRcProEnterprise(gateway);
     return {
       flightControl: false,
+      droneControl: false,
       flyTo: false,
       pointingFlight: false,
       orbitFlight: false,
@@ -91,6 +96,7 @@ export function getDjiCloudControlProfile(
     const supportedGateway = isRcPlus2(gateway);
     return {
       flightControl: false,
+      droneControl: supportedGateway && DJI_DRONE_CONTROL_ENABLED,
       flyTo: supportedGateway,
       pointingFlight: false,
       orbitFlight: false,
@@ -103,13 +109,14 @@ export function getDjiCloudControlProfile(
       // implemented as a generic adapter command in V3.
       capabilities: [],
       reason: supportedGateway
-        ? "FH2 globally disables DJI cloud manual flight control (stick_control and legacy drone_control). FlyTo remains a separate service capability behind RC Plus 2; other documented M4 controls remain disabled unless explicitly implemented."
-        : "Matrice 4 runtime control requires a supported RC Plus 2 gateway; cloud manual flight control remains globally disabled regardless of gateway."
+        ? "FH2 globally disables stick_control, but keeps DJI drone_control available as a separate DRC method behind RC Plus 2 and the existing FC3/lease/authority/session guards. FlyTo remains a separate service capability."
+        : "Matrice 4 runtime control requires a supported RC Plus 2 gateway; stick_control remains globally disabled."
     };
   }
 
   return {
     flightControl: false,
+    droneControl: false,
     flyTo: false,
     pointingFlight: false,
     orbitFlight: false,

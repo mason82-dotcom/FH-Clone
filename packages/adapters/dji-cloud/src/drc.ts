@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { DjiServiceReply, DjiServiceRequester } from "./service.js";
 import { DjiServiceError } from "./service.js";
-import { DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED } from "./capabilities.js";
+import {
+  DJI_CLOUD_STICK_CONTROL_ENABLED,
+  DJI_DRONE_CONTROL_ENABLED
+} from "./capabilities.js";
 
 export type MqttQos = 0 | 1;
 
@@ -240,13 +243,12 @@ export class DrcController {
   }
 
   /**
-   * Legacy velocity-control command. DJI marks drone_control as abandoned in
-   * current DRC documentation; keep it only for integrations that explicitly
-   * require the legacy profile.
+   * DJI DRC velocity/direction control method. This is intentionally governed
+   * separately from stick_control.
    */
   async sendControl(gatewaySn: string, axes: DrcAxes): Promise<number> {
-    if (!DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED) {
-      throw new Error("dji_cloud_manual_flight_control_disabled");
+    if (!DJI_DRONE_CONTROL_ENABLED) {
+      throw new Error("dji_drone_control_disabled");
     }
     assertFiniteRange("x", axes.x, -17, 17);
     assertFiniteRange("y", axes.y, -17, 17);
@@ -284,8 +286,8 @@ export class DrcController {
     gatewaySn: string,
     channels: DrcStickChannels
   ): Promise<number> {
-    if (!DJI_CLOUD_MANUAL_FLIGHT_CONTROL_ENABLED) {
-      throw new Error("dji_cloud_manual_flight_control_disabled");
+    if (!DJI_CLOUD_STICK_CONTROL_ENABLED) {
+      throw new Error("dji_cloud_stick_control_disabled");
     }
     assertFiniteRange("roll", channels.roll, DJI_STICK_MIN, DJI_STICK_MAX);
     assertFiniteRange("pitch", channels.pitch, DJI_STICK_MIN, DJI_STICK_MAX);

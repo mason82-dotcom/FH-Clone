@@ -78,11 +78,10 @@ Bereits vorhanden: zwei reale, redigiert dokumentierte M3T-Wide-Samples unter
 
 ## 2. RC Plus 2 + M4T Cloud-Control-Protokoll — OPTIONAL_REFERENCE
 
-DJI dokumentiert für Matrice 4 Cloud-Flight-Control/DRC. FH2 deaktiviert die
-manuelle Cloud-Stick-/Velocity-Flugsteuerung jedoch global. Hardwarebelege
-dürfen den Herstellervertrag und read-only Status dokumentieren, sind aber
-keine Voraussetzung mehr für eine FH2-Stick-Control-Freigabe. Die CI **führt
-keine Flugbefehle aus**;
+DJI dokumentiert für Matrice 4 Cloud-Flight-Control/DRC. FH2 deaktiviert
+`stick_control` global, lässt den separaten `drone_control`-DRC-Pfad aber
+aktiv. Hardwarebelege für diesen Pfad bleiben vor produktiver Nutzung
+erforderlich. Die CI **führt keine Flugbefehle aus**;
 sie analysiert ausschließlich vorher aufgezeichnete, redigierte Captures.
 
 Erforderlich:

@@ -32,6 +32,7 @@ test("Matrice 4E/4T keep cloud manual flight control globally disabled", () => {
     );
 
     assert.equal(profile.flightControl, false);
+    assert.equal(profile.droneControl, true);
     assert.equal(profile.flyTo, true);
     assert.equal(profile.pointingFlight, false);
     assert.equal(profile.orbitFlight, false);
@@ -112,11 +113,13 @@ test("documented product support does not imply generic adapter execution", () =
 
   assert.equal(m3.payloadControl, false);
   assert.equal(m3.flightControl, false);
+  assert.equal(m3.droneControl, false);
   assert.equal(m3.drcProfile, "none");
   assert.deepEqual(m3.capabilities, []);
 
   assert.equal(m4.payloadControl, false);
   assert.equal(m4.flightControl, false);
+  assert.equal(m4.droneControl, true);
   assert.equal(m4.flyTo, true);
   assert.equal(m4.pointingFlight, false);
   assert.equal(m4.orbitFlight, false);
