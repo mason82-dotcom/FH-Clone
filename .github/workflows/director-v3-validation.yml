@@ -92,6 +92,11 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: Pilot2 JSBridge Safety
+        run: |
+          npm run test:pilot2-jsbridge
+          npm run verify:pilot2-jsbridge
+
       - name: Erfolgreichen Lockfile als Artefakt sichern
         uses: actions/upload-artifact@v4
         with:
@@ -359,9 +364,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pr: 46
-            ref: agent/dji-jsbridge-v3
-            label: Pilot2 JSBridge
     steps:
       - name: Aktuellen main auschecken
         uses: actions/checkout@v4
@@ -437,12 +439,6 @@ jobs:
           git diff "$base..origin/${{ matrix.ref }}" > "$patch"
 
           case "${{ matrix.pr }}" in
-            46)
-              if git diff "$base..origin/${{ matrix.ref }}" -- .env.example apps/web infra/docker                 | grep '^+'                 | grep -Ei 'VITE_.*(MQTT.*PASSWORD|EMQX.*TOKEN|DRC.*PASSWORD|AUTH_TOKEN)'; then
-                echo "::error::PR #46 würde Backend-/MQTT-/DRC-Secrets ins Browser-Bundle verdrahten."
-                exit 1
-              fi
-              ;;
           esac
 
       - name: Draft-Ergebnis dokumentieren
