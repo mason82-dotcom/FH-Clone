@@ -30,6 +30,7 @@ data class BridgeSnapshot(
     val payloadControl: CameraGimbalControlSnapshot,
     val wayline: WaylineMissionSnapshot,
     val control: BridgeControlSnapshot,
+    val keyManager: MsdkKeyManagerSnapshot,
     val capabilities: BridgeCapabilities
 ) {
     fun toJson(): JSONObject =
@@ -49,6 +50,7 @@ data class BridgeSnapshot(
             put("payloadControl", payloadControl.toJson())
             put("wayline", wayline.toJson())
             put("control", control.toJson())
+            put("keyManager", keyManager.toJson())
             put("capabilities", capabilities.toJson())
         }
 }
@@ -102,6 +104,7 @@ object BridgeSnapshotProvider {
                 networkArmed = NetworkControlArm.snapshot.armed,
                 networkArmedAt = NetworkControlArm.snapshot.armedAt
             ),
+            keyManager = MsdkKeyManagerRuntime.snapshot,
             capabilities = capabilities
         )
     }
@@ -235,6 +238,44 @@ private fun VirtualStickSnapshot.toJson() =
         put("advancedMode", advancedMode)
         put("authorityOwner", authorityOwner)
         put("changeReason", changeReason)
+        putNullable("lastError", lastError)
+    }
+
+private fun MsdkKeyManagerSnapshot.toJson() =
+    JSONObject().apply {
+        put("active", active)
+        put("productConnected", productConnected)
+        putNullable("probedAt", probedAt)
+        put(
+            "keys",
+            JSONArray().apply {
+                keys.forEach { put(it.toJson()) }
+            }
+        )
+    }
+
+private fun MsdkKeyDescriptor.toJson() =
+    JSONObject().apply {
+        put("identifier", identifier)
+        put("family", family)
+        putNullable("componentIndex", componentIndex)
+        putNullable("cameraLensType", cameraLensType)
+        putNullable("subComponentType", subComponentType)
+        put(
+            "operations",
+            JSONObject().apply {
+                put("canGet", operations.canGet)
+                put("canSet", operations.canSet)
+                put("canListen", operations.canListen)
+                put("canPerformAction", operations.canPerformAction)
+            }
+        )
+        putNullable("isEvent", isEvent)
+        putNullable("valueType", valueType)
+        putNullable("concreteKeyType", concreteKeyType)
+        put("probeMode", probeMode)
+        put("runtimeStatus", runtimeStatus)
+        putNullable("lastObservedAt", lastObservedAt)
         putNullable("lastError", lastError)
     }
 
