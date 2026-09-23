@@ -74,6 +74,15 @@ export interface MsdkBridgeSnapshot {
     lastAction?: string | null | undefined;
     lastError?: string | null | undefined;
   } | undefined;
+  wayline?: {
+    supported: boolean;
+    selectedFileName?: string | null | undefined;
+    availableWaylineIds: number[];
+    uploadState: string;
+    uploadProgress: number;
+    uploadedAt?: number | null | undefined;
+    lastError?: string | null | undefined;
+  } | undefined;
   control: {
     enabled: boolean;
     authorityOwner: string;
@@ -305,6 +314,21 @@ export function isMsdkBridgeSnapshot(
     if (typeof value.payloadControl.cameraIndex !== "string") return false;
     if (typeof value.payloadControl.isShootingPhoto !== "boolean") return false;
     if (typeof value.payloadControl.isRecording !== "boolean") return false;
+  }
+
+  if (value.wayline !== undefined) {
+    if (!isRecord(value.wayline)) return false;
+    if (typeof value.wayline.supported !== "boolean") return false;
+    if (!Array.isArray(value.wayline.availableWaylineIds)) return false;
+    if (
+      !value.wayline.availableWaylineIds.every(
+        (entry) => Number.isInteger(entry)
+      )
+    ) {
+      return false;
+    }
+    if (typeof value.wayline.uploadState !== "string") return false;
+    if (!finiteNumber(value.wayline.uploadProgress)) return false;
   }
 
   if (!isRecord(value.control)) return false;
