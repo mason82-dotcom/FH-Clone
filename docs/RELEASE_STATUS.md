@@ -18,14 +18,20 @@ Hardware-Evidence gegatet.
 ## Versionsstand
 
 ```text
-Release: 3.0.0
+Software-Baseline: 3.0.0
+Baseline-Commit: 58b82f907391b8444883aa6040190fae8690e596
+Git-Tag v3.0.0: noch nicht angelegt
+GitHub Release 3.0.0: noch nicht veröffentlicht
 Node.js: 22.23.2 in der Direktor-CI
 npm: 11.19.1
 Root package-lock.json: vorhanden
 ```
 
 Die Versionsnummer 3.0.0 ist für Root, Node-Workspaces, Lockfile und
-UgCS-Maven-Modul vereinheitlicht.
+UgCS-Maven-Modul vereinheitlicht. Änderungen nach dem Baseline-Commit werden
+bis zu einer ausdrücklich angelegten Tag-/Release-Grenze im Changelog unter
+`Unreleased` geführt. Dadurch ist „Software-Baseline freigegeben“ nicht mit
+„GitHub Release veröffentlicht“ gleichzusetzen.
 
 ## Automatische Release-Gates
 
@@ -78,7 +84,12 @@ Noch nicht vollständig real belegt:
 Diese fehlenden Nachweise werden in der CI als Hardwarestatus sichtbar
 geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 
-## Freigegebener V3.0.0-Basisumfang
+## Aktueller 3.0.0-Softwarestand
+
+Der folgende Stand umfasst die freigegebene 3.0.0-Software-Baseline plus die
+seitdem auf `main` integrierte, weiterhin unter `Unreleased` geführte
+Härtung. Erst ein späterer Tag/Release fixiert die veröffentlichte
+Artefaktgrenze.
 
 - SDK-neutraler Aircraft Core
 - SafetyGate FC0..FC3 mit FC0 als Standard
