@@ -804,6 +804,8 @@ function getDeviceCapabilityView(deviceId: string) {
       specializedRuntime: controlProfile
         ? {
             flightControl: controlProfile.flightControl,
+            stickControl: controlProfile.stickControl,
+            droneControl: controlProfile.droneControl,
             flyTo: controlProfile.flyTo,
             pointingFlight: controlProfile.pointingFlight,
             orbitFlight: controlProfile.orbitFlight,
