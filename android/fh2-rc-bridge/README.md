@@ -16,6 +16,8 @@ Implementiert:
 
 - MSDK-Initialisierung und Registrierung
 - Product Connect / Disconnect Status
+- getrennte Gateway-/Aircraft-Identität
+- RC-SN + RC-Firmware über RemoteControllerKey
 - authoritative MSDK-Geräteidentität über ProductKey
 - Product Type, Firmware, Flight-Controller-SN
 - Aircraft Location 3D (raw MSDK)
@@ -111,6 +113,7 @@ Die App bündelt den lokalen MSDK-Zustand in einen stabilen Snapshot:
 ```text
 schema = fh2.msdk.v1
 sdk
+gateway
 aircraft
 sensors[]
 rtk
