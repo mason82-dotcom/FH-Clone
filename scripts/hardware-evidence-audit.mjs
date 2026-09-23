@@ -284,7 +284,7 @@ add("GLOBAL_POLICY", "INFORMATIONAL", "Multi-Dock global deaktiviert", true, "ke
 add("GLOBAL_POLICY", "INFORMATIONAL", "PSDK-Payloads global deaktiviert", true, "psdk_* und drc_psdk_* gesperrt");
 
 // ---------------------------------------------------------------------------
-// WPML + Pilot Wayline catalog (PR #45)
+// WPML + Pilot Wayline catalog (PR #51)
 // ---------------------------------------------------------------------------
 const wpmlPath = "docs/fixtures/wpml/evidence.json";
 const wpml = readJson(wpmlPath);
