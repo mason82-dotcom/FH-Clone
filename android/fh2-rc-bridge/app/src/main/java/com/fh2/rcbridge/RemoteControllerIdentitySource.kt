@@ -63,12 +63,9 @@ object RemoteControllerIdentitySource {
                             if (valid) location?.latitude else null,
                         rcLongitude =
                             if (valid) location?.longitude else null,
-                        rcAccuracyM =
-                            if (valid) {
-                                location?.accuracy?.toDouble()
-                            } else {
-                                null
-                            }
+                        // DJI MSDK 5.18 RcGPSInfo exposes validity + location,
+                        // but no accuracy field.
+                        rcAccuracyM = null
                     )
                 }
             }
