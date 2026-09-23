@@ -198,16 +198,22 @@ export function Fh2OverlayController({
 function useMediaOverlayFeed(): void {
   useEffect(() => {
     let cancelled = false;
+    let controller: AbortController | undefined;
 
     const refresh = async () => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+
       try {
         const response = await fetch("/api/media/overlays", {
-          headers: { accept: "application/json" }
+          headers: { accept: "application/json" },
+          signal: request.signal
         });
         if (!response.ok) throw new Error(`media overlays HTTP ${response.status}`);
 
         const data = (await response.json()) as MediaOverlayResponse;
-        if (cancelled) return;
+        if (cancelled || controller !== request) return;
 
         setFh2OverlayFeatures(
           "thermal",
@@ -220,9 +226,8 @@ function useMediaOverlayFeed(): void {
           toMediaFeatures(data.multispectral ?? [])
         );
       } catch {
-        if (cancelled) return;
-        clearFh2OverlayProducer("thermal", "media-captures");
-        clearFh2OverlayProducer("multispectral", "media-captures");
+        if (cancelled || request.signal.aborted) return;
+        // Preserve the last known-good overlay during transient fetch failures.
       }
     };
 
@@ -231,6 +236,7 @@ function useMediaOverlayFeed(): void {
 
     return () => {
       cancelled = true;
+      controller?.abort();
       window.clearInterval(timer);
       clearFh2OverlayProducer("thermal", "media-captures");
       clearFh2OverlayProducer("multispectral", "media-captures");
@@ -241,12 +247,23 @@ function useMediaOverlayFeed(): void {
 function useUgcsOverlayFeed(): void {
   useEffect(() => {
     let cancelled = false;
+    let controller: AbortController | undefined;
 
     const refresh = async () => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+
       try {
         const [routesResponse, telemetryResponse] = await Promise.all([
-          fetch("/api/ugcs/routes", { headers: { accept: "application/json" } }),
-          fetch("/api/ugcs/telemetry", { headers: { accept: "application/json" } })
+          fetch("/api/ugcs/routes", {
+            headers: { accept: "application/json" },
+            signal: request.signal
+          }),
+          fetch("/api/ugcs/telemetry", {
+            headers: { accept: "application/json" },
+            signal: request.signal
+          })
         ]);
 
         if (!routesResponse.ok || !telemetryResponse.ok) {
@@ -257,7 +274,7 @@ function useUgcsOverlayFeed(): void {
         const telemetry =
           (await telemetryResponse.json()) as UgcsTelemetrySnapshot;
 
-        if (cancelled) return;
+        if (cancelled || controller !== request) return;
 
         setFh2OverlayFeatures("ugcs", "routes", toUgcsRouteFeatures(routes));
         setFh2OverlayFeatures(
@@ -266,9 +283,8 @@ function useUgcsOverlayFeed(): void {
           toUgcsTelemetryFeatures(telemetry)
         );
       } catch {
-        if (cancelled) return;
-        clearFh2OverlayProducer("ugcs", "routes");
-        clearFh2OverlayProducer("ugcs", "vehicles");
+        if (cancelled || request.signal.aborted) return;
+        // Preserve the last known-good UgCS overlay on transient failures.
       }
     };
 
@@ -277,6 +293,7 @@ function useUgcsOverlayFeed(): void {
 
     return () => {
       cancelled = true;
+      controller?.abort();
       window.clearInterval(timer);
       clearFh2OverlayProducer("ugcs", "routes");
       clearFh2OverlayProducer("ugcs", "vehicles");
@@ -512,14 +529,22 @@ function useAircraftPositions(
     }
 
     let cancelled = false;
+    let controller: AbortController | undefined;
 
     const refresh = async () => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+
       const entries = await Promise.all(
         deviceIds.map(async (deviceId) => {
           try {
             const response = await fetch(
               `/api/devices/${encodeURIComponent(deviceId)}/telemetry`,
-              { headers: { accept: "application/json" } }
+              {
+                headers: { accept: "application/json" },
+                signal: request.signal
+              }
             );
             if (!response.ok) return undefined;
 
@@ -534,7 +559,13 @@ function useAircraftPositions(
         })
       );
 
-      if (cancelled) return;
+      if (
+        cancelled ||
+        request.signal.aborted ||
+        controller !== request
+      ) {
+        return;
+      }
 
       setPositions(
         Object.fromEntries(
@@ -553,6 +584,7 @@ function useAircraftPositions(
 
     return () => {
       cancelled = true;
+      controller?.abort();
       window.clearInterval(timer);
     };
   }, [deviceKey]);
