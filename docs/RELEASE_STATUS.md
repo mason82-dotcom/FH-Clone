@@ -96,6 +96,9 @@ geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 - kanonische DJI-Kamera-/Gimbal-Telemetrie nach gültigem `payload_index`, bei vollständiger Raw-Retention
 - adapterübergreifende DJI-Telemetrie-Fusion mit Quellenprovenienz für Cloud API und MSDK V5
 - MediaStore-Persistenz mit Startup-Rehydration und fail-closed Readiness bleibt integriert
+- dauerhafte RawMessage-Historie und vollständige normalisierte Parameterhistorie mit Adapter-Provenienz
+- missionsbezogene Telemetrieprojektion in `telemetry` plus bestehendes `telemetry_1m`
+- TelemetryStore ist in Readiness, Root-Compose-Migration und Shutdown integriert
 - UgCS Groundstation Adapter / Bridge
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
