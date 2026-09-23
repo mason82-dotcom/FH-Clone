@@ -55,6 +55,32 @@ FH2 darf daher nicht nur anhand von `type` entscheiden.
 
 Unbekannte Domains oder Subtypen werden **fail-closed** behandelt.
 
+## Globale Ausschlüsse
+
+Unabhängig von DJI-Produktsupport und Capability-Erkennung gilt:
+
+```text
+DJI Dock domain=3
+  -> global disabled
+
+Multi-Dock
+  -> global disabled
+
+PSDK-specific services/telemetry
+  -> global disabled
+```
+
+Damit sind DJI Dock 1, Dock 2 und Dock 3 einschließlich ihrer Sub-Devices
+keine aktiven FH2-Runtime-Gateways. Multi-Dock-Felder und -Services werden
+verworfen beziehungsweise abgelehnt. PSDK-spezifische Methoden
+(`psdk_*`, `drc_psdk_*`) und PSDK-Telemetriefelder werden ebenfalls
+gesperrt.
+
+Diese Policy betrifft **nicht** die eingebauten DJI-Kamera-Payloads
+(M3E/M3T/M3TA/M4E/M4T) mit ihren dokumentierten `payload_index`-Werten.
+
+Es gibt keinen Environment- oder Runtime-Schalter zur Reaktivierung.
+
 ## Live-Control-Matrix
 
 | Funktion | M3E/M3T/M3TA + RC Pro Enterprise | M4E/M4T + RC Plus 2 | FH2 V3 Runtime |
