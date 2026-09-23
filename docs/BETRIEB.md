@@ -5,9 +5,9 @@
 Dieses Dokument beschreibt den aktuellen lokalen Entwicklungsbetrieb und den
 verbindlichen V3-Zielbetrieb.
 
-Der Root-Compose-Gesamtstack ist auf `main` vorhanden. Seine lokale
-Ausführung und Abnahme ist weiterhin ein Release-Gate; die Dokumentation
-unterscheidet deshalb zwischen **implementiert** und **lokal verifiziert**.
+Der Root-Compose-Gesamtstack ist auf `main` vorhanden und wird in der
+Direktor-CI über `scripts/verify.sh` reproduzierbar gebaut, gestartet und
+geprüft. Reale Hardwareprofile bleiben davon getrennte Abnahmen.
 
 ## Voraussetzungen
 
@@ -101,16 +101,15 @@ Neben Health/Readiness validiert `scripts/verify.sh` auch:
 
 ## Lokale Node.js-Prüfung
 
-Solange das Root-`package-lock.json` noch fehlt:
+Der Root-`package-lock.json` ist committed. Die reproduzierbare Standardprüfung
+lautet:
 
 ```bash
-npm install
+npm ci
 npm run build
 npm run typecheck
 npm test
 ```
-
-Für den Release Candidate ist `npm ci` mit committed Lockfile verbindlich.
 
 Zusätzlicher AuthZ-Testpfad:
 
@@ -205,13 +204,13 @@ Netztrennung:
 Port 8081 wird nur über `expose` im Docker-Netz bekannt gemacht und nicht als
 Host-Port veröffentlicht.
 
-Das noch offene lokale V3-Abnahme-Gate verlangt:
+Der Software-Abnahmevertrag prüft automatisiert:
 
 - reproduzierbaren Start
 - Health/Readiness aller Pflichtdienste
-- Neustart ohne Datenverlust
-- keine öffentlich exponierten internen Broker-APIs
-- persistente Datenbankmigrationen
+- Neustart ohne Verlust persistenter Historie
+- keine öffentlich exponierte interne Control-API
+- idempotente Datenbankmigrationen und Upgrade-Pfad
 - lokale Verify-Suite
 
 ## Netzwerkgrenzen
@@ -328,7 +327,7 @@ Dabei werden nacheinander beziehungsweise kontrolliert bereinigt:
 - UgCS-Adapter
 - AuthZ-Audit
 - Gateway-Credential-Store
-- Mission-Persistenz
+- Mission-/Media-/Telemetrie-Persistenz
 - Topologie-Persistenzqueue
 - Topologie-Store
 
