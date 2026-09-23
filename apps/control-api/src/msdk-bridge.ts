@@ -5,6 +5,38 @@ import {
 
 const SAFE_ID = /^[A-Za-z0-9._:-]{3,128}$/;
 
+export interface MsdkSensorSnapshot {
+  index: string;
+  cameraConnected: boolean;
+  cameraType?: string | null | undefined;
+  cameraSerial?: string | null | undefined;
+  streamSources?: string[] | undefined;
+  gimbalConnected: boolean;
+  payloadConnected?: boolean | undefined;
+  payloadProductName?: string | null | undefined;
+}
+
+export interface MsdkRtkSnapshot {
+  enabled?: boolean | null | undefined;
+  healthy?: boolean | null | undefined;
+  maintainAccuracyEnabled?: boolean | null | undefined;
+  referenceStationSource?: string | null | undefined;
+  positioningSolution?: string | null | undefined;
+  mobileLatitude?: number | null | undefined;
+  mobileLongitude?: number | null | undefined;
+  mobileAltitudeM?: number | null | undefined;
+  baseLatitude?: number | null | undefined;
+  baseLongitude?: number | null | undefined;
+  baseAltitudeM?: number | null | undefined;
+  stdLongitude?: number | null | undefined;
+  stdLatitude?: number | null | undefined;
+  stdAltitude?: number | null | undefined;
+  rtkHeading?: string | null | undefined;
+  realHeading?: string | null | undefined;
+  satelliteCounts?: Record<string, number> | undefined;
+  error?: string | null | undefined;
+}
+
 export interface MsdkBridgeSnapshot {
   schema: "fh2.msdk.v1";
   timestampMs: number;
@@ -15,15 +47,19 @@ export interface MsdkBridgeSnapshot {
   gateway: {
     connected: boolean;
     serialNumber: string;
-    firmwareVersion?: string | null;
+    firmwareVersion?: string | null | undefined;
   };
   aircraft: {
     flightControllerConnected: boolean;
     productType: string;
     flightControllerSerial: string;
+    firmwareVersion?: string | null | undefined;
+    latitude?: number | null | undefined;
+    longitude?: number | null | undefined;
+    altitudeM?: number | null | undefined;
   };
-  sensors: unknown[];
-  rtk: Record<string, unknown>;
+  sensors: MsdkSensorSnapshot[];
+  rtk: MsdkRtkSnapshot;
   control: {
     enabled: boolean;
     authorityOwner: string;
