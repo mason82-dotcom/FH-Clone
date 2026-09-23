@@ -47,6 +47,7 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - Root-Compose / `scripts/verify.sh`: Bestandteil der finalen Release-CI
 - Readiness unterscheidet optionale `disabled`-Abhängigkeiten von konfiguriertem `unavailable`
 - Compose-Regressionscheck schützt `control-api -> emqx/timescaledb: service_healthy` und den internen Port 8081
+- Verify-Cleanup bewahrt Fehlerstatus, läuft bei INT/TERM über den EXIT-Pfad und macht Cleanup-Fehler bei sonst erfolgreichem Lauf sichtbar
 
 ## Hardware-Evidence
 
