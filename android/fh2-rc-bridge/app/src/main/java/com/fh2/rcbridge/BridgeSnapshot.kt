@@ -9,6 +9,7 @@ data class BridgeCapabilities(
     val thermal: Boolean,
     val multispectral: Boolean,
     val rtk: Boolean,
+    val wayline: Boolean,
     val virtualStick: Boolean
 )
 
@@ -21,6 +22,7 @@ data class BridgeSnapshot(
     val sensors: SensorInventorySnapshot,
     val rtk: RtkSnapshot,
     val payloadControl: CameraGimbalControlSnapshot,
+    val wayline: WaylineMissionSnapshot,
     val control: VirtualStickSnapshot,
     val capabilities: BridgeCapabilities
 ) {
@@ -39,6 +41,7 @@ data class BridgeSnapshot(
             )
             put("rtk", rtk.toJson())
             put("payloadControl", payloadControl.toJson())
+            put("wayline", wayline.toJson())
             put("control", control.toJson())
             put("capabilities", capabilities.toJson())
         }
@@ -64,6 +67,12 @@ object BridgeSnapshotProvider {
                 RtkTelemetrySource.snapshot.enabled != null ||
                     RtkTelemetrySource.snapshot.healthy != null ||
                     RtkTelemetrySource.snapshot.positioningSolution != null,
+            wayline = cameraTypes.any {
+                it == "M3E" ||
+                    it == "M3T" ||
+                    it == "M3TA" ||
+                    it == "M3M"
+            },
             virtualStick =
                 cameraTypes.any {
                     it == "M3E" ||
@@ -81,6 +90,7 @@ object BridgeSnapshotProvider {
             sensors = sensors,
             rtk = RtkTelemetrySource.snapshot,
             payloadControl = CameraGimbalController.snapshot,
+            wayline = WaylineMissionController.snapshot,
             control = VirtualStickController.snapshot,
             capabilities = capabilities
         )
@@ -186,6 +196,22 @@ private fun CameraGimbalControlSnapshot.toJson() =
         putNullable("lastError", lastError)
     }
 
+private fun WaylineMissionSnapshot.toJson() =
+    JSONObject().apply {
+        put("supported", supported)
+        putNullable("selectedFileName", selectedFileName)
+        put(
+            "availableWaylineIds",
+            JSONArray().apply {
+                availableWaylineIds.forEach(::put)
+            }
+        )
+        put("uploadState", uploadState)
+        put("uploadProgress", uploadProgress)
+        putNullable("uploadedAt", uploadedAt)
+        putNullable("lastError", lastError)
+    }
+
 private fun VirtualStickSnapshot.toJson() =
     JSONObject().apply {
         put("enabled", enabled)
@@ -202,6 +228,7 @@ private fun BridgeCapabilities.toJson() =
         put("thermal", thermal)
         put("multispectral", multispectral)
         put("rtk", rtk)
+        put("wayline", wayline)
         put("virtualStick", virtualStick)
     }
 
