@@ -59,7 +59,6 @@ export const DEFAULT_TOPICS = [
   "thing/product/+/state",
   "thing/product/+/events",
   "thing/product/+/services_reply",
-  "thing/product/+/status",
   "sys/product/+/status"
 ];
 
@@ -324,7 +323,7 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
 
     const isTopologyStatusTopic =
       topic.endsWith("/status") &&
-      (topic.startsWith("sys/product/") || topic.startsWith("thing/product/"));
+      topic.startsWith("sys/product/");
 
     const topology =
       deviceId && isTopologyStatusTopic
