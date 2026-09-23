@@ -12,6 +12,7 @@ Baseline:
 - targetSdk 35 (DJI-MSDK-5.18-Kompatibilitätsgrenze)
 - Android Build Tools 36.0.0
 - AGP 8.13.2
+- Gradle 8.13
 - Kotlin 2.3.21
 - arm64-v8a
 - Ziel zuerst: M3E / M3T / M3TA + DJI RC Pro Enterprise
@@ -209,6 +210,16 @@ nicht offiziell als unterstütztes Target bestätigt.
 Compile-Basis auf API 36.1 angehoben; das würde für diese RC-App derzeit nur
 Tooling-Komplexität hinzufügen, ohne einen MSDK-Vorteil zu bringen.
 
-Für den Build wird JDK 17 benötigt. Der erzeugte App-Bytecode bleibt
-absichtlich auf Java/Kotlin JVM 1.8, solange DJI MSDK hierfür keinen höheren
-Bytecode-Level verlangt.
+Für den Build werden **JDK 17** und **Gradle 8.13** benötigt. Der erzeugte
+App-Bytecode bleibt absichtlich auf Java/Kotlin JVM 1.8, solange DJI MSDK
+hierfür keinen höheren Bytecode-Level verlangt.
+
+Der Repository-Branch enthält aktuell bewusst keinen generierten
+`gradle-wrapper.jar`. Wird ein Wrapper benötigt, im Android-Projekt einmal
+lokal ausführen:
+
+```bash
+gradle wrapper --gradle-version 8.13
+```
+
+Danach kann regulär mit `./gradlew :app:assembleDebug` gebaut werden.
