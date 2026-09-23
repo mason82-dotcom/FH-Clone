@@ -93,6 +93,7 @@ Auf `main` sind unter anderem vorhanden:
 - DJI-WPML/KMZ-Parser für `template.kml` und `waylines.wpml` (read-only)
 - DJI-Pilot-Waypoint-Dateikatalog (read-only)
 - Android-MSDK-V5-Bridge mit KeyManager-Runtimeinventar und read-only Hardware-Probes
+- Pilot-2-JSBridge read-only Runtime mit exaktem RC-/Aircraft-Topologie-Match
 - read-only Mission-/Wayline-/Capability-APIs
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
@@ -100,7 +101,7 @@ Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 - M4E/M4T Cloud-Flight-Control (`stick_control`/`drone_control`) ohne reale DRC-/Authority-Hardwareabnahme
 - M3E/M3T/M3TA Cloud-Payload-Control ohne reale RC-Pro-/Payload-Hardwareabnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: global deaktiviert
-- Pilot-2-JSBridge
+- Pilot-2-JSBridge-Hardwarefreigabe ohne reales WebView-Evidence-Fixture
 - schreibende WPML/Pilot-Wayline-Upload-, Collect- und Execution-Pfade
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - nicht real belegte M3T/M4T Tele-/Thermal-Medienpfade
