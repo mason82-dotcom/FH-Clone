@@ -21,12 +21,37 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U fhclone -d fhclone >/dev/null && psql -U fhclone -d fhclone -tAc \"SELECT CASE WHEN to_regclass('public.missions') IS NOT NULL AND to_regclass('public.telemetry') IS NOT NULL AND to_regclass('public.authz_audit') IS NOT NULL AND to_regclass('public.gateway_credentials') IS NOT NULL AND to_regclass('public.dji_gateways') IS NOT NULL AND to_regclass('public.dji_gateway_devices') IS NOT NULL AND to_regclass('public.msdk_token_revocations') IS NOT NULL AND to_regclass('public.media_assets') IS NOT NULL THEN 1 ELSE 0 END\" | grep -qx 1"
+          "pg_isready -U fhclone -d fhclone >/dev/null && psql -U fhclone -d fhclone -tAc \"SELECT CASE WHEN to_regclass('public.missions') IS NOT NULL AND to_regclass('public.telemetry') IS NOT NULL AND to_regclass('public.authz_audit') IS NOT NULL AND to_regclass('public.gateway_credentials') IS NOT NULL AND to_regclass('public.dji_gateways') IS NOT NULL AND to_regclass('public.dji_gateway_devices') IS NOT NULL AND to_regclass('public.msdk_token_revocations') IS NOT NULL THEN 1 ELSE 0 END\" | grep -qx 1"
         ]
       interval: 10s
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+  db-migrations:
+    image: timescale/timescaledb:2.30.1-pg16
+    environment:
+      PGPASSWORD: ${TIMESCALE_PASSWORD}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    volumes:
+      - ./sql/006_media_assets.sql:/migrations/006_media_assets.sql:ro
+    command:
+      [
+        "psql",
+        "-h",
+        "timescaledb",
+        "-U",
+        "fhclone",
+        "-d",
+        "fhclone",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-f",
+        "/migrations/006_media_assets.sql"
+      ]
+    restart: "no"
 
 volumes:
   timescale_data:
