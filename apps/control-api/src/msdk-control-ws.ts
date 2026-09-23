@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
-import { WebSocketServer, type RawData, type WebSocket } from "ws";
+import { WebSocket, WebSocketServer, type RawData } from "ws";
 
 import type { MsdkBridgeService } from "./msdk-bridge.js";
 import type {
@@ -87,7 +87,7 @@ function bindSocket(
 ): void {
   const peer: MsdkControlPeer = {
     send(text) {
-      if (ws.readyState !== ws.OPEN) return false;
+      if (ws.readyState !== WebSocket.OPEN) return false;
       ws.send(text);
       return true;
     },
