@@ -151,6 +151,7 @@ export interface DrcSessionManagerOptions {
   now?: () => number;
   onStateChange?: (record: DrcSessionRecord) => void | Promise<void>;
   onAudit?: (event: DrcSessionAuditEvent) => void | Promise<void>;
+  onRuntimeError?: (gatewaySn: string, error: Error) => void;
 }
 
 export interface DrcSessionAuditEvent {
@@ -242,6 +243,9 @@ export class DrcSessionManager {
   private readonly onAudit:
     | ((event: DrcSessionAuditEvent) => void | Promise<void>)
     | undefined;
+  private readonly onRuntimeError:
+    | ((gatewaySn: string, error: Error) => void)
+    | undefined;
 
   constructor(
     private readonly controller: DrcSessionTransport,
@@ -259,6 +263,7 @@ export class DrcSessionManager {
     this.now = options.now ?? Date.now;
     this.onStateChange = options.onStateChange;
     this.onAudit = options.onAudit;
+    this.onRuntimeError = options.onRuntimeError;
 
     if (this.degradeAfterMs <= 0) {
       throw new RangeError("degradeAfterMs must be greater than zero");
@@ -631,7 +636,7 @@ export class DrcSessionManager {
   async shutdown(): Promise<void> {
     const open = await this.store.listOpen();
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       open.map(async (session) => {
         if (session.state === "controlling" || session.state === "degraded" || session.state === "drc_mode_active" || session.state === "authority_grabbed") {
           await this.closeGracefully(session.gatewaySn, "backend_shutdown");
@@ -649,6 +654,24 @@ export class DrcSessionManager {
 
     for (const gatewaySn of [...this.timers.keys()]) {
       this.stopTimer(gatewaySn);
+    }
+
+    const failures = results
+      .filter(
+        (result): result is PromiseRejectedResult =>
+          result.status === "rejected"
+      )
+      .map((result) =>
+        result.reason instanceof Error
+          ? result.reason
+          : new Error(String(result.reason))
+      );
+
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures,
+        `DRC shutdown failed for ${failures.length} session(s)`
+      );
     }
   }
 
@@ -694,10 +717,40 @@ export class DrcSessionManager {
   private startTimer(gatewaySn: string): void {
     this.stopTimer(gatewaySn);
     const timer = setInterval(() => {
-      void this.tick(gatewaySn);
+      void this.tick(gatewaySn).catch((error: unknown) => {
+        this.stopTimer(gatewaySn);
+        const normalized =
+          error instanceof Error ? error : new Error(String(error));
+        this.reportRuntimeError(gatewaySn, normalized);
+        void this.forceClose(
+          gatewaySn,
+          "deadman_watchdog_error"
+        ).catch((closeError: unknown) => {
+          this.reportRuntimeError(
+            gatewaySn,
+            closeError instanceof Error
+              ? closeError
+              : new Error(String(closeError))
+          );
+        });
+      });
     }, this.checkIntervalMs);
     timer.unref();
     this.timers.set(gatewaySn, timer);
+  }
+
+  private reportRuntimeError(
+    gatewaySn: string,
+    error: Error
+  ): void {
+    if (this.onRuntimeError) {
+      this.onRuntimeError(gatewaySn, error);
+      return;
+    }
+    console.error(
+      `[DRC] Runtime error for gateway ${gatewaySn}:`,
+      error.message
+    );
   }
 
   private stopTimer(gatewaySn: string): void {
