@@ -405,10 +405,13 @@ test("shutdown aggregates DRC close failures after attempting every session", as
 });
 
 test("watchdog runtime errors are reported and fail-close the session", async () => {
-  let failGet = false;
+  let failNextGet = false;
   class FailingStore extends InMemoryDrcSessionStore {
     override async get(gatewaySn: string) {
-      if (failGet) throw new Error("store_read_failed");
+      if (failNextGet) {
+        failNextGet = false;
+        throw new Error("store_read_failed");
+      }
       return super.get(gatewaySn);
     }
   }
@@ -432,9 +435,8 @@ test("watchdog runtime errors are reported and fail-close the session", async ()
   });
   await advanceToControlling(manager, "RC-WATCHDOG");
 
-  failGet = true;
+  failNextGet = true;
   await new Promise<void>((resolve) => setTimeout(resolve, 25));
-  failGet = false;
 
   assert.ok(errors.includes("store_read_failed"));
   assert.equal(
