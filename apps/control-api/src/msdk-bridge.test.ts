@@ -13,7 +13,7 @@ function snapshot(
 ): MsdkBridgeSnapshot {
   return {
     schema: "fh2.msdk.v1",
-    timestampMs: 1_000,
+    timestampMs: 10_000,
     sdk: {
       registered: true,
       productConnected: true
@@ -127,5 +127,66 @@ test("does not pair disconnected or unregistered agents", () => {
       sdk: { registered: false, productConnected: true }
     }),
     undefined
+  );
+});
+
+
+test("rejects stale and far-future snapshots", () => {
+  const service = new MsdkBridgeService({
+    pairingToken: "pair-secret",
+    signingSecret: "sign-secret",
+    snapshotMaxAgeMs: 5_000,
+    snapshotFutureSkewMs: 1_000,
+    now: () => 10_000
+  });
+
+  assert.equal(
+    service.pair("pair-secret", {
+      ...snapshot(),
+      timestampMs: 4_999
+    }),
+    undefined
+  );
+
+  assert.equal(
+    service.pair("pair-secret", {
+      ...snapshot(),
+      timestampMs: 11_001
+    }),
+    undefined
+  );
+
+  assert.ok(
+    service.pair("pair-secret", {
+      ...snapshot(),
+      timestampMs: 10_000
+    })
+  );
+});
+
+test("validates optional payload-control state when present", () => {
+  assert.equal(
+    isMsdkBridgeSnapshot({
+      ...snapshot(),
+      payloadControl: {
+        cameraIndex: "LEFT_OR_MAIN",
+        isShootingPhoto: false,
+        isRecording: true,
+        lastAction: "start_record"
+      }
+    }),
+    true
+  );
+
+  assert.equal(
+    isMsdkBridgeSnapshot({
+      ...snapshot(),
+      payloadControl: {
+        cameraIndex: "LEFT_OR_MAIN",
+        isShootingPhoto: "no",
+        isRecording: true
+      }
+    }),
+    false
   );
 });
