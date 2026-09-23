@@ -862,6 +862,8 @@ function getDeviceCapabilityView(deviceId: string) {
   const adapterDevices = devices.get(deviceId);
   const djiDevice = adapterDevices.find((device) => device.adapterId === "dji-cloud");
   const adapterCapabilities = djiDevice?.capabilities ?? [];
+  const msdkDevice = adapterDevices.find((device) => device.adapterId === "msdk-v5");
+  const msdkAgent = msdkBridge.getByAircraftSn(deviceId);
   const controlProfile = dji?.getControlProfile(deviceId);
   const activeMission = missions.getActive(deviceId);
   const lastCompletedMission = missions.getLastCompleted(deviceId);
@@ -874,6 +876,23 @@ function getDeviceCapabilityView(deviceId: string) {
       lastSeenAt: device.lastSeenAt,
       capabilities: device.capabilities
     })),
+    msdkV5: msdkDevice && msdkAgent
+      ? {
+          connected: msdkDevice.connected,
+          gatewaySn: msdkAgent.gatewaySn,
+          lastSeenAt: msdkAgent.lastSeenAt,
+          capabilities: msdkDevice.capabilities,
+          reportedCapabilities: msdkAgent.snapshot.capabilities,
+          networkControlImplemented: false,
+          localVirtualStickState: {
+            supported:
+              msdkAgent.snapshot.capabilities.virtualStick === true,
+            enabled: msdkAgent.snapshot.control.enabled,
+            authorityOwner:
+              msdkAgent.snapshot.control.authorityOwner
+          }
+        }
+      : null,
     djiCloud: {
       controlProfile: controlProfile ?? null,
       genericAdapterCapabilities: adapterCapabilities,
