@@ -1,7 +1,6 @@
 {
   "schema": "fh2.m3t.real-media-fixture.v1",
   "status": "partial_real_hardware_fixture",
-  "sourceCommit": "b626e2fdb7292f5c59f5799bbd9a2b4b1b0bd0d2",
   "policy": {
     "rawExifXmpAuthoritative": true,
     "derivedManifestRedacts": [
@@ -10,7 +9,9 @@
       "camera_serials",
       "ntrip_endpoint"
     ],
-    "syntheticDataAllowedAsReal": false
+    "syntheticDataAllowedAsReal": false,
+    "gitObjectReferencesPublished": false,
+    "rawSourceLocationPublished": false
   },
   "samples": [
     {
@@ -20,8 +21,6 @@
         "height": 3000,
         "bitsPerSample": 8
       },
-      "exif": "docs/DJI_20230426201904_0001_V.txt",
-      "gitBlobSha": "700c03acf53b8639aba6ae8b292d77f164f982a8",
       "fileSizeBytes": 7725056,
       "deviceModel": "M3T",
       "imageSource": "WideCamera",
@@ -57,7 +56,8 @@
           "z": 0
         }
       },
-      "surveyingMode": 1
+      "surveyingMode": 1,
+      "source": "local-authoritative-original"
     },
     {
       "id": "m3t-wide-rtk-fixed",
@@ -66,8 +66,6 @@
         "height": 3000,
         "bitsPerSample": 8
       },
-      "exif": "docs/DJI_20240225160726_0027_V.txt",
-      "gitBlobSha": "03af2cfea4baa2bb22c6f0498519f018710534f7",
       "fileSizeBytes": 7454720,
       "deviceModel": "M3T",
       "imageSource": "WideCamera",
@@ -107,7 +105,8 @@
           "z": 0
         }
       },
-      "surveyingMode": 1
+      "surveyingMode": 1,
+      "source": "local-authoritative-original"
     }
   ],
   "missing": {
