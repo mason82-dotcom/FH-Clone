@@ -10,7 +10,7 @@ import dji.sdk.keyvalue.key.KeyTools
 import dji.sdk.keyvalue.key.PayloadKey
 import dji.sdk.keyvalue.key.ProductKey
 import dji.sdk.keyvalue.key.RemoteControllerKey
-import dji.sdk.keyvalue.value.camera.CameraLensType
+import dji.sdk.keyvalue.value.common.CameraLensType
 import dji.sdk.keyvalue.value.common.ComponentIndexType
 import dji.v5.common.callback.CommonCallbacks
 import dji.v5.common.error.IDJIError
