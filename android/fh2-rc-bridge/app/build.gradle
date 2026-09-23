@@ -100,7 +100,11 @@ android {
 }
 
 dependencies {
-    compileOnly "com.dji:dji-sdk-v5-aircraft-provided:${project.DJI_MSDK_VERSION}"
+    // DJI documents the API/stub artifact as compileOnly. The FH2 hardware
+    // target however does not provide these Java API classes itself; keeping
+    // it compileOnly produced NoClassDefFoundError on RC Pro Enterprise.
+    // Package the API classes with the application and verify them in CI.
+    implementation "com.dji:dji-sdk-v5-aircraft-provided:${project.DJI_MSDK_VERSION}"
     implementation "com.dji:dji-sdk-v5-aircraft:${project.DJI_MSDK_VERSION}"
     implementation "org.maplibre.gl:android-sdk:${project.MAPLIBRE_VERSION}"
     implementation "com.squareup.okhttp3:okhttp:${project.OKHTTP_VERSION}"
