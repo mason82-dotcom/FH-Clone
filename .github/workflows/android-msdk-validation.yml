@@ -129,5 +129,8 @@ jobs:
       - name: MSDK media lifecycle source contract
         run: npm run test:msdk-media-lifecycle
 
+      - name: MSDK control dead-man source contract
+        run: npm run test:msdk-control-deadman
+
       - name: MSDK hardware evidence validator tests
         run: npm run test:msdk-evidence
