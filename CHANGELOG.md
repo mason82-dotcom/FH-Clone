@@ -12,6 +12,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - Pilot-2-JSBridge read-only Runtime integriert: Verifikationsstatus, Version, RC-/Aircraft-Identität, Modulstatus und exakter Topologie-Match; credential-/write-fähige Browseraufrufe werden per CI blockiert.
 - DJI-Kamera-/Gimbal-Live-Telemetrie kanonisch nach validiertem `payload_index` normalisiert; `cameras[]` und unbekannte Felder bleiben parallel als Raw-Daten erhalten.
 - DJI-Telemetrie-Fusion ergänzt: Cloud API und MSDK V5 speisen gemeinsame kanonische Flug-/RTK-Keys; Adapterprovenienz bleibt über `/telemetry/sources` erhalten.
+- MediaStore-/Readiness-Integration aus #69 bleibt vollständig erhalten: Persistenz, Startup-Rehydration, `mediaStore.ping()` und Shutdown-Cleanup.
 
 ## 3.0.0 – 2026-09-23
 
