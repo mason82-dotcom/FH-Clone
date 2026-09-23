@@ -369,14 +369,22 @@ Bei `SIGINT` oder `SIGTERM`:
 - [DJI-MQTT-Sicherheit](../../docs/DJI_MQTT_SECURITY.md)
 - [Fehlersuche](../../docs/FEHLERSUCHE.md)
 
-## V3-Grenze
+## Software-Basisstand
 
-Vor V3 fehlen insbesondere noch:
+Der V3.0.0-Software-/FC0-Basisstand ist abgeschlossen. Root-Compose,
+automatisierte Abnahme, Media-/Telemetriepersistenz sowie die zentralen
+Security-/Safety-Grenzen sind integriert.
 
-- vollständiger Telemetrie-Writer
-- vollständige V3-Persistenz
-- finaler Root-Compose-Gesamtstart
-- vollständige automatisierte Abnahme
+Weiterhin bewusst außerhalb des öffentlichen Schreibvertrags liegen:
+
+- öffentliche Operator-/Browser-Flight-Control-Endpunkte
+- Wayline-Upload/-Execution
+- selbst gehosteter Livestream-Pfad
+- generische Kamera-/Gimbal-/Payload-Schreibcapabilities, solange deren
+  ausführbare FH2-Pfade nicht separat implementiert und abgenommen sind
+
+Reale Hardware-Supportzusagen werden separat über
+`docs/HARDWARE_EVIDENCE.md` geführt.
 
 
 ## DJI Pilot Cloud Authority
