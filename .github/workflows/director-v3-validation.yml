@@ -196,6 +196,9 @@ jobs:
           npm run test:pilot2-jsbridge
           npm run verify:pilot2-jsbridge
 
+      - name: GitHub Sensitive-Data Support Handoff
+        run: npm run test:github-support-handoff
+
   ugcs:
     name: UgCS-Bridge
     if: ${{ !inputs.r1_bootstrap }}
