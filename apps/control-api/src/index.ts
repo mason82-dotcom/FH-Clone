@@ -217,6 +217,26 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, await topologyStore.list());
     }
 
+    const authorityMatch = url.pathname.match(
+      /^\/api\/dji\/gateways\/([^/]+)\/authority$/
+    );
+    if (request.method === "GET" && authorityMatch) {
+      const gatewaySn = decodeURIComponent(authorityMatch[1] ?? "");
+      if (!dji) return json(response, 503, { error: "dji_not_configured" });
+      const state = dji.getCloudControlAuthority(gatewaySn);
+      return json(response, 200, {
+        gatewaySn,
+        cloudControlEnabled: true,
+        state: state ?? {
+          gatewaySn,
+          status: "unknown",
+          authorized: false,
+          updatedAt: null,
+          source: "local"
+        }
+      });
+    }
+
     if (request.method === "GET" && url.pathname === "/api/missions/active") {
       return json(response, 200, missions.listActive());
     }
@@ -803,6 +823,7 @@ function getDeviceCapabilityView(deviceId: string) {
       genericAdapterCapabilities: adapterCapabilities,
       specializedRuntime: controlProfile
         ? {
+            cloudControl: controlProfile.cloudControl,
             flightControl: controlProfile.flightControl,
             stickControl: controlProfile.stickControl,
             droneControl: controlProfile.droneControl,
