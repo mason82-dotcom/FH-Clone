@@ -48,6 +48,10 @@ export interface MsdkBridgeSnapshot {
     connected: boolean;
     serialNumber: string;
     firmwareVersion?: string | null | undefined;
+    rcGpsValid?: boolean | undefined;
+    rcLatitude?: number | null | undefined;
+    rcLongitude?: number | null | undefined;
+    rcAccuracyM?: number | null | undefined;
   };
   aircraft: {
     flightControllerConnected: boolean;
@@ -57,9 +61,19 @@ export interface MsdkBridgeSnapshot {
     latitude?: number | null | undefined;
     longitude?: number | null | undefined;
     altitudeM?: number | null | undefined;
+    homeLatitude?: number | null | undefined;
+    homeLongitude?: number | null | undefined;
+    headingDeg?: number | null | undefined;
   };
   sensors: MsdkSensorSnapshot[];
   rtk: MsdkRtkSnapshot;
+  payloadControl?: {
+    cameraIndex: string;
+    isShootingPhoto: boolean;
+    isRecording: boolean;
+    lastAction?: string | null | undefined;
+    lastError?: string | null | undefined;
+  } | undefined;
   control: {
     enabled: boolean;
     authorityOwner: string;
@@ -265,6 +279,13 @@ export function isMsdkBridgeSnapshot(
 
   if (!Array.isArray(value.sensors)) return false;
   if (!isRecord(value.rtk)) return false;
+
+  if (value.payloadControl !== undefined) {
+    if (!isRecord(value.payloadControl)) return false;
+    if (typeof value.payloadControl.cameraIndex !== "string") return false;
+    if (typeof value.payloadControl.isShootingPhoto !== "boolean") return false;
+    if (typeof value.payloadControl.isRecording !== "boolean") return false;
+  }
 
   if (!isRecord(value.control)) return false;
   if (typeof value.control.enabled !== "boolean") return false;
