@@ -192,11 +192,12 @@ test("rejects a second gateway while the singleton DRC transport is in use", asy
 });
 
 
-test("M3 RC Pro routes drone_control but rejects stick_control", async () => {
+test("M3 RC Pro remains fail-closed for cloud flight control", async () => {
   const f = fixture(true);
   f.dji.resolveGatewaySn = () => "RC-PRO-001";
+  f.dji.supportsFlightControl = () => false;
   f.dji.supportsStickControl = () => false;
-  f.dji.supportsDroneControl = () => true;
+  f.dji.supportsDroneControl = () => false;
 
   const coordinator = new ControlCoordinator(
     f.dji,
@@ -204,12 +205,14 @@ test("M3 RC Pro routes drone_control but rejects stick_control", async () => {
     () => ({ ...f.guards, djiAuthority: true })
   );
 
-  await coordinator.sendDroneControl(
-    "M3T-001",
-    "operator-a",
-    { x: 0, y: 0, h: 0, w: 0 }
+  await assert.rejects(
+    coordinator.sendDroneControl(
+      "M3T-001",
+      "operator-a",
+      { x: 0, y: 0, h: 0, w: 0 }
+    ),
+    /drone_control_not_supported/
   );
-  assert.deepEqual(f.calls, ["session.sendDrone"]);
 
   await assert.rejects(
     coordinator.sendStick(
@@ -219,6 +222,27 @@ test("M3 RC Pro routes drone_control but rejects stick_control", async () => {
     ),
     /stick_control_not_supported/
   );
+
+  await assert.rejects(
+    coordinator.start({
+      aircraftSn: "M3T-001",
+      holder: "operator-a",
+      authority: { userId: "u1", userCallsign: "OP-A" },
+      drc: {
+        mqttBroker: {
+          address: "mqtt://broker",
+          client_id: "drc",
+          username: "u",
+          password: "p",
+          expire_time: Math.floor(Date.now() / 1000) + 120,
+          enable_tls: false
+        }
+      }
+    }),
+    /flight_control_not_supported/
+  );
+
+  assert.deepEqual(f.calls, []);
 });
 
 
