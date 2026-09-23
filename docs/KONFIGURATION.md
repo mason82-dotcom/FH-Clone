@@ -56,7 +56,7 @@ Das ist beabsichtigtes Fail-Closed-Verhalten.
 
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
-| `TIMESCALE_URL` | leer | PostgreSQL-/TimescaleDB-Verbindungszeichenfolge; aktiviert den MissionStore |
+| `TIMESCALE_URL` | leer | PostgreSQL-/TimescaleDB-Verbindungszeichenfolge; aktiviert MissionStore, MediaStore und TelemetryStore |
 | `RTK_SOURCE_LABEL` | leer | nicht-sensitive Bezeichnung der RTK-Korrekturquelle |
 | `RTK_SOURCE_PROVIDER` | leer | nicht-sensitiver Anbietername der RTK-Korrekturquelle |
 
