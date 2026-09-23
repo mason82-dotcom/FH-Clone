@@ -45,6 +45,8 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - deutsche Pflichtdokumentation: PASS
 - zentrale Hardware-Evidence-Auswertung: aktiv
 - Root-Compose / `scripts/verify.sh`: Bestandteil der finalen Release-CI
+- Readiness unterscheidet optionale `disabled`-Abhängigkeiten von konfiguriertem `unavailable`
+- Compose-Regressionscheck schützt `control-api -> emqx/timescaledb: service_healthy` und den internen Port 8081
 
 ## Hardware-Evidence
 
