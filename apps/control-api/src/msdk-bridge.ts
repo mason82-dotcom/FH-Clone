@@ -112,6 +112,12 @@ export interface MsdkPairingResult {
   aircraftSn: string;
 }
 
+export interface MsdkAgentIdentity {
+  gatewaySn: string;
+  aircraftSn: string;
+  expiresAt: number;
+}
+
 interface MsdkTokenPayload {
   v: 1;
   gatewaySn: string;
@@ -239,6 +245,22 @@ export class MsdkBridgeService {
           snapshot: structuredClone(record.snapshot)
         }
       : undefined;
+  }
+
+  authenticateAgent(agentToken: string): MsdkAgentIdentity | undefined {
+    const token = this.verify(agentToken);
+    if (!token) return undefined;
+
+    const record = this.agents.get(
+      agentKey(token.gatewaySn, token.aircraftSn)
+    );
+    if (!record) return undefined;
+
+    return {
+      gatewaySn: token.gatewaySn,
+      aircraftSn: token.aircraftSn,
+      expiresAt: token.exp
+    };
   }
 
   private isFreshSnapshot(
