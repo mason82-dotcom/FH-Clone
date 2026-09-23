@@ -121,3 +121,6 @@ jobs:
             apps/control-api/dist/msdk-control.test.js \
             apps/control-api/dist/msdk-normalizer.test.js \
             apps/control-api/dist/msdk-token-revocations.test.js
+
+      - name: MSDK hardware evidence validator tests
+        run: npm run test:msdk-evidence
