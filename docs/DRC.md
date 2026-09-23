@@ -62,9 +62,9 @@ Der DJI-Adapter kennt die DJI-Protokollprofile weiterhin als Typinformation.
 Die Runtime-Auswahl für den Stick-Pfad ist wieder produktabhängig:
 
 ```text
-M4E/M4T + RC Plus 2 -> DjiDrcProfile = pilot-m4-stick
-M3 Enterprise       -> DjiDrcProfile = none
-unbekannt/falsch    -> DjiDrcProfile = none
+M4E/M4T + RC Plus 2   -> DjiDrcProfile = pilot-m4-stick
+M3E/M3T/M3TA + RC Pro -> DjiDrcProfile = pilot-m3-drone
+unbekannt/falsch      -> DjiDrcProfile = none
 ```
 
 `drone_control` bleibt zusätzlich als separater DJI-DRC-Pfad aktiv.
@@ -464,3 +464,28 @@ hebt diese Guards nicht auf.
 
 `fly_to_point` bleibt als eigener Servicepfad davon unabhängig.
 
+
+
+## M3 Enterprise + RC Pro Enterprise
+
+FH2 aktiviert für M3E, M3T und M3TA hinter einer bestätigten DJI RC Pro
+Enterprise den Pilot-to-Cloud-Control-Pfad:
+
+```text
+flightControl  = true
+stickControl   = false
+droneControl   = true
+payloadControl = true
+drcProfile     = pilot-m3-drone
+flyTo          = false
+```
+
+Der Flugsteuerpfad verwendet `drone_control` auf
+`thing/product/{gateway_sn}/drc/down`. Das RC-Plus-2-Verfahren
+`stick_control` wird für diese Gerätefamilie nicht verwendet.
+
+Für `drone_control` bleiben FC3, Control Lease, DJI
+Cloud-Control-Authority, aktive DRC-Sitzung und Dead-Man Pflicht.
+Payload-/Kamera-/Gimbal-Support wird im spezialisierten DJI-Control-Profil
+ausgewiesen; generische `AircraftAdapter.execute()`-Capabilities bleiben
+davon getrennt.
