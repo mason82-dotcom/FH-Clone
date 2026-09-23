@@ -50,6 +50,7 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - Verify-Cleanup bewahrt Fehlerstatus, läuft bei INT/TERM über den EXIT-Pfad und macht Cleanup-Fehler bei sonst erfolgreichem Lauf sichtbar
 - Shutdown ist idempotent, wartet beide HTTP-Server ab und führt verbleibende Cleanup-Schritte auch nach Teilfehlern weiter aus
 - Web-/Proxy-Regressionscheck schützt `/health`, `/ready`, `/api/*`, SPA-Fallback und die Nicht-Exposition von Port 8081
+- Persistenzgrenze verhindert FC-Stufe, Control Lease, DJI-Authority und rehydrierbare DRC-Sessions in PostgreSQL; DRC bleibt in-memory
 
 ## Hardware-Evidence
 
