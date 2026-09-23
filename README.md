@@ -6,10 +6,10 @@ Multispektral-Verarbeitung und Groundstation-Anbindung.
 
 Der freigegebene Basisstand ist **FH2 V3.0.0**. Der Release ist als
 Software-/FC0-Basisstand definiert. DJI Dock 1–3, Multi-Dock und
-PSDK-Payloads sind projektweit deaktiviert; ebenso ist `stick_control`
-global gesperrt. Der getrennte M4-/RC-Plus-2-`drone_control`-Pfad sowie
-Thermal-, Multispektral- und Pilot-2-Hardwareprofile benötigen ihre jeweils
-dokumentierte reale Abnahme.
+PSDK-Payloads sind projektweit deaktiviert. Für Mavic 3 Enterprise + RC Pro
+ist nur Cloud-Payload-Control vorgesehen; Cloud-Flugsteuerung bleibt dort
+gesperrt. Matrice 4 + RC Plus 2 besitzt das separate Cloud-Flight-Control-
+Profil. Reale Hardwarefreigaben benötigen weiterhin die dokumentierte Abnahme.
 
 ## Projektziel
 
@@ -94,8 +94,8 @@ Auf `main` sind unter anderem vorhanden:
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 
-- M4E/M4T `drone_control` ohne reale DRC-/Authority-Hardwareabnahme
-- `stick_control`: global deaktiviert
+- M4E/M4T Cloud-Flight-Control (`stick_control`/`drone_control`) ohne reale DRC-/Authority-Hardwareabnahme
+- M3E/M3T/M3TA Cloud-Payload-Control ohne reale RC-Pro-/Payload-Hardwareabnahme
 - DJI Dock 1–3 / Multi-Dock / PSDK-Payloads: global deaktiviert
 - Pilot-2-JSBridge
 - vollständige WPML/Pilot-Wayline-Integration aus offenen Drafts
