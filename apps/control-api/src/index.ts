@@ -24,7 +24,8 @@ import {
   MediaOverlayRegistry,
   isMediaAsset
 } from "./media-overlay.js";
-import { MediaStore } from "./media-store.js";\nimport { TelemetryStore } from "./telemetry-store.js";
+import { MediaStore } from "./media-store.js";
+import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
   isEmqxAuthorizationRequest
