@@ -85,26 +85,23 @@ keine Voraussetzung mehr für eine FH2-Stick-Control-Freigabe. Die CI **führt
 keine Flugbefehle aus**;
 sie analysiert ausschließlich vorher aufgezeichnete, redigierte Captures.
 
-Erforderlich:
+Optional dokumentierbar sind weiterhin reale Protokollbelege für:
 
-1. `update_topo` für RC Plus 2 + M4T,
-2. erfolgreicher Cloud-Control-Authority-Nachweis,
-3. erfolgreicher `drc_mode_enter`-Nachweis,
-4. mindestens ein zusammengehöriges
-   `thing/product/{gateway_sn}/drc/down` -> `drc/up` Heartbeat-Paar,
-5. Nachweis, dass der Upstream dem aktiven Gateway/der aktiven Runtime-Session
-   zugeordnet wurde,
-6. ein echter `hsi_info_push`-Capture, **wenn** FH2 diese
-   DRC-Hindernis-Telemetrie als Runtimefunktion freigibt,
-7. ein realer M4T-Thermal-Medienbeleg für den bereits vorhandenen
-   FH2-M4T-Thermal-Layer. Dieser ist ein **Projekt-Feature-Gate**, kein
-   Cloud-API-Pflichtfeldvertrag. Es werden daher nur reale Herkunft,
-   M4T-/Thermal-Zuordnung, Dateihash und die tatsächlich beobachteten
-   Metadaten verlangt; keine undokumentierten EXIF-Tags werden erfunden.
+1. `update_topo` von RC Plus 2 + M4T,
+2. Cloud-Control-Authority,
+3. `drc_mode_enter`,
+4. `drc/down` / `drc/up` Heartbeat,
+5. Session-/Gateway-Zuordnung,
+6. `hsi_info_push`.
 
-`drc_status_notify` allein reicht nicht als DRC-Link-Liveness-Beleg. Der
-Heartbeat-Upstream ist der maßgebliche Datenpfad für die aktive
-DRC-Verbindung.
+Diese Nachweise sind **INFORMATIONAL** und schalten keine manuelle
+Flugsteuerung frei.
+
+Separat davon bleibt ein realer **M4T-Thermal-Medienbeleg REQUIRED_MAIN**,
+weil der V3-Code einen M4T-Thermal-Layer beansprucht. Dieser Medienbeleg ist
+ein Projekt-Feature-Gate und kein Cloud-API-Pflichtfeldvertrag. Verlangt
+werden reale Herkunft, M4T-/Thermal-Zuordnung, Dateihash und die tatsächlich
+beobachteten Metadaten; undokumentierte EXIF-Tags werden nicht erfunden.
 
 ## 3. Mavic 3M Multispektral — REQUIRED_MAIN
 
@@ -256,6 +253,7 @@ Die zentrale Direktor-CI besitzt zwei Evidence-Sichten:
   Drafts grün sein.
 
 CONDITIONAL-Nachweise werden nur für weiterhin unterstützte Profile aktiviert.
-Dock-, Multi-Dock- und PSDK-Nachweise sind ausdrücklich **keine** Conditional-
-Gates mehr, weil diese Funktionsfamilien global deaktiviert sind. Fehlende
-Hardware wird nie durch synthetische Fixtures oder Annahmen ersetzt.
+Dock-, Multi-Dock-, PSDK- sowie manuelle DJI-Cloud-DRC-/Stick-Nachweise sind
+ausdrücklich **keine** Conditional-Gates mehr, weil diese Funktionsfamilien
+global deaktiviert sind. Fehlende Hardware wird nie durch synthetische
+Fixtures oder Annahmen ersetzt.
