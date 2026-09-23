@@ -297,6 +297,39 @@ test("expired transport token closes session and socket", () => {
   );
 });
 
+test("explicit unpair closes control session and transport fail-closed", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.hub.disconnectAgent("M3T-001", "agent_unpaired");
+
+  assert.deepEqual(
+    f.peer.sent.slice(-2).map((entry) => entry.type),
+    ["neutral", "session_stop"]
+  );
+  assert.deepEqual(
+    f.peer.closed,
+    { code: 4004, reason: "agent_unpaired" }
+  );
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "agent_unpaired"
+  );
+  assert.throws(
+    () => f.hub.openSession("M3T-001", "operator-a"),
+    /msdk_agent_socket_not_connected/
+  );
+});
+
 test("wrong lease holder cannot inject stick frames", () => {
   const f = fixture();
   const session = f.hub.openSession("M3T-001", "operator-a");
