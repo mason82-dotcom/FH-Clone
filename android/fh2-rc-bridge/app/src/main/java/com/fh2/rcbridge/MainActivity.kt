@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var unpairButton: Button
     private lateinit var armNetworkButton: Button
     private lateinit var disarmNetworkButton: Button
+    private var msdkRuntimeListenersBound = false
 
     private val sdkListener: (DjiSdkSnapshot) -> Unit = { state ->
         runOnUiThread {
@@ -60,16 +61,25 @@ class MainActivity : AppCompatActivity() {
                 appendLine("DJI MSDK 5.18.0")
                 appendLine("Init: ${state.initEvent} (${state.initProgress})")
                 appendLine("Registriert: ${state.registered}")
+                appendLine("Runtime bereit: ${state.runtimeReady}")
                 appendLine("Produkt verbunden: ${state.productConnected}")
                 append("Product-ID: ${state.productId ?: "-"}")
                 state.registrationError?.let {
                     appendLine()
                     append("Registrierungsfehler: $it")
                 }
+                state.runtimeError?.let {
+                    appendLine()
+                    append("Runtime-Fehler: $it")
+                }
             }
 
             enableButton.isEnabled =
-                state.registered && state.productConnected
+                state.runtimeReady && state.productConnected
+
+            if (state.runtimeReady) {
+                bindMsdkRuntimeListeners()
+            }
         }
     }
 
@@ -576,32 +586,59 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
+        gatewayText.text = "Gateway / Remote Controller\nWarte auf DJI MSDK Runtime"
+        telemetryText.text = "Aircraft\nWarte auf DJI MSDK Runtime"
+        sensorText.text = "Sensorik\nWarte auf DJI MSDK Runtime"
+        rtkText.text = "RTK\nWarte auf DJI MSDK Runtime"
+        payloadControlText.text = "Kamera / Gimbal\nWarte auf DJI MSDK Runtime"
+        waylineText.text = "Wayline / KMZ\nWarte auf DJI MSDK Runtime"
+        controlText.text = "Virtual Stick\nWarte auf DJI MSDK Runtime"
+
         DjiSdkRuntime.addListener(sdkListener)
-        RemoteControllerIdentitySource.addListener(gatewayListener)
-        AircraftTelemetrySource.addListener(telemetryListener)
-        SensorInventorySource.addListener(sensorListener)
-        RtkTelemetrySource.addListener(rtkListener)
         Fh2BridgeClient.addListener(bridgeListener)
         NetworkControlArm.addListener(networkArmListener)
         MsdkControlClient.addListener(controlChannelListener)
-        WaylineMissionController.addListener(waylineListener)
-        CameraGimbalController.addListener(payloadControlListener)
-        VirtualStickController.addListener(controlListener)
     }
 
     override fun onDestroy() {
         DjiSdkRuntime.removeListener(sdkListener)
-        RemoteControllerIdentitySource.removeListener(gatewayListener)
-        AircraftTelemetrySource.removeListener(telemetryListener)
-        SensorInventorySource.removeListener(sensorListener)
-        RtkTelemetrySource.removeListener(rtkListener)
         Fh2BridgeClient.removeListener(bridgeListener)
         NetworkControlArm.removeListener(networkArmListener)
         MsdkControlClient.removeListener(controlChannelListener)
-        WaylineMissionController.removeListener(waylineListener)
-        CameraGimbalController.removeListener(payloadControlListener)
-        VirtualStickController.removeListener(controlListener)
+
+        if (msdkRuntimeListenersBound) {
+            runCatching {
+                RemoteControllerIdentitySource.removeListener(gatewayListener)
+                AircraftTelemetrySource.removeListener(telemetryListener)
+                SensorInventorySource.removeListener(sensorListener)
+                RtkTelemetrySource.removeListener(rtkListener)
+                WaylineMissionController.removeListener(waylineListener)
+                CameraGimbalController.removeListener(payloadControlListener)
+                VirtualStickController.removeListener(controlListener)
+            }
+        }
+
         super.onDestroy()
+    }
+
+    private fun bindMsdkRuntimeListeners() {
+        if (msdkRuntimeListenersBound) return
+
+        runCatching {
+            RemoteControllerIdentitySource.addListener(gatewayListener)
+            AircraftTelemetrySource.addListener(telemetryListener)
+            SensorInventorySource.addListener(sensorListener)
+            RtkTelemetrySource.addListener(rtkListener)
+            WaylineMissionController.addListener(waylineListener)
+            CameraGimbalController.addListener(payloadControlListener)
+            VirtualStickController.addListener(controlListener)
+            msdkRuntimeListenersBound = true
+        }.onFailure { error ->
+            sdkText.append(
+                "\nUI-Runtime-Bind fehlgeschlagen: " +
+                    (error.message ?: error.javaClass.simpleName)
+            )
+        }
     }
 
     private fun renderNetworkControl() {
