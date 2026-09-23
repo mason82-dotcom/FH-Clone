@@ -13,11 +13,13 @@
     "@fh-clone/aircraft-core": "3.0.0",
     "@fh-clone/adapter-dji-cloud": "3.0.0",
     "pg": "^8.16.3",
-    "@fh-clone/adapter-ugcs": "3.0.0"
+    "@fh-clone/adapter-ugcs": "3.0.0",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.9.0",
-    "@types/pg": "^8.15.5"
+    "@types/pg": "^8.15.5",
+    "@types/ws": "^8.18.1"
   }
 }
