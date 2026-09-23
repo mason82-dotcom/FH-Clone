@@ -38,68 +38,27 @@ export class MediaStore {
   async upsert(asset: MediaAsset): Promise<void> {
     if (!this.pool) return;
     assertMediaAssetPersistenceSafe(asset);
-
-    await this.pool.query(
-      `INSERT INTO media_assets (
-         asset_id,
-         device_sn,
-         sensor_id,
-         sensor_kind,
-         profile,
-         captured_at,
-         mission_id,
-         payload_id,
-         latitude,
-         longitude,
-         asset
-       ) VALUES (
-         $1,
-         $2,
-         $3,
-         $4,
-         $5,
-         CASE
-           WHEN $6::double precision IS NULL THEN NULL
-           ELSE to_timestamp($6 / 1000.0)
-         END,
-         $7,
-         $8,
-         $9,
-         $10,
-         $11::jsonb
-       )
-       ON CONFLICT (asset_id) DO UPDATE
-       SET device_sn = EXCLUDED.device_sn,
-           sensor_id = EXCLUDED.sensor_id,
-           sensor_kind = EXCLUDED.sensor_kind,
-           profile = EXCLUDED.profile,
-           captured_at = EXCLUDED.captured_at,
-           mission_id = EXCLUDED.mission_id,
-           payload_id = EXCLUDED.payload_id,
-           latitude = EXCLUDED.latitude,
-           longitude = EXCLUDED.longitude,
-           asset = EXCLUDED.asset,
-           updated_at = now()`,
-      [
-        asset.id,
-        asset.capture.deviceId,
-        asset.sensor.id,
-        asset.sensor.kind,
-        asset.profile,
-        asset.capture.capturedAt ?? null,
-        asset.capture.missionId ?? null,
-        asset.capture.payloadId ?? asset.sensor.payloadId ?? null,
-        asset.capture.latitudeDeg ?? null,
-        asset.capture.longitudeDeg ?? null,
-        JSON.stringify(asset)
-      ]
-    );
+    const query = mediaAssetUpsertQuery(asset);
+    await this.pool.query(query.text, query.values);
   }
 
   async upsertMany(assets: readonly MediaAsset[]): Promise<void> {
     if (!this.pool) return;
-    for (const asset of assets) {
-      await this.upsert(asset);
+    assets.forEach(assertMediaAssetPersistenceSafe);
+
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const asset of assets) {
+        const query = mediaAssetUpsertQuery(asset);
+        await client.query(query.text, query.values);
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -140,6 +99,67 @@ export class MediaStore {
   async close(): Promise<void> {
     await this.pool?.end();
   }
+}
+
+function mediaAssetUpsertQuery(asset: MediaAsset): {
+  text: string;
+  values: unknown[];
+} {
+  return {
+    text: `INSERT INTO media_assets (
+       asset_id,
+       device_sn,
+       sensor_id,
+       sensor_kind,
+       profile,
+       captured_at,
+       mission_id,
+       payload_id,
+       latitude,
+       longitude,
+       asset
+     ) VALUES (
+       $1,
+       $2,
+       $3,
+       $4,
+       $5,
+       CASE
+         WHEN $6::double precision IS NULL THEN NULL
+         ELSE to_timestamp($6 / 1000.0)
+       END,
+       $7,
+       $8,
+       $9,
+       $10,
+       $11::jsonb
+     )
+     ON CONFLICT (asset_id) DO UPDATE
+     SET device_sn = EXCLUDED.device_sn,
+         sensor_id = EXCLUDED.sensor_id,
+         sensor_kind = EXCLUDED.sensor_kind,
+         profile = EXCLUDED.profile,
+         captured_at = EXCLUDED.captured_at,
+         mission_id = EXCLUDED.mission_id,
+         payload_id = EXCLUDED.payload_id,
+         latitude = EXCLUDED.latitude,
+         longitude = EXCLUDED.longitude,
+         asset = EXCLUDED.asset,
+         updated_at = now()`,
+    values: [
+      asset.id,
+      asset.capture.deviceId,
+      asset.sensor.id,
+      asset.sensor.kind,
+      asset.profile,
+      asset.capture.capturedAt ?? null,
+      asset.capture.missionId ?? null,
+      asset.capture.payloadId ?? asset.sensor.payloadId ?? null,
+      asset.capture.latitudeDeg ?? null,
+      asset.capture.longitudeDeg ?? null,
+      JSON.stringify(asset)
+    ]
+  };
 }
 
 export function assertMediaAssetPersistenceSafe(
