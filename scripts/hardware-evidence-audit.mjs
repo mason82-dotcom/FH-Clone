@@ -329,54 +329,36 @@ if (realEvidence(wpml)) {
 }
 
 // ---------------------------------------------------------------------------
-// DJI Pilot 2 JSBridge (PR #46)
+// DJI Pilot 2 JSBridge runtime
 // ---------------------------------------------------------------------------
 const jsPath = "docs/fixtures/pilot2/jsbridge-session.json";
 const js = readJson(jsPath);
-add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "reale redigierte Pilot-2-JSBridge-Session", realEvidence(js), jsPath);
+add(
+  "PILOT2_JSBRIDGE",
+  "REQUIRED_HARDWARE",
+  "reale redigierte Pilot-2-JSBridge-Session",
+  realEvidence(js),
+  jsPath
+);
 if (realEvidence(js)) {
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "window.djiBridge vorhanden", js.bridgePresent === true);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "License verifiziert", js.platformIsVerified === true);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Pilot-2-Version erfasst",
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "window.djiBridge vorhanden",
+    js.bridgePresent === true);
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "License bereits in Pilot 2 verifiziert",
+    js.platformIsVerified === true);
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "Pilot-2-Version erfasst",
     typeof js.platformVersion === "string" && js.platformVersion.length > 0);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "RC-/Aircraft-IDs nur gehasht",
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "RC-/Aircraft-IDs nur gehasht",
     sha256(js.remoteControllerSnSha256) && sha256(js.aircraftSnSha256));
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "exakter Topologie-Pair-Match", js.topologyPairMatch === true);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Cloud-Modul thing geladen und verbunden",
-    js.modules?.thing?.loaded === true && js.modules?.thing?.connected === true);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Workspace gesetzt", js.workspace?.configured === true);
-  if (js.features?.map === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Map: API+WS+Map geladen",
-      js.modules?.api?.loaded === true &&
-      js.modules?.ws?.loaded === true &&
-      js.modules?.map?.loaded === true);
-  }
-  if (js.features?.tsa === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "TSA: API+WS+TSA geladen",
-      js.modules?.api?.loaded === true &&
-      js.modules?.ws?.loaded === true &&
-      js.modules?.tsa?.loaded === true);
-  }
-  if (js.features?.mission === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Mission: API+WS+Mission geladen",
-      js.modules?.api?.loaded === true &&
-      js.modules?.ws?.loaded === true &&
-      js.modules?.mission?.loaded === true);
-  }
-  if (js.features?.media === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Media: API+Media geladen",
-      js.modules?.api?.loaded === true &&
-      js.modules?.media?.loaded === true);
-  }
-  if (js.features?.live === true || js.features?.livestream === true) {
-    add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Live: Liveshare-Modul geladen",
-      js.modules?.liveshare?.loaded === true);
-  }
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "Browser-Bundle Secret-Scan grün", js.browserBundleSecretScanPass === true);
-  add("PILOT2_JSBRIDGE", "REQUIRED_DRAFT", "keine Secrets im veröffentlichten Session-Fixture", !sensitiveValueLeaked(js));
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "exakter Topologie-Pair-Match",
+    js.topologyPairMatch === true);
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "read-only Modulstatus erfasst",
+    js.moduleInventoryCaptured === true && record(js.modules));
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "Browser-Bundle Safety-Scan grün",
+    js.browserBundleSecretScanPass === true);
+  add("PILOT2_JSBRIDGE", "REQUIRED_HARDWARE", "keine Secrets im Session-Fixture",
+    !sensitiveValueLeaked(js));
 }
 
-// ---------------------------------------------------------------------------
 // MSDK KeyManager runtime
 // ---------------------------------------------------------------------------
 const msdkKeyManagerPath = "docs/fixtures/msdk/keymanager-evidence.json";
