@@ -49,10 +49,11 @@ Implementiert:
 Nicht implementiert:
 
 - keine automatische Flight-Control-Aktivierung
-- noch kein FH2-Control-WebSocket
+- kein öffentlicher Operator-/Browser-Schreibendpunkt für Flight-Control
+- keine automatische FC3-/Lease-Erteilung
 - Pairing + read-only Snapshot-Heartbeat sind implementiert
-- noch keine Remote-Control-Freigabe aus dem Netzwerk
-- Kamera/Gimbal/RTK-Inventar ist vorhanden; Wayline folgt separat
+- der authentifizierte Agent-Control-WebSocket ist implementiert
+- Kamera/Gimbal/RTK, Wayline, Livevideo und Medienbrowser sind lokal vorhanden
 
 ## DJI App Key
 
@@ -95,7 +96,7 @@ FC3
 
 MSDK-Authority ersetzt den FH2-Control-Lease nicht.
 
-## Geplante Transportarchitektur
+## Transportarchitektur
 
 ```text
 RC Pro Enterprise
@@ -188,6 +189,64 @@ ausschließlich für localhost beziehungsweise private RFC1918-LAN-Adressen.
 
 Der Pairing-/Heartbeat-Kanal besitzt keinerlei Flight-Control-Command-
 Nachrichten.
+
+
+## MSDK Control WebSocket
+
+Nach erfolgreichem Pairing verbindet die Android-App zusätzlich:
+
+```text
+WSS /ws/msdk/control/{aircraftSn}
+Authorization: Bearer <agentToken>
+```
+
+Der Agent-Token ist an genau `gatewaySn + aircraftSn` gebunden. Ein Socket
+allein erzeugt **keine** Flugsteuerungsberechtigung.
+
+Der Backend-`MsdkControlHub` öffnet eine Control-Session nur, wenn gleichzeitig
+erfüllt ist:
+
+```text
+Agent frisch (Heartbeat <= 3 s)
++ lokale Android-Freigabe (NetworkControlArm)
++ MSDK virtualStick Capability
++ FC3
++ Control Lease für denselben Holder
++ verbundener authentifizierter Agent-Socket
+```
+
+Protokoll:
+
+```text
+Server -> Agent: session_start
+Agent  -> Server: session_ready | session_rejected
+Server -> Agent: stick
+Server -> Agent: neutral
+Server -> Agent: session_stop
+Agent  -> Server: session_stopped
+```
+
+Stickframes sind normalisiert auf `[-1,1]`, besitzen eine serverseitige
+monotone Sequenznummer und verfallen nach 250 ms.
+
+Die App akzeptiert `session_start` nur bei lokaler Netzwerkfreigabe. Sie
+fordert dann MSDK Virtual Stick an und bestätigt `session_ready` erst,
+wenn `authorityOwner == MSDK` gemeldet wird.
+
+Fail-closed:
+
+- lokales Disarm -> Neutral + Authority release
+- Socketverlust -> Neutral + Authority release
+- FC3-/Lease-Verlust -> Backend sendet zuerst `neutral`, dann
+  `session_stop`
+- Agent-Heartbeat > 3 s alt -> Session close
+- lokale Input-Stille 500 ms -> Neutral
+- lokale Input-Stille 2 s -> Neutral + Virtual Stick release
+
+Derzeit existiert bewusst **kein öffentlicher Operator-Ingress**, der
+`openSession()` oder `sendStick()` aufruft. Damit ist der Agent-Kanal
+vollständig implementiert und testbar, kann aber nicht durch einen
+unautorisierten Browser-/HTTP-Aufruf aktiviert werden.
 
 
 ## Android API 36
