@@ -66,6 +66,21 @@ for (const [pattern, message] of [
   if (!pattern.test(rcPro)) fail(message);
 }
 
+const m3tFixtureManifestPath = "docs/fixtures/m3t/media-manifest.json";
+const m3tFixtureManifest = read(m3tFixtureManifestPath);
+for (const [pattern, message] of [
+  [/"sourceCommit"\s*:/, "public M3T fixture manifest must not publish source commit ids"],
+  [/"gitBlobSha"\s*:/, "public M3T fixture manifest must not publish git blob ids"],
+  [/"exif"\s*:\s*"docs\/DJI_/i, "public M3T fixture manifest must not publish removed raw fixture paths"]
+]) {
+  if (pattern.test(m3tFixtureManifest)) fail(message);
+}
+
+const m3tFixtureReadme = read("docs/fixtures/m3t/README.md");
+if (/\b[0-9a-f]{40}\b/i.test(m3tFixtureReadme)) {
+  fail("public M3T fixture README must not publish raw 40-character Git object ids");
+}
+
 if (!process.exitCode) {
   console.log("CONTROL_POLICY_AUDIT_PASS");
 }
