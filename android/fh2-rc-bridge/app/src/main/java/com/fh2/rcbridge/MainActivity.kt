@@ -426,7 +426,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         evidenceButton = Button(this).apply {
-            text = "Hardware-Evidence speichern"
+            text = "Hardware-/Transport-Evidence speichern"
             setOnClickListener {
                 runCatching {
                     HardwareEvidenceExporter.export(this@MainActivity)
