@@ -78,7 +78,8 @@ function fixture(expiresAt = 60_000) {
     hasLease: () => lease,
     now: () => now,
     agentFreshMs: 3_000,
-    startTimeoutMs: 5_000
+    startTimeoutMs: 5_000,
+    frameSilenceTimeoutMs: 2_000
   });
 
   const peer = new FakePeer();
@@ -356,5 +357,119 @@ test("wrong lease holder cannot inject stick frames", () => {
         }
       ),
     /msdk_control_lease_holder_mismatch/
+  );
+});
+
+
+test("backend frame dead-man closes an active session after 2 seconds", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.setNow(11_999);
+  f.hub.tick();
+  assert.equal(f.hub.getSession("M3T-001")?.state, "active");
+
+  f.setNow(12_000);
+  f.hub.tick();
+
+  assert.equal(f.hub.getSession("M3T-001")?.state, "closed");
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "stick_frame_timeout"
+  );
+  assert.deepEqual(
+    f.peer.sent.slice(-2).map((entry) => entry.type),
+    ["neutral", "session_stop"]
+  );
+});
+
+test("stick traffic refreshes backend frame dead-man", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.setNow(11_900);
+  f.hub.sendStick("M3T-001", "operator-a", {
+    leftHorizontal: 0,
+    leftVertical: 0,
+    rightHorizontal: 0,
+    rightVertical: 0
+  });
+
+  f.setNow(13_899);
+  f.hub.tick();
+  assert.equal(f.hub.getSession("M3T-001")?.state, "active");
+
+  f.setNow(13_900);
+  f.hub.tick();
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "stick_frame_timeout"
+  );
+});
+
+test("agent dead-man notification closes backend session immediately", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_stopped",
+      sessionId: session.sessionId,
+      reason: "local_deadman_timeout"
+    })
+  );
+
+  assert.equal(f.hub.getSession("M3T-001")?.state, "closed");
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "local_deadman_timeout"
+  );
+});
+
+test("failed stop signaling still closes backend session locally", () => {
+  const f = fixture();
+  const session = f.hub.openSession("M3T-001", "operator-a");
+  f.hub.handleAgentMessage(
+    "M3T-001",
+    JSON.stringify({
+      type: "session_ready",
+      sessionId: session.sessionId,
+      authorityOwner: "MSDK"
+    })
+  );
+
+  f.peer.send = () => false;
+  assert.doesNotThrow(() =>
+    f.hub.closeSession("M3T-001", "test_signal_failure")
+  );
+  assert.equal(f.hub.getSession("M3T-001")?.state, "closed");
+  assert.equal(
+    f.hub.getSession("M3T-001")?.reason,
+    "test_signal_failure"
   );
 });
