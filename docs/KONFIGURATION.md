@@ -203,6 +203,28 @@ docker compose --profile ugcs up -d
 Für den In-Compose-Pfad wird typischerweise
 `UGCS_BRIDGE_URL=http://ugcs-bridge:8092` gesetzt.
 
+## Native Android-/MSDK-Bridge
+
+Die native FH2 RC Bridge für DJI MSDK V5 ist optional und standardmäßig
+deaktiviert.
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `MSDK_PAIRING_TOKEN` | leer | Bootstrap-Secret für `POST /api/msdk/pair` |
+| `MSDK_BRIDGE_TOKEN_SECRET` | leer | HMAC-Secret für signierte Agent-Tokens |
+| `MSDK_BRIDGE_TOKEN_TTL_SECONDS` | `86400` | Lebensdauer eines gepairten Agent-Tokens |
+
+Nur wenn `MSDK_PAIRING_TOKEN` und `MSDK_BRIDGE_TOKEN_SECRET` gesetzt sind,
+ist Pairing aktiv. Der Heartbeat-Kanal ist read-only und besitzt keine
+Flight-Control-Kommandos.
+
+Der Bootstrap-Token wird von der Android-App nur zur Pairing-Anfrage
+verwendet. Das daraus erzeugte Agent-Token ist an `gatewaySn + aircraftSn`
+gebunden. Explizites Unpair schreibt ausschließlich den SHA-256-Digest des
+Agent-Tokens mit seiner Ablaufzeit nach `msdk_token_revocations`. Dadurch
+bleibt der Widerruf über Control-API-Neustarts erhalten, ohne eine zweite
+Gateway-/Aircraft-Identity oder Runtime-Control-Rechte zu persistieren.
+
 ## Media-Ingest
 
 | Variable | Standard | Bedeutung |
@@ -229,6 +251,9 @@ Die Vorlage `.env.example` enthält zusätzlich:
 | `MQTT_BACKEND_PASSWORD` | `change-me-...` | MQTT-Secret des Backend-Service |
 | `EMQX_AUTHN_TOKEN` | `change-me-...` | interner AuthN-Hook-Token |
 | `EMQX_AUTHZ_TOKEN` | `change-me-...` | interner AuthZ-Hook-Token |
+| `MSDK_PAIRING_TOKEN` | leer | optionales Android-Pairing-Secret |
+| `MSDK_BRIDGE_TOKEN_SECRET` | leer | optionales HMAC-Secret für Agent-Tokens |
+| `MSDK_BRIDGE_TOKEN_TTL_SECONDS` | `86400` | Agent-Token-Lebensdauer |
 
 `scripts/verify.sh` verweigert die Abnahme, solange `change-me`-Platzhalter
 in `.env` stehen.

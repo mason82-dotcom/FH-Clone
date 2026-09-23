@@ -1,0 +1,450 @@
+import {
+  createHmac,
+  timingSafeEqual
+} from "node:crypto";
+
+const SAFE_ID = /^[A-Za-z0-9._:-]{3,128}$/;
+
+export interface MsdkSensorSnapshot {
+  index: string;
+  cameraConnected: boolean;
+  cameraType?: string | null | undefined;
+  cameraSerial?: string | null | undefined;
+  streamSources?: string[] | undefined;
+  gimbalConnected: boolean;
+  payloadConnected?: boolean | undefined;
+  payloadProductName?: string | null | undefined;
+}
+
+export interface MsdkRtkSnapshot {
+  enabled?: boolean | null | undefined;
+  healthy?: boolean | null | undefined;
+  maintainAccuracyEnabled?: boolean | null | undefined;
+  referenceStationSource?: string | null | undefined;
+  positioningSolution?: string | null | undefined;
+  mobileLatitude?: number | null | undefined;
+  mobileLongitude?: number | null | undefined;
+  mobileAltitudeM?: number | null | undefined;
+  baseLatitude?: number | null | undefined;
+  baseLongitude?: number | null | undefined;
+  baseAltitudeM?: number | null | undefined;
+  stdLongitude?: number | null | undefined;
+  stdLatitude?: number | null | undefined;
+  stdAltitude?: number | null | undefined;
+  rtkHeading?: string | null | undefined;
+  realHeading?: string | null | undefined;
+  satelliteCounts?: Record<string, number> | undefined;
+  error?: string | null | undefined;
+}
+
+export interface MsdkBridgeSnapshot {
+  schema: "fh2.msdk.v1";
+  timestampMs: number;
+  sdk: {
+    registered: boolean;
+    productConnected: boolean;
+  };
+  gateway: {
+    connected: boolean;
+    serialNumber: string;
+    firmwareVersion?: string | null | undefined;
+    rcGpsValid?: boolean | undefined;
+    rcLatitude?: number | null | undefined;
+    rcLongitude?: number | null | undefined;
+    rcAccuracyM?: number | null | undefined;
+  };
+  aircraft: {
+    flightControllerConnected: boolean;
+    productType: string;
+    flightControllerSerial: string;
+    firmwareVersion?: string | null | undefined;
+    latitude?: number | null | undefined;
+    longitude?: number | null | undefined;
+    altitudeM?: number | null | undefined;
+    homeLatitude?: number | null | undefined;
+    homeLongitude?: number | null | undefined;
+    headingDeg?: number | null | undefined;
+  };
+  sensors: MsdkSensorSnapshot[];
+  rtk: MsdkRtkSnapshot;
+  payloadControl?: {
+    cameraIndex: string;
+    isShootingPhoto: boolean;
+    isRecording: boolean;
+    lastAction?: string | null | undefined;
+    lastError?: string | null | undefined;
+  } | undefined;
+  wayline?: {
+    supported: boolean;
+    selectedFileName?: string | null | undefined;
+    availableWaylineIds: number[];
+    uploadState: string;
+    uploadProgress: number;
+    uploadedAt?: number | null | undefined;
+    lastError?: string | null | undefined;
+  } | undefined;
+  control: {
+    networkArmed: boolean;
+    networkArmedAt?: number | null | undefined;
+    virtualStick: {
+      enabled: boolean;
+      advancedMode?: boolean | undefined;
+      authorityOwner: string;
+      changeReason?: string | undefined;
+      lastError?: string | null | undefined;
+    };
+  };
+  capabilities: Record<string, boolean>;
+}
+
+export interface MsdkAgentRecord {
+  gatewaySn: string;
+  aircraftSn: string;
+  pairedAt: number;
+  lastSeenAt: number;
+  snapshot: MsdkBridgeSnapshot;
+}
+
+export interface MsdkPairingResult {
+  agentToken: string;
+  expiresAt: number;
+  gatewaySn: string;
+  aircraftSn: string;
+}
+
+export interface MsdkAgentIdentity {
+  gatewaySn: string;
+  aircraftSn: string;
+  expiresAt: number;
+}
+
+interface MsdkTokenPayload {
+  v: 1;
+  gatewaySn: string;
+  aircraftSn: string;
+  exp: number;
+}
+
+export interface MsdkBridgeServiceOptions {
+  pairingToken?: string | undefined;
+  signingSecret?: string | undefined;
+  tokenTtlMs?: number | undefined;
+  snapshotMaxAgeMs?: number | undefined;
+  snapshotFutureSkewMs?: number | undefined;
+  isAgentTokenRevoked?: ((token: string) => boolean) | undefined;
+  now?: (() => number) | undefined;
+}
+
+export class MsdkBridgeService {
+  private readonly pairingToken: string | undefined;
+  private readonly signingSecret: string | undefined;
+  private readonly tokenTtlMs: number;
+  private readonly snapshotMaxAgeMs: number;
+  private readonly snapshotFutureSkewMs: number;
+  private readonly isAgentTokenRevoked: (token: string) => boolean;
+  private readonly now: () => number;
+  private readonly agents = new Map<string, MsdkAgentRecord>();
+
+  constructor(options: MsdkBridgeServiceOptions = {}) {
+    this.pairingToken = options.pairingToken;
+    this.signingSecret = options.signingSecret;
+    this.tokenTtlMs = options.tokenTtlMs ?? 86_400_000;
+    this.snapshotMaxAgeMs = options.snapshotMaxAgeMs ?? 15_000;
+    this.snapshotFutureSkewMs = options.snapshotFutureSkewMs ?? 5_000;
+    this.isAgentTokenRevoked =
+      options.isAgentTokenRevoked ?? (() => false);
+    this.now = options.now ?? Date.now;
+  }
+
+  get configured(): boolean {
+    return Boolean(this.pairingToken && this.signingSecret);
+  }
+
+  pair(
+    presentedPairingToken: string | undefined,
+    snapshot: MsdkBridgeSnapshot
+  ): MsdkPairingResult | undefined {
+    if (!this.configured) return undefined;
+    if (!presentedPairingToken || !this.pairingToken) return undefined;
+    if (!safeEqual(presentedPairingToken, this.pairingToken)) return undefined;
+
+    const now = this.now();
+    if (!this.isFreshSnapshot(snapshot, now)) return undefined;
+
+    const identity = snapshotIdentity(snapshot);
+    if (!identity) return undefined;
+    const expiresAt = now + this.tokenTtlMs;
+    const payload: MsdkTokenPayload = {
+      v: 1,
+      gatewaySn: identity.gatewaySn,
+      aircraftSn: identity.aircraftSn,
+      exp: expiresAt
+    };
+    const agentToken = this.sign(payload);
+
+    this.agents.set(agentKey(identity.gatewaySn, identity.aircraftSn), {
+      gatewaySn: identity.gatewaySn,
+      aircraftSn: identity.aircraftSn,
+      pairedAt: now,
+      lastSeenAt: now,
+      snapshot
+    });
+
+    return {
+      agentToken,
+      expiresAt,
+      gatewaySn: identity.gatewaySn,
+      aircraftSn: identity.aircraftSn
+    };
+  }
+
+  heartbeat(
+    agentToken: string,
+    snapshot: MsdkBridgeSnapshot
+  ): boolean {
+    const now = this.now();
+    if (!this.isFreshSnapshot(snapshot, now)) return false;
+
+    const identity = snapshotIdentity(snapshot);
+    if (!identity) return false;
+
+    const token = this.verify(agentToken);
+    if (!token) return false;
+    if (
+      token.gatewaySn !== identity.gatewaySn ||
+      token.aircraftSn !== identity.aircraftSn
+    ) {
+      return false;
+    }
+
+    const key = agentKey(identity.gatewaySn, identity.aircraftSn);
+    const current = this.agents.get(key);
+    this.agents.set(key, {
+      gatewaySn: identity.gatewaySn,
+      aircraftSn: identity.aircraftSn,
+      pairedAt: current?.pairedAt ?? now,
+      lastSeenAt: now,
+      snapshot
+    });
+    return true;
+  }
+
+  listAgents(): MsdkAgentRecord[] {
+    return [...this.agents.values()]
+      .sort((a, b) => b.lastSeenAt - a.lastSeenAt)
+      .map((record) => ({
+        ...record,
+        snapshot: structuredClone(record.snapshot)
+      }));
+  }
+
+  getByAircraftSn(aircraftSn: string): MsdkAgentRecord | undefined {
+    const record = [...this.agents.values()]
+      .filter((entry) => entry.aircraftSn === aircraftSn)
+      .sort((a, b) => b.lastSeenAt - a.lastSeenAt)[0];
+
+    return record
+      ? {
+          ...record,
+          snapshot: structuredClone(record.snapshot)
+        }
+      : undefined;
+  }
+
+  authenticateAgent(agentToken: string): MsdkAgentIdentity | undefined {
+    const token = this.verify(agentToken);
+    if (!token) return undefined;
+
+    // The signed token is the transport credential. The in-memory agent
+    // snapshot is deliberately not required here so a valid paired RC can
+    // reconnect its WSS transport after a Control-API process restart.
+    // Flight-control remains fail-closed because MsdkControlHub separately
+    // requires a fresh heartbeat-backed agent record before opening or using
+    // a session.
+    return {
+      gatewaySn: token.gatewaySn,
+      aircraftSn: token.aircraftSn,
+      expiresAt: token.exp
+    };
+  }
+
+  unpairAgent(identity: MsdkAgentIdentity): void {
+    this.agents.delete(agentKey(identity.gatewaySn, identity.aircraftSn));
+  }
+
+  private isFreshSnapshot(
+    snapshot: MsdkBridgeSnapshot,
+    now: number
+  ): boolean {
+    const age = now - snapshot.timestampMs;
+    return (
+      age <= this.snapshotMaxAgeMs &&
+      age >= -this.snapshotFutureSkewMs
+    );
+  }
+
+  private sign(payload: MsdkTokenPayload): string {
+    if (!this.signingSecret) {
+      throw new Error("msdk_bridge_not_configured");
+    }
+
+    const encoded = Buffer.from(
+      JSON.stringify(payload),
+      "utf8"
+    ).toString("base64url");
+    const signature = createHmac("sha256", this.signingSecret)
+      .update(encoded)
+      .digest("base64url");
+    return `${encoded}.${signature}`;
+  }
+
+  private verify(token: string): MsdkTokenPayload | undefined {
+    if (!this.signingSecret) return undefined;
+    if (this.isAgentTokenRevoked(token)) return undefined;
+
+    const [encoded, signature, extra] = token.split(".");
+    if (!encoded || !signature || extra !== undefined) return undefined;
+
+    const expected = createHmac("sha256", this.signingSecret)
+      .update(encoded)
+      .digest("base64url");
+    if (!safeEqual(signature, expected)) return undefined;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(
+        Buffer.from(encoded, "base64url").toString("utf8")
+      );
+    } catch {
+      return undefined;
+    }
+
+    if (!isMsdkTokenPayload(parsed)) return undefined;
+    if (parsed.exp <= this.now()) return undefined;
+    return parsed;
+  }
+}
+
+export function isMsdkBridgeSnapshot(
+  value: unknown
+): value is MsdkBridgeSnapshot {
+  if (!isRecord(value)) return false;
+  if (value.schema !== "fh2.msdk.v1") return false;
+  if (!finiteNumber(value.timestampMs)) return false;
+  if (!isRecord(value.sdk)) return false;
+  if (typeof value.sdk.registered !== "boolean") return false;
+  if (typeof value.sdk.productConnected !== "boolean") return false;
+
+  if (!isRecord(value.gateway)) return false;
+  if (typeof value.gateway.connected !== "boolean") return false;
+  if (!safeId(value.gateway.serialNumber)) return false;
+
+  if (!isRecord(value.aircraft)) return false;
+  if (typeof value.aircraft.flightControllerConnected !== "boolean") {
+    return false;
+  }
+  if (typeof value.aircraft.productType !== "string") return false;
+  if (!safeId(value.aircraft.flightControllerSerial)) return false;
+
+  if (!Array.isArray(value.sensors)) return false;
+  if (!isRecord(value.rtk)) return false;
+
+  if (value.payloadControl !== undefined) {
+    if (!isRecord(value.payloadControl)) return false;
+    if (typeof value.payloadControl.cameraIndex !== "string") return false;
+    if (typeof value.payloadControl.isShootingPhoto !== "boolean") return false;
+    if (typeof value.payloadControl.isRecording !== "boolean") return false;
+  }
+
+  if (value.wayline !== undefined) {
+    if (!isRecord(value.wayline)) return false;
+    if (typeof value.wayline.supported !== "boolean") return false;
+    if (!Array.isArray(value.wayline.availableWaylineIds)) return false;
+    if (
+      !value.wayline.availableWaylineIds.every(
+        (entry) => Number.isInteger(entry)
+      )
+    ) {
+      return false;
+    }
+    if (typeof value.wayline.uploadState !== "string") return false;
+    if (!finiteNumber(value.wayline.uploadProgress)) return false;
+  }
+
+  if (!isRecord(value.control)) return false;
+  if (typeof value.control.networkArmed !== "boolean") return false;
+  if (
+    value.control.networkArmedAt !== undefined &&
+    value.control.networkArmedAt !== null &&
+    !finiteNumber(value.control.networkArmedAt)
+  ) {
+    return false;
+  }
+  if (!isRecord(value.control.virtualStick)) return false;
+  if (typeof value.control.virtualStick.enabled !== "boolean") return false;
+  if (
+    typeof value.control.virtualStick.authorityOwner !== "string"
+  ) {
+    return false;
+  }
+
+  if (!isRecord(value.capabilities)) return false;
+  if (
+    !Object.values(value.capabilities).every(
+      (entry) => typeof entry === "boolean"
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function snapshotIdentity(
+  snapshot: MsdkBridgeSnapshot
+): { gatewaySn: string; aircraftSn: string } | undefined {
+  if (!snapshot.sdk.registered || !snapshot.sdk.productConnected) {
+    return undefined;
+  }
+  if (!snapshot.gateway.connected) return undefined;
+  if (!snapshot.aircraft.flightControllerConnected) return undefined;
+  if (!safeId(snapshot.gateway.serialNumber)) return undefined;
+  if (!safeId(snapshot.aircraft.flightControllerSerial)) return undefined;
+
+  return {
+    gatewaySn: snapshot.gateway.serialNumber,
+    aircraftSn: snapshot.aircraft.flightControllerSerial
+  };
+}
+
+function isMsdkTokenPayload(value: unknown): value is MsdkTokenPayload {
+  if (!isRecord(value)) return false;
+  return (
+    value.v === 1 &&
+    safeId(value.gatewaySn) &&
+    safeId(value.aircraftSn) &&
+    finiteNumber(value.exp)
+  );
+}
+
+function agentKey(gatewaySn: string, aircraftSn: string): string {
+  return `${gatewaySn}\u0000${aircraftSn}`;
+}
+
+function safeId(value: unknown): value is string {
+  return typeof value === "string" && SAFE_ID.test(value);
+}
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function safeEqual(left: string, right: string): boolean {
+  const a = Buffer.from(left, "utf8");
+  const b = Buffer.from(right, "utf8");
+  return a.length === b.length && timingSafeEqual(a, b);
+}

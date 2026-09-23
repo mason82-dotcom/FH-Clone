@@ -41,12 +41,29 @@ import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-
 import { ControlCoordinator } from "./control-coordinator.js";
 import { evaluateControlApiReadiness } from "./readiness.js";
 import { closeHttpServer, onceAsync, runShutdownSteps } from "./shutdown.js";
+import { MsdkBridgeService, isMsdkBridgeSnapshot } from "./msdk-bridge.js";
+import { MsdkControlHub } from "./msdk-control.js";
+import { attachMsdkControlWebSocket } from "./msdk-control-ws.js";
+import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
+import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 const fh2 = createFh2OpenApiFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
+
+const msdkTokenRevocations = new MsdkTokenRevocationStore({
+  connectionString: process.env.DATABASE_URL
+});
+await msdkTokenRevocations.initialize();
+
+const msdkBridge = new MsdkBridgeService({
+  pairingToken: process.env.MSDK_PAIRING_TOKEN,
+  signingSecret: process.env.MSDK_BRIDGE_TOKEN_SECRET,
+  tokenTtlMs: envInt("MSDK_BRIDGE_TOKEN_TTL_SECONDS", 86_400) * 1_000,
+  isAgentTokenRevoked: (token) => msdkTokenRevocations.isRevoked(token)
+});
 
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
@@ -60,6 +77,13 @@ const djiOptions = getDjiOptions(topologyPersistence, async (gatewaySn, drcState
 });
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const controlGuards = new RuntimeControlGuardRegistry();
+const msdkControl = new MsdkControlHub({
+  getAgent: (aircraftSn) => msdkBridge.getByAircraftSn(aircraftSn),
+  hasFc3: (aircraftSn) => controlGuards.hasFc3(aircraftSn),
+  hasLease: (aircraftSn, holder) =>
+    controlGuards.hasLease(aircraftSn, holder),
+  onAudit: (event) => console.info("[MSDK CONTROL]", event)
+});
 const drcRuntimeContext = new Map<
   string,
   { sessionId: string; aircraftSn: string; state: string }
@@ -187,6 +211,14 @@ const publicServer = createServer(async (request, response) => {
         controlRuntime: {
           configured: Boolean(controlCoordinator),
           activeSessions: drcRuntimeContext.size
+        },
+        msdkBridge: {
+          configured: msdkBridge.configured,
+          agents: msdkBridge.listAgents().length,
+          controlSessions: msdkControl
+            .listSessions()
+            .filter((session) => session.state !== "closed")
+            .length
         }
       });
     }
@@ -195,6 +227,7 @@ const publicServer = createServer(async (request, response) => {
       const [
         topologyStoreReady,
         gatewayCredentialStoreReady,
+        msdkTokenRevocationStoreReady,
         missionStoreReady
       ] = await Promise.all([
         topologyStore
@@ -202,6 +235,9 @@ const publicServer = createServer(async (request, response) => {
           : Promise.resolve(false),
         gatewayCredentials
           ? gatewayCredentials.assertReady().then(() => true).catch(() => false)
+          : Promise.resolve(false),
+        msdkTokenRevocations.persistent
+          ? msdkTokenRevocations.assertReady().then(() => true).catch(() => false)
           : Promise.resolve(false),
         missionStore.enabled
           ? missionStore.ping()
@@ -226,12 +262,94 @@ const publicServer = createServer(async (request, response) => {
           ready: missionStoreReady
         }
       });
+      const msdkTokenRevocationStore = {
+        configured: msdkTokenRevocations.persistent,
+        ready: msdkTokenRevocationStoreReady,
+        state: msdkTokenRevocations.persistent
+          ? (msdkTokenRevocationStoreReady ? "ready" : "unavailable")
+          : "disabled"
+      };
+      const ready =
+        readiness.ready && msdkTokenRevocationStore.state !== "unavailable";
 
-      return json(response, readiness.ready ? 200 : 503, {
-        status: readiness.ready ? "ready" : "not_ready",
+      return json(response, ready ? 200 : 503, {
+        status: ready ? "ready" : "not_ready",
         service: "control-api",
-        checks: readiness.checks
+        checks: {
+          ...readiness.checks,
+          msdkTokenRevocationStore
+        }
       });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/msdk/pair") {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+
+      const body = await readJson<unknown>(request, 512_000);
+      if (!isMsdkBridgeSnapshot(body)) {
+        return json(response, 400, { error: "invalid_msdk_bridge_snapshot" });
+      }
+
+      const bootstrap = readBearerToken(request);
+      const pairing = msdkBridge.pair(bootstrap, body);
+      if (!pairing) {
+        return json(response, 401, { error: "msdk_pairing_unauthorized" });
+      }
+
+      ingestMsdkSnapshot(body, Date.now());
+      return json(response, 200, pairing);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/msdk/unpair") {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+
+      const token = readBearerToken(request);
+      const identity = token
+        ? msdkBridge.authenticateAgent(token)
+        : undefined;
+      if (!token || !identity) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      await msdkTokenRevocations.revoke(token, identity.expiresAt);
+      msdkBridge.unpairAgent(identity);
+      msdkControl.disconnectAgent(identity.aircraftSn, "agent_unpaired");
+      return json(response, 200, {
+        unpaired: true,
+        gatewaySn: identity.gatewaySn,
+        aircraftSn: identity.aircraftSn
+      });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/msdk/heartbeat") {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+
+      const body = await readJson<unknown>(request, 512_000);
+      if (!isMsdkBridgeSnapshot(body)) {
+        return json(response, 400, { error: "invalid_msdk_bridge_snapshot" });
+      }
+
+      const token = readBearerToken(request);
+      if (!token || !msdkBridge.heartbeat(token, body)) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      const serverTimeMs = Date.now();
+      ingestMsdkSnapshot(body, serverTimeMs);
+      return json(response, 200, {
+        accepted: true,
+        serverTimeMs
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/msdk/agents") {
+      return json(response, 200, msdkBridge.listAgents());
     }
 
     if (request.method === "GET" && url.pathname === "/api/devices") {
@@ -436,6 +554,16 @@ const publicServer = createServer(async (request, response) => {
     return json(response, 500, { error: message });
   }
 });
+
+const msdkControlWebSocket = attachMsdkControlWebSocket(
+  publicServer,
+  msdkBridge,
+  msdkControl
+);
+const msdkControlSweepTimer = setInterval(() => {
+  msdkControl.tick();
+}, 100);
+msdkControlSweepTimer.unref();
 
 const internalServer = createServer(async (request, response) => {
   try {
@@ -680,8 +808,13 @@ if (dji) {
 
 const shutdown = onceAsync(async () => {
   clearInterval(missionSweepTimer);
+  clearInterval(msdkControlSweepTimer);
 
   await runShutdownSteps([
+    {
+      name: "msdk_control_ws",
+      run: () => msdkControlWebSocket.close()
+    },
     {
       name: "public_http",
       run: () => closeHttpServer(publicServer)
@@ -709,6 +842,10 @@ const shutdown = onceAsync(async () => {
     {
       name: "gateway_credentials",
       run: () => gatewayCredentials?.close()
+    },
+    {
+      name: "msdk_token_revocations",
+      run: () => msdkTokenRevocations.close()
     },
     {
       name: "mission_store",
@@ -826,6 +963,24 @@ function errorMessage(error: unknown): string {
 }
 
 
+function ingestMsdkSnapshot(
+  snapshot: import("./msdk-bridge.js").MsdkBridgeSnapshot,
+  receivedAt: number
+): void {
+  const normalized = normalizeMsdkBridgeSnapshot(snapshot, receivedAt);
+  devices.upsert(normalized.device);
+  normalized.samples.forEach((sample) => parameters.update(sample));
+}
+
+function readBearerToken(request: IncomingMessage): string | undefined {
+  const header = request.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) {
+    return undefined;
+  }
+  const token = header.slice("Bearer ".length).trim();
+  return token.length > 0 ? token : undefined;
+}
+
 function hasValidBearerToken(
   request: IncomingMessage,
   expectedToken: string | undefined
@@ -899,6 +1054,8 @@ function getDeviceCapabilityView(deviceId: string) {
   const adapterDevices = devices.get(deviceId);
   const djiDevice = adapterDevices.find((device) => device.adapterId === "dji-cloud");
   const adapterCapabilities = djiDevice?.capabilities ?? [];
+  const msdkDevice = adapterDevices.find((device) => device.adapterId === "msdk-v5");
+  const msdkAgent = msdkBridge.getByAircraftSn(deviceId);
   const controlProfile = dji?.getControlProfile(deviceId);
   const activeMission = missions.getActive(deviceId);
   const lastCompletedMission = missions.getLastCompleted(deviceId);
@@ -911,6 +1068,26 @@ function getDeviceCapabilityView(deviceId: string) {
       lastSeenAt: device.lastSeenAt,
       capabilities: device.capabilities
     })),
+    msdkV5: msdkDevice && msdkAgent
+      ? {
+          connected: msdkDevice.connected,
+          gatewaySn: msdkAgent.gatewaySn,
+          lastSeenAt: msdkAgent.lastSeenAt,
+          capabilities: msdkDevice.capabilities,
+          reportedCapabilities: msdkAgent.snapshot.capabilities,
+          networkControlImplemented: false,
+          networkControlArmed:
+            msdkAgent.snapshot.control.networkArmed,
+          localVirtualStickState: {
+            supported:
+              msdkAgent.snapshot.capabilities.virtualStick === true,
+            enabled:
+              msdkAgent.snapshot.control.virtualStick.enabled,
+            authorityOwner:
+              msdkAgent.snapshot.control.virtualStick.authorityOwner
+          }
+        }
+      : null,
     djiCloud: {
       controlProfile: controlProfile ?? null,
       genericAdapterCapabilities: adapterCapabilities,
