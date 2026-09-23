@@ -338,3 +338,14 @@ Credential- und Write-fähige JSBridge-Aufrufe sind im Browsercode durch CI
 verboten.
 
 Details: [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md).
+
+
+### MediaStore-/Readiness-Kopplung
+
+Die Telemetrie-Fusion verändert die Persistenzgrenze nicht. Validierte
+MediaAssets werden weiterhin über den `MediaStore` persistiert und beim
+Start rehydriert. Ist der Store konfiguriert, aber nicht erreichbar, bleibt
+die Control API über `/ready` fail-closed.
+
+Die MediaStore-Readiness bleibt unabhängig von der Auswahl des aktuell
+fusionierten Telemetriesamples.
