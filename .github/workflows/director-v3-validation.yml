@@ -234,11 +234,18 @@ jobs:
           cp .env.example .env
           docker compose --env-file .env up -d
 
-          for attempt in $(seq 1 30); do
-            if docker compose --env-file .env exec -T timescaledb               pg_isready -U fhclone -d fhclone >/dev/null 2>&1; then
+          for attempt in $(seq 1 45); do
+            schema_ready="$(docker compose --env-file .env exec -T timescaledb               psql -U fhclone -d fhclone -tAc               "SELECT CASE WHEN
+                 to_regclass('public.missions') IS NOT NULL
+                 AND to_regclass('public.authz_audit') IS NOT NULL
+                 AND to_regclass('public.gateway_credentials') IS NOT NULL
+                 AND to_regclass('public.dji_gateways') IS NOT NULL
+                 AND to_regclass('public.dji_gateway_devices') IS NOT NULL
+               THEN 1 ELSE 0 END" 2>/dev/null || true)"
+            if [ "$(printf '%s' "$schema_ready" | tr -d '[:space:]')" = "1" ]; then
               break
             fi
-            if [ "$attempt" -eq 30 ]; then
+            if [ "$attempt" -eq 45 ]; then
               docker compose --env-file .env logs
               exit 1
             fi
