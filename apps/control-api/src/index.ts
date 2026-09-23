@@ -37,12 +37,18 @@ import { MissionStore } from "./mission-store.js";
 import { createFh2OpenApiFromEnv, Fh2OpenApiError, Fh2OpenApiNotConfigured } from "./fh2-openapi.js";
 import { PostgresGatewayRegistryStore } from "./topology-store.js";
 import { RuntimeControlGuardRegistry, resolveRuntimeDrcGuards } from "./control-guards.js";
+import { MsdkBridgeService, isMsdkBridgeSnapshot } from "./msdk-bridge.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 const fh2 = createFh2OpenApiFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
+const msdkBridge = new MsdkBridgeService({
+  pairingToken: process.env.MSDK_PAIRING_TOKEN,
+  signingSecret: process.env.MSDK_BRIDGE_TOKEN_SECRET,
+  tokenTtlMs: envInt("MSDK_BRIDGE_TOKEN_TTL_SECONDS", 86_400) * 1_000
+});
 
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
@@ -171,6 +177,10 @@ const publicServer = createServer(async (request, response) => {
         },
         mediaOverlays: {
           assets: mediaOverlays.size()
+        },
+        msdkBridge: {
+          configured: msdkBridge.configured,
+          agents: msdkBridge.listAgents().length
         }
       });
     }
@@ -202,6 +212,50 @@ const publicServer = createServer(async (request, response) => {
         service: "control-api",
         checks
       });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/msdk/pair") {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+
+      const body = await readJson<unknown>(request, 512_000);
+      if (!isMsdkBridgeSnapshot(body)) {
+        return json(response, 400, { error: "invalid_msdk_bridge_snapshot" });
+      }
+
+      const bootstrap = readBearerToken(request);
+      const pairing = msdkBridge.pair(bootstrap, body);
+      if (!pairing) {
+        return json(response, 401, { error: "msdk_pairing_unauthorized" });
+      }
+
+      return json(response, 200, pairing);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/msdk/heartbeat") {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+
+      const body = await readJson<unknown>(request, 512_000);
+      if (!isMsdkBridgeSnapshot(body)) {
+        return json(response, 400, { error: "invalid_msdk_bridge_snapshot" });
+      }
+
+      const token = readBearerToken(request);
+      if (!token || !msdkBridge.heartbeat(token, body)) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      return json(response, 200, {
+        accepted: true,
+        serverTimeMs: Date.now()
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/msdk/agents") {
+      return json(response, 200, msdkBridge.listAgents());
     }
 
     if (request.method === "GET" && url.pathname === "/api/devices") {
@@ -712,6 +766,15 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+
+function readBearerToken(request: IncomingMessage): string | undefined {
+  const header = request.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) {
+    return undefined;
+  }
+  const token = header.slice("Bearer ".length).trim();
+  return token.length > 0 ? token : undefined;
+}
 
 function hasValidBearerToken(
   request: IncomingMessage,

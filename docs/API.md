@@ -59,6 +59,53 @@ erfolgreich sind, andernfalls `503`.
 FlightHub 2 OpenAPI ist optional und blockiert die allgemeine Readiness
 nicht, wenn `FH2_ENABLED=false` gesetzt ist.
 
+### POST /api/msdk/pair
+
+Pairing-Endpunkt für die native FH2 RC Bridge auf DJI MSDK V5.
+
+Der erste Request benötigt:
+
+```http
+Authorization: Bearer <MSDK_PAIRING_TOKEN>
+```
+
+Body ist ein vollständiger `fh2.msdk.v1`-BridgeSnapshot mit getrennten
+`gateway`- und `aircraft`-Identitäten. Der Server akzeptiert nur Snapshots
+mit verbundener RC, verbundenem Flight Controller sowie gültiger RC- und
+Aircraft-Seriennummer.
+
+Bei Erfolg wird ein zeitlich begrenztes, HMAC-signiertes Agent-Token
+zurückgegeben. Das Token ist an genau diese `gatewaySn + aircraftSn`-
+Kombination gebunden und enthält keine Flight-Control-Rechte.
+
+### POST /api/msdk/heartbeat
+
+Read-only Snapshot-/Heartbeat-Ingest der gepairten Android-App.
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+Der Agent-Token muss zur RC-/Aircraft-Identität im Snapshot passen. Dieser
+Endpunkt nimmt **keine** Flight-Control-Kommandos an.
+
+### GET /api/msdk/agents
+
+Read-only Sicht auf die zuletzt von MSDK-Agents gemeldeten Snapshots und
+`lastSeenAt`.
+
+Konfiguration:
+
+```text
+MSDK_PAIRING_TOKEN
+MSDK_BRIDGE_TOKEN_SECRET
+MSDK_BRIDGE_TOKEN_TTL_SECONDS   # Standard 86400
+```
+
+Die Token-Signatur ist stateless und dadurch auch bei mehreren
+Control-API-Instanzen konsistent. Die aktuelle Snapshot-Liste selbst ist in
+diesem Entwicklungsstand noch pro Prozess in-memory.
+
 ### GET /api/devices
 
 Liefert die aktuell bekannte Geräte-Registry.
