@@ -59,10 +59,10 @@ erfolgreich sind, andernfalls `503`.
 FlightHub 2 OpenAPI ist optional und blockiert die allgemeine Readiness
 nicht, wenn `FH2_ENABLED=false` gesetzt ist.
 
-Die Readiness prüft außerdem den konfigurierten MediaStore. Wenn
-`TIMESCALE_URL` gesetzt ist, muss die Tabelle `media_assets` erreichbar
-sein; andernfalls meldet `/ready` den Check `mediaStore=unavailable` und
-liefert HTTP 503.
+Die Readiness prüft außerdem MediaStore und TelemetryStore. Wenn
+`TIMESCALE_URL` gesetzt ist, müssen `media_assets`, `raw_messages` und
+`normalized_parameters` erreichbar sein. Andernfalls meldet `/ready` den
+betroffenen Check als `unavailable` und liefert HTTP 503.
 
 ### POST /api/msdk/pair
 
@@ -620,15 +620,15 @@ Für EMQX AuthZ gilt zusätzlich: Sicherheitsrelevante Evaluierungsfehler werden
 bevorzugt als HTTP 200 mit `{"result":"deny"}` zurückgegeben, damit kein
 ungewollter Fallback eine breitere Berechtigung erzeugt.
 
-## Noch offen für V3
+## Optionale API-Erweiterungen nach dem Basisrelease
 
-Die finale V3-API wird zusätzlich dokumentieren:
+Die Persistenz benötigt keinen öffentlichen Schreibendpunkt. Bei späterem
+Bedarf können ergänzt werden:
 
-- Persistenz-/Historienendpunkte, falls öffentlich benötigt
-- Medien-/Multispektralendpunkte
-- Readiness
-- stabile Fehlerobjekte
-- Versionierung der öffentlichen API
+- read-only Historienabfragen für `normalized_parameters`/Missionen
+- zusätzliche Medien-/Multispektral-Leseansichten
+- stabil versionierte Fehlerobjekte
+- explizite Versionierung der öffentlichen API
 
 Schreibende Flight-Control-Endpunkte gehören nicht zur
 V3-Defaultkonfiguration.
