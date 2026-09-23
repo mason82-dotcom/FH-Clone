@@ -63,8 +63,12 @@ function snapshot(): MsdkBridgeSnapshot {
       uploadedAt: 1_500
     },
     control: {
-      enabled: false,
-      authorityOwner: "UNKNOWN"
+      networkArmed: false,
+      networkArmedAt: null,
+      virtualStick: {
+        enabled: false,
+        authorityOwner: "UNKNOWN"
+      }
     },
     capabilities: {
       camera: true,
