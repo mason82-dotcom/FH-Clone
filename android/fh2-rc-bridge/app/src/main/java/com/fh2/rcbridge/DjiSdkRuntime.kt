@@ -41,6 +41,7 @@ object DjiSdkRuntime {
                             registrationError = null
                         )
                     }
+                    RemoteControllerIdentitySource.start()
                     AircraftTelemetrySource.start()
                     SensorInventorySource.start()
                     RtkTelemetrySource.start()
