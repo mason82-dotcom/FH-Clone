@@ -76,14 +76,15 @@ Cloud-Flight-Control unterstützt.
 Bereits vorhanden: zwei reale, redigiert dokumentierte M3T-Wide-Samples unter
 `docs/fixtures/m3t/`. Diese schließen Tele, Thermal und MQTT nicht.
 
-## 2. RC Plus 2 + M4T `drone_control` — HARDWARE_PROFILE_GATE
+## 2. RC Plus 2 + M4T Cloud-Flight-Control — HARDWARE_PROFILE_GATE
 
-DJI dokumentiert für Matrice 4 Cloud-Flight-Control/DRC. FH2 deaktiviert
-`stick_control` global, lässt den separaten `drone_control`-DRC-Pfad aber
-aktiv. Dieser Pfad ist **nicht Teil der V3.0.0-Hardware-Supportzusage**, solange
-die nachfolgenden realen Nachweise fehlen. Die Belege bleiben vor produktiver
-`drone_control`-Nutzung verpflichtend. Die CI **führt keine Flugbefehle aus**;
-sie analysiert ausschließlich vorher aufgezeichnete, redigierte Captures.
+DJI dokumentiert für Matrice 4 Cloud-Flight-Control und Payload-Control. FH2
+führt dafür das M4-/RC-Plus-2-Profil mit `stick_control` und dem getrennten
+`drone_control`-Kompatibilitätspfad. Diese Flugsteuerpfade sind **nicht Teil
+der V3.0.0-Hardware-Supportzusage**, solange die nachfolgenden realen Nachweise
+fehlen. Die Belege bleiben vor produktiver Flugsteuerung verpflichtend. Die CI
+**führt keine Flugbefehle aus**; sie analysiert ausschließlich vorher
+aufgezeichnete, redigierte Captures.
 
 Erforderlich:
 
