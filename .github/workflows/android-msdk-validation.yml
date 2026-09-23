@@ -3,7 +3,11 @@ name: Android MSDK Validation
 on:
   push:
     branches:
+      - main
       - agent/android-msdk-v5
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
