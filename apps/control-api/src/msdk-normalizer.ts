@@ -39,6 +39,31 @@ export function normalizeMsdkBridgeSnapshot(
     "deg"
   );
 
+  pushNumber(
+    samples,
+    deviceId,
+    "flight.home.latitude_deg",
+    snapshot.aircraft.homeLatitude,
+    sampledAt,
+    "deg"
+  );
+  pushNumber(
+    samples,
+    deviceId,
+    "flight.home.longitude_deg",
+    snapshot.aircraft.homeLongitude,
+    sampledAt,
+    "deg"
+  );
+  pushNumber(
+    samples,
+    deviceId,
+    "flight.heading_deg",
+    snapshot.aircraft.headingDeg,
+    sampledAt,
+    "deg"
+  );
+
   // MSDK LocationCoordinate3D altitude semantics are kept raw until the
   // installation-specific datum/relative-height contract is verified.
   pushNumber(
@@ -63,6 +88,38 @@ export function normalizeMsdkBridgeSnapshot(
     "raw.msdk.gateway.serial_number",
     snapshot.gateway.serialNumber,
     sampledAt
+  );
+
+  pushValue(
+    samples,
+    deviceId,
+    "raw.msdk.gateway.gps.valid",
+    snapshot.gateway.rcGpsValid,
+    sampledAt
+  );
+  pushNumber(
+    samples,
+    deviceId,
+    "raw.msdk.gateway.gps.latitude_deg",
+    snapshot.gateway.rcLatitude,
+    sampledAt,
+    "deg"
+  );
+  pushNumber(
+    samples,
+    deviceId,
+    "raw.msdk.gateway.gps.longitude_deg",
+    snapshot.gateway.rcLongitude,
+    sampledAt,
+    "deg"
+  );
+  pushNumber(
+    samples,
+    deviceId,
+    "raw.msdk.gateway.gps.accuracy_m",
+    snapshot.gateway.rcAccuracyM,
+    sampledAt,
+    "m"
   );
 
   const cameraTypes = snapshot.sensors
@@ -147,6 +204,38 @@ export function normalizeMsdkBridgeSnapshot(
     sampledAt,
     "m"
   );
+
+
+  if (snapshot.payloadControl) {
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.payload_control.camera_index",
+      snapshot.payloadControl.cameraIndex,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.payload_control.is_shooting_photo",
+      snapshot.payloadControl.isShootingPhoto,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.payload_control.is_recording",
+      snapshot.payloadControl.isRecording,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "raw.msdk.payload_control.last_action",
+      snapshot.payloadControl.lastAction,
+      sampledAt
+    );
+  }
 
   return {
     device: {
