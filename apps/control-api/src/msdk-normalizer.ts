@@ -58,7 +58,15 @@ export function normalizeMsdkBridgeSnapshot(
   pushNumber(
     samples,
     deviceId,
-    "flight.heading_deg",
+    "raw.msdk.flight.compass_heading_deg",
+    snapshot.aircraft.headingDeg,
+    sampledAt,
+    "deg"
+  );
+  pushNumber(
+    samples,
+    deviceId,
+    "flight.attitude.yaw_deg",
     snapshot.aircraft.headingDeg,
     sampledAt,
     "deg"
@@ -152,10 +160,39 @@ export function normalizeMsdkBridgeSnapshot(
   pushValue(
     samples,
     deviceId,
-    "navigation.rtk.fix_status",
+    "raw.msdk.rtk.positioning_solution",
     snapshot.rtk.positioningSolution,
     sampledAt
   );
+
+  const rtkSolution = normalizeRtkSolution(
+    snapshot.rtk.positioningSolution
+  );
+  if (rtkSolution) {
+    pushValue(
+      samples,
+      deviceId,
+      "navigation.rtk.solution",
+      rtkSolution.solution,
+      sampledAt
+    );
+    pushValue(
+      samples,
+      deviceId,
+      "navigation.rtk.fix_status",
+      rtkSolution.fixStatus,
+      sampledAt
+    );
+    if (rtkSolution.fixed !== undefined) {
+      pushValue(
+        samples,
+        deviceId,
+        "navigation.rtk.fixed",
+        rtkSolution.fixed,
+        sampledAt
+      );
+    }
+  }
   pushNumber(
     samples,
     deviceId,
@@ -304,6 +341,61 @@ export function normalizeMsdkBridgeSnapshot(
     },
     samples
   };
+}
+
+interface NormalizedRtkSolution {
+  solution:
+    | "none"
+    | "single_point"
+    | "float"
+    | "fixed_point"
+    | "unknown";
+  fixStatus:
+    | "not_started"
+    | "fixing"
+    | "fixed"
+    | "unknown";
+  fixed?: boolean;
+}
+
+function normalizeRtkSolution(
+  value: unknown
+): NormalizedRtkSolution | undefined {
+  if (typeof value !== "string") return undefined;
+
+  switch (value.trim().toUpperCase()) {
+    case "NONE":
+      return {
+        solution: "none",
+        fixStatus: "not_started",
+        fixed: false
+      };
+    case "SINGLE_POINT":
+      return {
+        solution: "single_point",
+        fixStatus: "fixing",
+        fixed: false
+      };
+    case "FLOAT":
+      return {
+        solution: "float",
+        fixStatus: "fixing",
+        fixed: false
+      };
+    case "FIXED_POINT":
+      return {
+        solution: "fixed_point",
+        fixStatus: "fixed",
+        fixed: true
+      };
+    case "UNKNOWN":
+      return {
+        solution: "unknown",
+        fixStatus: "unknown"
+      };
+    default:
+      return undefined;
+  }
 }
 
 function pushNumber(
