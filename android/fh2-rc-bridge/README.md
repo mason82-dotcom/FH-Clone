@@ -271,6 +271,15 @@ melden. In der App wird ausschließlich die Control-API-Basis-URL eingetragen,
 z. B. `http://192.168.1.10:8080`; der externe MQTT-Port wird für diesen
 MSDK-Pairing-Pfad nicht eingegeben.
 
+Serverseitiger Vorabcheck aus dem Repository-Root:
+
+```bash
+npm run verify:msdk-pairing-preflight -- http://<LAN-IP>:8080
+```
+
+Der Check gibt keine Pairing-/Signing-Secrets aus und endet bei vollständiger
+Bereitschaft mit `MSDK_PAIRING_PREFLIGHT=READY`.
+
 Explizites Trennen ist ein echtes Unpair: Die App beendet zuerst den lokalen
 Control-Transport fail-closed und ruft danach `POST /api/msdk/unpair` mit dem
 Agent-Token auf. FH2 persistiert ausschließlich den SHA-256-Digest des
