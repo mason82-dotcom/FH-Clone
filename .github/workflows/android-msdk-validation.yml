@@ -56,8 +56,10 @@ jobs:
           if [ -n "$DJI_MSDK_APP_KEY" ]; then
             printf 'AIRCRAFT_API_KEY=%s\n' "$DJI_MSDK_APP_KEY" >> ~/.gradle/gradle.properties
             echo "DJI_APP_KEY_CONFIGURED=true" >> "$GITHUB_ENV"
+            echo "FH2_APK_USAGE=hardware-pairing" >> "$GITHUB_ENV"
           else
             echo "DJI_APP_KEY_CONFIGURED=false" >> "$GITHUB_ENV"
+            echo "FH2_APK_USAGE=compile-ui-only" >> "$GITHUB_ENV"
           fi
 
       - name: Assemble debug
@@ -83,7 +85,7 @@ jobs:
         run: |
           gradle :app:lintDebug --stacktrace --no-daemon
 
-      - name: Package hardware-test APK
+      - name: Package debug APK
         shell: bash
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
@@ -101,13 +103,14 @@ jobs:
           msdk=5.18.0
           application_id=com.fh2.rcbridge
           dji_app_key_configured=${DJI_APP_KEY_CONFIGURED}
+          usage=${FH2_APK_USAGE}
           sha256=${SHA256}
           EOF
 
       - name: Upload RC Bridge debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: fh2-rc-bridge-debug-${{ github.sha }}
+          name: fh2-rc-bridge-debug-${{ env.FH2_APK_USAGE }}-${{ github.sha }}
           path: android/fh2-rc-bridge/app/build/fh2-artifact/
           if-no-files-found: error
           retention-days: 14
