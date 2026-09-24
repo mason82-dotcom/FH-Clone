@@ -80,6 +80,15 @@ jobs:
           grep -F "satelliteInfo?.baseStationReceiverInfo?.forEach" "$RTK"
           grep -F "RTK_SYSTEM_STATE_FAILED" "$RTK"
 
+      - name: Verify DJI aircraft initial-state hydration
+        shell: bash
+        run: |
+          SRC="app/src/main/java/com/fh2/rcbridge/AircraftTelemetrySource.kt"
+          grep -F "FlightControllerKey.KeyConnection.create().get(false)" "$SRC"
+          grep -F "ProductKey.KeyProductType" "$SRC"
+          grep -F ".get(ProductType.UNKNOWN)" "$SRC"
+          grep -F "hydrateCurrentState()" "$SRC"
+
       - name: Assemble debug
         run: |
           gradle :app:assembleDebug --stacktrace --no-daemon
