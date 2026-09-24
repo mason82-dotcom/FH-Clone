@@ -1,6 +1,6 @@
 # V3.0 Release-Status
 
-Stand: 23.09.2026
+Stand: 24.09.2026
 
 ## Release-Entscheidung
 
@@ -52,7 +52,7 @@ Bestätigte Software-Gates aus der Direktor-CI:
 - UgCS-Bridge: PASS
 - TimescaleDB / Migrationen: PASS
 - deutsche Pflichtdokumentation: PASS
-- zentrale Hardware-Evidence-Auswertung: aktiv
+- zentrale Hardware-Evidence-Auswertung: aktiv; Produkt-Hardwaregates bleiben im normalen `main`-Lauf sichtbar, werden aber erst im strikten `all`-Scope blockierend
 - Root-Compose / `scripts/verify.sh`: Bestandteil der finalen Release-CI
 - Readiness unterscheidet optionale `disabled`-Abhängigkeiten von konfiguriertem `unavailable`
 - Compose-Regressionscheck schützt `control-api -> emqx/timescaledb: service_healthy` und den internen Port 8081
@@ -168,6 +168,10 @@ Software-CI grün
 = V3.0.0 Basisrelease
 
 Hardwareprofil erst freigeben
-+ reale Hardwareevidence grün
++ reale Hardwareevidence im strikten `all`-Scope grün
 = jeweilige Hardware-Supportfreigabe
+
+Fehlende `REQUIRED_HARDWARE`-Fixtures sind damit kein versteckter grüner
+Softwaretest: sie erscheinen als `PENDING`, werden bei der gezielten
+Hardwareabnahme jedoch zu echten blockierenden Gates.
 ```
