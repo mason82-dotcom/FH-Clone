@@ -264,7 +264,7 @@ Die Vorlage `.env.example` enthält zusätzlich:
 | `FH2_WEB_BIND` | `0.0.0.0` | Host-Bind der Weboberfläche |
 | `FH2_WEB_PORT` | `8088` | veröffentlichter Web-Port |
 | `MQTT_BIND` | `0.0.0.0` | Host-Bind des MQTT-Listeners |
-| `MQTT_PORT` | `1883` | veröffentlichter MQTT-Port |
+| `MQTT_PORT` | `1885` | veröffentlichter MQTT-Port |
 | `EMQX_IMAGE` | `emqx/emqx:5.7.2` | verbindliches EMQX-5.7-Laufzeitprofil |
 | `TIMESCALE_PASSWORD` | `change-me-...` | DB-Secret |
 | `MQTT_BACKEND_PASSWORD` | `change-me-...` | MQTT-Secret des Backend-Service |
