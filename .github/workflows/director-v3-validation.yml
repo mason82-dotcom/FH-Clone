@@ -387,7 +387,9 @@ jobs:
         run: node scripts/control-policy-audit.mjs
 
       - name: Release-/Toolchain-Vertrag konsistent halten
-        run: node scripts/release-contract-audit.mjs
+        run: |
+          node --check scripts/msdk-pairing-preflight.mjs
+          node scripts/release-contract-audit.mjs
 
 
   hardware-evidence:
