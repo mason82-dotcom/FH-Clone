@@ -14,7 +14,7 @@ Standardmäßig:
 
 ```text
 öffentliche API: http://<host>:8080
-interne API:     http://<host>:8081
+interne API:     http://control-api:8081 (nur Docker-Netz)
 ```
 
 Die Ports sind konfigurierbar.
