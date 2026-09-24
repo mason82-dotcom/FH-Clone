@@ -113,6 +113,9 @@ expect(
   "run: node scripts/release-contract-audit.mjs",
   "director documentation gate"
 );
+expect(workflow, "FH2_APK_USAGE=hardware-pairing", "keyed APK classification");
+expect(workflow, "FH2_APK_USAGE=compile-ui-only", "unkeyed APK classification");
+expect(androidReadme, "usage=hardware-pairing", "pairing APK documentation");
 
 if (!process.exitCode) {
   console.log("release-contract-audit: PASS");
