@@ -281,6 +281,13 @@ node scripts/verify-msdk-evidence.mjs --keymanager <evidence.json>
 
 Synthetische Inventare zählen nicht als reale Hardwareevidenz.
 
+Aktueller realer Stand: Für **RC Pro Enterprise + Mavic 3 Enterprise** liegt
+unter `docs/fixtures/msdk/keymanager-evidence.json` ein redigiertes
+Runtime-Fixture vor. Der lokale KeyManager-Validator und der zentrale
+`MSDK_KEYMANAGER`-Hardware-Audit sind dafür PASS. Der Nachweis gilt nur für
+das konkret erfasste Produkt-/Firmwareprofil; andere MSDK-Produkte werden
+dadurch nicht automatisch freigegeben.
+
 ## CI-Regel
 
 Die zentrale Direktor-CI besitzt zwei Evidence-Sichten:

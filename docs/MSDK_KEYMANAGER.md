@@ -423,8 +423,15 @@ Credentials und freie Fehlertexte werden nicht in das öffentliche Fixture
 übernommen. Zusätzlich wird der SHA-256 des lokalen Originals als
 Provenienzbezug gespeichert.
 
-Erst das reale **und redigierte** Fixture schließt das
-`MSDK_KEYMANAGER`-Hardwaregate in der zentralen Evidence-CI.
+Das reale **und redigierte** Fixture unter
+`docs/fixtures/msdk/keymanager-evidence.json` ist auf `main` vorhanden und
+schließt das `MSDK_KEYMANAGER`-Hardwaregate für das getestete Profil
+**RC Pro Enterprise + Mavic 3 Enterprise**.
+
+Der Capture wurde lokal mit dem KeyManager-Validator geprüft und anschließend
+durch den zentralen Hardware-Evidence-Audit bestätigt. Das veröffentlichte
+Fixture enthält 42 Key-Deskriptoren. Weitere Produkt-/Firmwareprofile werden
+daraus ausdrücklich **nicht** abgeleitet und benötigen eigene reale Evidence.
 
 ## Offizielle DJI-Referenzen
 
