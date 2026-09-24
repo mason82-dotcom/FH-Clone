@@ -32,6 +32,20 @@ Für Binär-/Medienquellen darf ein redigiertes Manifest mit SHA-256 der
 authoritativen lokalen Originaldatei verwendet werden. Synthetische Daten dürfen
 nicht als reale Quelle gekennzeichnet werden.
 
+Für Android-MSDK-Evidence darf der rohe Export **nicht** direkt veröffentlicht
+werden. Der kanonische Redaktionspfad ist:
+
+```bash
+npm run redact:msdk-evidence -- --real-hardware \
+  <lokales-evidence.json> \
+  docs/fixtures/msdk/keymanager-evidence.json
+```
+
+Der Redactor arbeitet mit einer Whitelist und entfernt insbesondere
+Seriennummern, Koordinaten, Credentials und freie Fehlertexte. Das erzeugte
+Fixture enthält `realHardware=true`, `synthetic=false`, `redacted=true`
+sowie den SHA-256 des lokalen Originals.
+
 ## 1. RC Pro Enterprise + M3T — REQUIRED_HARDWARE
 
 DJI trennt Gateway-Topologie und Aircraft Properties. Für RC Pro Enterprise ist
