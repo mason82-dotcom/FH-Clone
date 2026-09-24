@@ -136,9 +136,9 @@ add(
 
 const m3tMqttPath = "docs/fixtures/m3t/mqtt-evidence.json";
 const m3tMqtt = readJson(m3tMqttPath);
-add("M3T_RC_PRO", "REQUIRED_MAIN", "reales redigiertes MQTT-Evidence-Manifest", realEvidence(m3tMqtt), m3tMqttPath);
+add("M3T_RC_PRO", "REQUIRED_HARDWARE", "reales redigiertes MQTT-Evidence-Manifest", realEvidence(m3tMqtt), m3tMqttPath);
 if (realEvidence(m3tMqtt)) {
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "keine Secrets im öffentlichen M3T-Fixture", !sensitiveValueLeaked(m3tMqtt));
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "keine Secrets im öffentlichen M3T-Fixture", !sensitiveValueLeaked(m3tMqtt));
   const rcProTopo = findRecord(
     m3tMqtt,
     (v) =>
@@ -161,38 +161,38 @@ if (realEvidence(m3tMqtt)) {
   );
   const gateway = findRecord(m3tMqtt, (v) => Number(v.type) === 144 && Number(v.sub_type ?? v.subType) === 0);
   const aircraft = findRecord(m3tMqtt, (v) => Number(v.type) === 77 && Number(v.sub_type ?? v.subType) === 1);
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "Produktidentität RC Pro Enterprise 144/0", Boolean(gateway));
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "Produktidentität M3T 77/1", Boolean(aircraft));
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "Produktidentität RC Pro Enterprise 144/0", Boolean(gateway));
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "Produktidentität M3T 77/1", Boolean(aircraft));
 
   const osd = m3tMqtt.osd;
   const state = m3tMqtt.state;
   const osdData = record(osd?.data) ? osd.data : osd;
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "M3T OSD Topic", typeof osd?.topic === "string" && /^thing\/product\/[^/]+\/osd$/.test(osd.topic));
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "M3T State Topic", typeof state?.topic === "string" && /^thing\/product\/[^/]+\/state$/.test(state.topic));
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "M3T OSD Topic", typeof osd?.topic === "string" && /^thing\/product\/[^/]+\/osd$/.test(osd.topic));
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "M3T State Topic", typeof state?.topic === "string" && /^thing\/product\/[^/]+\/state$/.test(state.topic));
   for (const key of ["attitude_head", "attitude_roll", "attitude_pitch", "latitude", "longitude", "height", "elevation", "horizontal_speed", "vertical_speed"]) {
-    add("M3T_RC_PRO", "REQUIRED_MAIN", `OSD Feld ${key}`, get(osdData, key) !== undefined);
+    add("M3T_RC_PRO", "REQUIRED_HARDWARE", `OSD Feld ${key}`, get(osdData, key) !== undefined);
   }
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "OSD position_state.is_fixed", get(osdData, "position_state.is_fixed") !== undefined);
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "OSD battery.batteries[]", arr(get(osdData, "battery.batteries")).length > 0);
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "OSD cameras[] mit M3T-Payload 67-0-0",
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "OSD position_state.is_fixed", get(osdData, "position_state.is_fixed") !== undefined);
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "OSD battery.batteries[]", arr(get(osdData, "battery.batteries")).length > 0);
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "OSD cameras[] mit M3T-Payload 67-0-0",
     arr(get(osdData, "cameras")).some((c) => c?.payload_index === "67-0-0"));
 
   const fixed = m3tMqtt.rtk?.fixed;
   const notFixed = m3tMqtt.rtk?.notFixed;
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "MQTT RTK Fixed via is_fixed=2",
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "MQTT RTK Fixed via is_fixed=2",
     Number(get(fixed, "position_state.is_fixed")) === 2 && Number(get(fixed, "position_state.rtk_number")) >= 0);
-  add("M3T_RC_PRO", "REQUIRED_MAIN", "MQTT RTK Nicht-Fixed separat",
+  add("M3T_RC_PRO", "REQUIRED_HARDWARE", "MQTT RTK Nicht-Fixed separat",
     [0, 1, 3].includes(Number(get(notFixed, "position_state.is_fixed"))));
 }
 
 const m3tExtraMediaPath = "docs/fixtures/m3t/media-evidence.json";
 const m3tExtraMedia = readJson(m3tExtraMediaPath);
 const m3tMediaSamples = arr(m3tExtraMedia?.samples);
-add("M3T_RC_PRO", "REQUIRED_MAIN", "realer Tele/Zoom-JPEG-Metadatenbeleg",
+add("M3T_RC_PRO", "REQUIRED_HARDWARE", "realer Tele/Zoom-JPEG-Metadatenbeleg",
   realEvidence(m3tExtraMedia) &&
   m3tMediaSamples.some((s) => ["tele", "zoom"].includes(String(s?.role).toLowerCase()) && sha256(s?.sourceSha256)),
   m3tExtraMediaPath);
-add("M3T_RC_PRO", "REQUIRED_MAIN", "realer Thermal-R-JPEG-Metadatenbeleg",
+add("M3T_RC_PRO", "REQUIRED_HARDWARE", "realer Thermal-R-JPEG-Metadatenbeleg",
   realEvidence(m3tExtraMedia) &&
   m3tMediaSamples.some((s) => ["thermal-rjpeg", "rjpeg", "thermal"].includes(String(s?.role).toLowerCase()) && sha256(s?.sourceSha256)),
   m3tExtraMediaPath);
@@ -202,27 +202,27 @@ add("M3T_RC_PRO", "REQUIRED_MAIN", "realer Thermal-R-JPEG-Metadatenbeleg",
 // ---------------------------------------------------------------------------
 const m4tPath = "docs/fixtures/m4t/hardware-evidence.json";
 const m4t = readJson(m4tPath);
-add("M4T_RC_PLUS2", "REQUIRED_MAIN", "reales redigiertes M4T/RC-Plus-2-Evidence", realEvidence(m4t), m4tPath);
+add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "reales redigiertes M4T/RC-Plus-2-Evidence", realEvidence(m4t), m4tPath);
 if (realEvidence(m4t)) {
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "keine Secrets im öffentlichen M4T-Fixture", !sensitiveValueLeaked(m4t));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "RC Plus 2 update_topo auf sys/product/.../status",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "keine Secrets im öffentlichen M4T-Fixture", !sensitiveValueLeaked(m4t));
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "RC Plus 2 update_topo auf sys/product/.../status",
     hasMethod(m4t, "update_topo") && hasTopic(m4t, /^sys\/product\/[^/]+\/status$/));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Produktidentität RC Plus 2 174/0",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "Produktidentität RC Plus 2 174/0",
     Boolean(findRecord(m4t, (v) => Number(v.type) === 174 && Number(v.sub_type ?? v.subType) === 0)));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Produktidentität M4T 99/1",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "Produktidentität M4T 99/1",
     Boolean(findRecord(m4t, (v) => Number(v.type) === 99 && Number(v.sub_type ?? v.subType) === 1)));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Cloud-Control-Authority erfolgreich",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "Cloud-Control-Authority erfolgreich",
     m4t.authority?.success === true &&
     ["cloud_control_auth_notify", "cloud_control_auth_request"].includes(m4t.authority?.method));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "drc_mode_enter erfolgreich",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "drc_mode_enter erfolgreich",
     m4t.drcEnter?.method === "drc_mode_enter" && Number(m4t.drcEnter?.result) === 0);
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "DRC heartbeat down",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "DRC heartbeat down",
     m4t.heartbeat?.down?.method === "heart_beat" &&
     /^thing\/product\/[^/]+\/drc\/down$/.test(m4t.heartbeat?.down?.topic ?? ""));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "DRC heartbeat up",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "DRC heartbeat up",
     m4t.heartbeat?.up?.method === "heart_beat" &&
     /^thing\/product\/[^/]+\/drc\/up$/.test(m4t.heartbeat?.up?.topic ?? ""));
-  add("M4T_RC_PLUS2", "REQUIRED_MAIN", "Heartbeat derselben Runtime-Session zugeordnet",
+  add("M4T_RC_PLUS2", "REQUIRED_HARDWARE", "Heartbeat derselben Runtime-Session zugeordnet",
     typeof m4t.heartbeat?.sessionIdHash === "string" &&
     m4t.heartbeat.sessionIdHash.length >= 16 &&
     m4t.heartbeat?.gatewayMatch === true);
@@ -234,7 +234,7 @@ if (realEvidence(m4t)) {
 const m4tMediaPath = "docs/fixtures/m4t/media-evidence.json";
 const m4tMedia = readJson(m4tMediaPath);
 const m4tMediaSamples = arr(m4tMedia?.samples);
-add("M4T_MEDIA", "REQUIRED_MAIN", "realer M4T-Thermal-Medienbeleg",
+add("M4T_MEDIA", "REQUIRED_HARDWARE", "realer M4T-Thermal-Medienbeleg",
   realEvidence(m4tMedia) &&
   m4tMediaSamples.some((s) =>
     ["thermal-rjpeg", "rjpeg", "thermal"].includes(String(s?.role).toLowerCase()) &&
@@ -242,8 +242,8 @@ add("M4T_MEDIA", "REQUIRED_MAIN", "realer M4T-Thermal-Medienbeleg",
   ),
   m4tMediaPath);
 if (realEvidence(m4tMedia)) {
-  add("M4T_MEDIA", "REQUIRED_MAIN", "keine Secrets im M4T-Medienbeleg", !sensitiveValueLeaked(m4tMedia));
-  add("M4T_MEDIA", "REQUIRED_MAIN", "M4T-Modellzuordnung real dokumentiert",
+  add("M4T_MEDIA", "REQUIRED_HARDWARE", "keine Secrets im M4T-Medienbeleg", !sensitiveValueLeaked(m4tMedia));
+  add("M4T_MEDIA", "REQUIRED_HARDWARE", "M4T-Modellzuordnung real dokumentiert",
     m4tMediaSamples.some((s) => String(s?.deviceModel).toUpperCase() === "M4T"));
 }
 
@@ -252,9 +252,9 @@ if (realEvidence(m4tMedia)) {
 // ---------------------------------------------------------------------------
 const m3mPath = "docs/fixtures/m3m/capture-set.json";
 const m3m = readJson(m3mPath);
-add("M3M", "REQUIRED_MAIN", "reales redigiertes M3M-Capture-Set", realEvidence(m3m), m3mPath);
+add("M3M", "REQUIRED_HARDWARE", "reales redigiertes M3M-Capture-Set", realEvidence(m3m), m3mPath);
 if (realEvidence(m3m)) {
-  add("M3M", "REQUIRED_MAIN", "keine Secrets im öffentlichen M3M-Fixture", !sensitiveValueLeaked(m3m));
+  add("M3M", "REQUIRED_HARDWARE", "keine Secrets im öffentlichen M3M-Fixture", !sensitiveValueLeaked(m3m));
   const bands = arr(m3m.bands);
   const expected = new Map([
     ["Green", 1],
@@ -264,14 +264,14 @@ if (realEvidence(m3m)) {
   ]);
   for (const [band, sensorIndex] of expected) {
     const sample = bands.find((b) => b?.BandName === band);
-    add("M3M", "REQUIRED_MAIN", `Band ${band} vorhanden`, Boolean(sample));
+    add("M3M", "REQUIRED_HARDWARE", `Band ${band} vorhanden`, Boolean(sample));
     if (!sample) continue;
-    add("M3M", "REQUIRED_MAIN", `${band}: SensorIndex=${sensorIndex}`, Number(sample.SensorIndex) === sensorIndex);
-    add("M3M", "REQUIRED_MAIN", `${band}: BandFreq`, typeof sample.BandFreq === "string" && sample.BandFreq.length > 0);
-    add("M3M", "REQUIRED_MAIN", `${band}: CaptureUUID`, typeof sample.CaptureUUID === "string" && sample.CaptureUUID.length > 0);
-    add("M3M", "REQUIRED_MAIN", `${band}: UTCAtExposure`, typeof sample.UTCAtExposure === "string" && sample.UTCAtExposure.length > 0);
+    add("M3M", "REQUIRED_HARDWARE", `${band}: SensorIndex=${sensorIndex}`, Number(sample.SensorIndex) === sensorIndex);
+    add("M3M", "REQUIRED_HARDWARE", `${band}: BandFreq`, typeof sample.BandFreq === "string" && sample.BandFreq.length > 0);
+    add("M3M", "REQUIRED_HARDWARE", `${band}: CaptureUUID`, typeof sample.CaptureUUID === "string" && sample.CaptureUUID.length > 0);
+    add("M3M", "REQUIRED_HARDWARE", `${band}: UTCAtExposure`, typeof sample.UTCAtExposure === "string" && sample.UTCAtExposure.length > 0);
     for (const key of ["Irradiance", "SensorGain", "SensorGainAdjustment", "ExposureTime", "RawData"]) {
-      add("M3M", "REQUIRED_MAIN", `${band}: ${key}`, sample[key] !== undefined);
+      add("M3M", "REQUIRED_HARDWARE", `${band}: ${key}`, sample[key] !== undefined);
     }
   }
   const uuids = bands.map((b) => b?.CaptureUUID).filter((v) => typeof v === "string" && v);
@@ -281,7 +281,7 @@ if (realEvidence(m3m)) {
   const calibrationObserved = bands.some((b) =>
     ["VignettingData", "DewarpData", "DewarpHMatrix", "CalibratedHMatrix"].some((k) => b?.[k] !== undefined)
   );
-  add("M3M", "REQUIRED_MAIN", "mindestens ein geometrisches/radiometrisches Kalibrierfeld beobachtet", calibrationObserved);
+  add("M3M", "REQUIRED_HARDWARE", "mindestens ein geometrisches/radiometrisches Kalibrierfeld beobachtet", calibrationObserved);
 }
 
 // ---------------------------------------------------------------------------
