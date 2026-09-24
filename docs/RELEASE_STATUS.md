@@ -75,6 +75,8 @@ Bereits real belegt:
 - zwei M3T-Wide-Aufnahmen
 - M3T-EXIF/XMP-Felder einschließlich eines dateiseitigen RTK-Fixed-Samples
 - reales M4T-Wide-Metadatenbeispiel im Projektbestand
+- reales, redigiertes MSDK-V5-KeyManager-Runtime-Fixture von RC Pro Enterprise + Mavic 3 Enterprise
+- KeyManager-Inventar mit 42 beobachteten Deskriptoren; `supported`, Write-/Action-Metadaten und lens-spezifischer Kamera-Kontext sind per Hardware-Audit belegt
 
 Noch nicht vollständig real belegt:
 
@@ -119,7 +121,7 @@ separaten Hosting-Cleanup-Gates.
 - UgCS Groundstation Adapter / Bridge
 - FlightHub-2 OpenAPI V2 read-only
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
-- Android MSDK V5 KeyManager-Runtimeinventar mit read-only Hardware-Probes
+- Android MSDK V5 KeyManager-Runtimeinventar mit read-only Hardware-Probes; RC Pro Enterprise + M3E real hardwareseitig belegt
 - Android-MSDK-MediaManager bereinigt Listener/Cache auch nach fehlgeschlagenem Enable und ist per CI-Regressionstest abgesichert
 - authentifizierter MSDK-Agent-Controltransport ist softwareseitig implementiert; öffentliche Operator-Control-API bleibt deaktiviert
 - Pilot 2 JSBridge read-only Runtime für Verifikation, Identität und Modulstatus
@@ -147,7 +149,7 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 - reale Pilot-2-WPML-/Workspace-Hardwarefreigabe ohne passendes reales KMZ-/Workspace-Fixture
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - M3T/M4T Thermal-Auswertung ohne passendes reales Thermal-Fixture
-- MSDK-KeyManager-Hardwarematrix ohne reales Runtime-Evidence-Fixture
+- weitere MSDK-KeyManager-Produkt-/Firmwareprofile außerhalb des real belegten RC-Pro-Enterprise-/M3E-Profils
 
 ## Release-Vorbereitung
 
