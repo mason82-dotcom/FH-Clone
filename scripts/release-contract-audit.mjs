@@ -110,7 +110,7 @@ const hardwareJob = workflow.slice(workflow.indexOf("\n  hardware-evidence:"));
 reject(hardwareJob, "continue-on-error:", "hardware evidence workflow");
 expect(
   workflow,
-  "run: node scripts/release-contract-audit.mjs",
+  "node scripts/release-contract-audit.mjs",
   "director documentation gate"
 );
 expect(workflow, "FH2_APK_USAGE=hardware-pairing", "keyed APK classification");
