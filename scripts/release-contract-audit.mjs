@@ -22,6 +22,9 @@ const androidReadme = read("android/fh2-rc-bridge/README.md");
 const hardwareDoc = read("docs/HARDWARE_EVIDENCE.md");
 const hardwareAudit = read("scripts/hardware-evidence-audit.mjs");
 const workflow = read(".github/workflows/director-v3-validation.yml");
+const baseManifest = read("android/fh2-rc-bridge/app/src/main/AndroidManifest.xml");
+const debugManifest = read("android/fh2-rc-bridge/app/src/debug/AndroidManifest.xml");
+const bridgeClient = read("android/fh2-rc-bridge/app/src/main/java/com/fh2/rcbridge/Fh2BridgeClient.kt");
 
 const properties = Object.fromEntries(
   gradle
@@ -74,6 +77,12 @@ for (const stale of [
 ]) {
   reject(androidReadme, stale, "android README");
 }
+
+
+expect(baseManifest, 'android:usesCleartextTraffic="false"', "release manifest");
+expect(debugManifest, 'android:usesCleartextTraffic="true"', "debug manifest");
+expect(bridgeClient, "BuildConfig.DEBUG", "debug HTTP guard");
+expect(bridgeClient, "isPrivateHost(host)", "private-LAN HTTP guard");
 
 for (const heading of [
   "## 1. RC Pro Enterprise + M3T — REQUIRED_HARDWARE",
