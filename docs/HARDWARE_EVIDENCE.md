@@ -1,6 +1,6 @@
 # Hardware-Evidence-Vertrag für V3
 
-Stand: 23.09.2026
+Stand: 24.09.2026
 
 Dieses Dokument definiert, welche **realen** DJI-Hardware-/Pilot-2-Nachweise die
 zentrale Direktor-CI auswertet. Synthetische Payloads bleiben für
@@ -32,7 +32,7 @@ Für Binär-/Medienquellen darf ein redigiertes Manifest mit SHA-256 der
 authoritativen lokalen Originaldatei verwendet werden. Synthetische Daten dürfen
 nicht als reale Quelle gekennzeichnet werden.
 
-## 1. RC Pro Enterprise + M3T — REQUIRED_MAIN
+## 1. RC Pro Enterprise + M3T — REQUIRED_HARDWARE
 
 DJI trennt Gateway-Topologie und Aircraft Properties. Für RC Pro Enterprise ist
 der reale `update_topo`-Upstream auf dem Gateway-Statuspfad zu erfassen. Für
@@ -76,7 +76,7 @@ Cloud-Flight-Control unterstützt.
 Bereits vorhanden: zwei reale, redigiert dokumentierte M3T-Wide-Samples unter
 `docs/fixtures/m3t/`. Diese schließen Tele, Thermal und MQTT nicht.
 
-## 2. RC Plus 2 + M4T Cloud-Flight-Control — HARDWARE_PROFILE_GATE
+## 2. RC Plus 2 + M4T Cloud-Flight-Control — REQUIRED_HARDWARE
 
 DJI dokumentiert für Matrice 4 Cloud-Flight-Control und Payload-Control. FH2
 führt dafür das M4-/RC-Plus-2-Profil mit `stick_control` und dem getrennten
@@ -108,7 +108,7 @@ Erforderlich:
 Heartbeat-Upstream ist der maßgebliche Datenpfad für die aktive
 DRC-Verbindung.
 
-## 3. Mavic 3M Multispektral — REQUIRED_MAIN
+## 3. Mavic 3M Multispektral — REQUIRED_HARDWARE
 
 Erforderlich ist mindestens ein realer Narrow-Band-Capture-Satz mit:
 
@@ -271,9 +271,15 @@ Synthetische Inventare zählen nicht als reale Hardwareevidenz.
 
 Die zentrale Direktor-CI besitzt zwei Evidence-Sichten:
 
-- `main`: REQUIRED_MAIN muss vollständig grün sein.
-- `all`: zusätzlich müssen REQUIRED_DRAFT-Nachweise für die zu promotenden
-  Drafts grün sein.
+- `main`: nur echte `REQUIRED_MAIN`-Gates sind blockierend.
+- `all`: zusätzlich werden `REQUIRED_DRAFT` und `REQUIRED_HARDWARE`
+  blockierend ausgewertet.
+
+Die M3T-, M4T-, M3M-, WPML-, Pilot-2-JSBridge- und MSDK-KeyManager-Nachweise
+sind Produkt-/Hardware-Supportgates. Fehlende reale Fixtures bleiben in der
+normalen Software-CI als `PENDING` sichtbar, blockieren den FC0-Basisrelease
+aber nicht. Für eine konkrete Hardware-Supportfreigabe ist der strikte
+`all`-Scope zu verwenden.
 
 CONDITIONAL-Nachweise werden nur für weiterhin unterstützte Profile aktiviert.
 Dock-, Multi-Dock- und PSDK-Nachweise sind ausdrücklich **keine** Conditional-
