@@ -386,11 +386,13 @@ jobs:
       - name: DJI Control-Policy konsistent halten
         run: node scripts/control-policy-audit.mjs
 
+      - name: Release-/Toolchain-Vertrag konsistent halten
+        run: node scripts/release-contract-audit.mjs
+
 
   hardware-evidence:
     name: DJI Hardware Evidence
     if: ${{ github.event_name != 'workflow_dispatch' || !inputs.r1_bootstrap }}
-    continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Repository auschecken
