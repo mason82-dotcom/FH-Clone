@@ -8,9 +8,9 @@ Baseline:
 
 - DJI MSDK `5.18.0`
 - Android minSdk 24
-- compileSdk 36
+- compileSdk 35
 - targetSdk 35 (DJI-MSDK-5.18-Kompatibilitätsgrenze)
-- Android Build Tools 36.0.0
+- Android Build Tools 35.0.0
 - AGP 8.13.2
 - Gradle 8.13
 - Kotlin 2.3.21
@@ -264,6 +264,22 @@ er gelöscht.
 Release-Builds akzeptieren nur HTTPS. Der Debug-Build erlaubt HTTP
 ausschließlich für localhost beziehungsweise private RFC1918-LAN-Adressen.
 
+Für das lokale RC-Pro-Pairing gegen den Root-Compose muss deshalb ein
+**Debug-Build** verwendet werden, solange die Control API nur per HTTP im LAN
+bereitsteht. Vor dem Pairing muss `/health` `msdkBridge.configured=true`
+melden. In der App wird ausschließlich die Control-API-Basis-URL eingetragen,
+z. B. `http://192.168.1.10:8080`; der externe MQTT-Port wird für diesen
+MSDK-Pairing-Pfad nicht eingegeben.
+
+Serverseitiger Vorabcheck aus dem Repository-Root:
+
+```bash
+npm run verify:msdk-pairing-preflight -- http://<LAN-IP>:8080
+```
+
+Der Check gibt keine Pairing-/Signing-Secrets aus und endet bei vollständiger
+Bereitschaft mit `MSDK_PAIRING_PREFLIGHT=READY`.
+
 Explizites Trennen ist ein echtes Unpair: Die App beendet zuerst den lokalen
 Control-Transport fail-closed und ruft danach `POST /api/msdk/unpair` mit dem
 Agent-Token auf. FH2 persistiert ausschließlich den SHA-256-Digest des
@@ -423,28 +439,28 @@ Zusätzlich wird rekursiv auf verbotene Secret-Felder und nicht redigierte
 `Bearer ...`-Werte geprüft.
 
 
-## Android API 36
+## Android API 35 / DJI MSDK 5.18
 
 Der Branch verwendet jetzt:
 
 ```text
-compileSdk = 36
+compileSdk = 35
 targetSdk  = 35
 AGP        = 8.13.2
 Kotlin     = 2.3.21
-BuildTools = 36.0.0
-Core-KTX   = 1.17.0
-AppCompat  = 1.8.0
+BuildTools = 35.0.0
+Core-KTX   = 1.16.0
+AppCompat  = 1.7.1
 DJI MSDK   = 5.18.0
 ```
 
-`compileSdk 36` ist mit AGP 8.13.x unterstützt. `targetSdk 36` bleibt
-vorerst bewusst deaktiviert, weil DJI MSDK 5.18.0 Android 16 / API 36 noch
-nicht offiziell als unterstütztes Target bestätigt.
+`compileSdk 35` und `targetSdk 35` bilden die aktuell in CI und im
+DJI-MSDK-5.18-Runtimepfad validierte Baseline. Eine Anhebung auf API 36 wird
+erst nach separater MSDK-/Hardwarevalidierung vorgenommen.
 
-`androidx.core:core-ktx` bleibt bei 1.17.0. Ab Core 1.18.0 wurde die
-Compile-Basis auf API 36.1 angehoben; das würde für diese RC-App derzeit nur
-Tooling-Komplexität hinzufügen, ohne einen MSDK-Vorteil zu bringen.
+`androidx.core:core-ktx` bleibt bei 1.16.0 und `appcompat` bei 1.7.1. Diese
+Versionen sind Teil derselben API-35-Baseline und werden gemeinsam mit dem
+Android-Buildvertrag aktualisiert.
 
 Für den Build werden **JDK 17** und **Gradle 8.13** benötigt. Der erzeugte
 App-Bytecode bleibt absichtlich auf Java/Kotlin JVM 1.8, solange DJI MSDK
@@ -576,7 +592,7 @@ MediaManager wieder deaktiviert.
 ## CI-APK
 
 Der Workflow **Android MSDK Validation** erzeugt nach erfolgreichem
-`assembleDebug` + `lintDebug` ein Hardware-Test-Artefakt:
+`assembleDebug` + `lintDebug` ein Debug-Artefakt:
 
 ```text
 fh2-rc-bridge-debug.apk
@@ -584,8 +600,13 @@ fh2-rc-bridge-debug.apk.sha256
 BUILD_INFO.txt
 ```
 
-`BUILD_INFO.txt` enthält Commit, MSDK-Version, Application-ID, SHA-256 und
-nur die Information, ob ein DJI-App-Key beim Build konfiguriert war.
+`BUILD_INFO.txt` enthält Commit, MSDK-Version, Application-ID, SHA-256,
+`dji_app_key_configured` und den Verwendungszweck `usage`.
+
+```text
+dji_app_key_configured=true  + usage=hardware-pairing  -> reale DJI/MSDK-Abnahme möglich
+dji_app_key_configured=false + usage=compile-ui-only   -> nur Build-/UI-Test, kein reales Pairing
+```
 
 Ein DJI-App-Key wird niemals in das Artefakt-Metadatenfile geschrieben.
 
@@ -596,8 +617,10 @@ DJI_MSDK_APP_KEY
 ```
 
 Ist es vorhanden, wird es ausschließlich für den Gradle-Build nach
-`~/.gradle/gradle.properties` injiziert. Fehlt es, bleibt das APK ein
-Compile-/UI-Testbuild und kann sich bei DJI nicht erfolgreich registrieren.
+`~/.gradle/gradle.properties` injiziert. Fehlt es, wird das Artefakt als
+`compile-ui-only` gekennzeichnet und kann sich bei DJI nicht erfolgreich
+registrieren. Für reales Pairing muss `BUILD_INFO.txt` daher ausdrücklich
+`dji_app_key_configured=true` und `usage=hardware-pairing` enthalten.
 
 Installation auf einer für Drittanbieter-Apps freigegebenen RC per ADB:
 
