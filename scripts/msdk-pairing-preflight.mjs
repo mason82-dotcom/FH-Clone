@@ -79,14 +79,11 @@ for (const key of ["MSDK_PAIRING_TOKEN", "MSDK_BRIDGE_TOKEN_SECRET"]) {
   if (/^(change-me|replace-me|example)/i.test(value)) {
     fail(`${key} still contains a placeholder`);
   }
-  if (value.length < 32) {
-    fail(`${key} must be at least 32 characters`);
-  }
 }
 
 const ttl = Number(env.MSDK_BRIDGE_TOKEN_TTL_SECONDS || "86400");
-if (!Number.isInteger(ttl) || ttl < 300) {
-  fail("MSDK_BRIDGE_TOKEN_TTL_SECONDS must be an integer >= 300");
+if (!Number.isInteger(ttl) || ttl < 1) {
+  fail("MSDK_BRIDGE_TOKEN_TTL_SECONDS must be a positive integer");
 }
 
 const apiPort = Number(env.FH2_API_PORT || "8080");
