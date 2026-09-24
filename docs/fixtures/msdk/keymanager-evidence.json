@@ -1,0 +1,898 @@
+{
+  "schema": "fh2.msdk.v1",
+  "realHardware": true,
+  "synthetic": false,
+  "redacted": true,
+  "timestampMs": 1790279323470,
+  "hardwareProfile": {
+    "productType": "DJI_MAVIC_3_ENTERPRISE_SERIES",
+    "msdkRegistered": true,
+    "productConnected": true
+  },
+  "provenance": {
+    "captureKind": "android-msdk-v5-runtime",
+    "sourceSha256": "2afcba3b880de199d5dbbde3b8df942c402501f15f35d823e2d329e77f232234",
+    "identifiers": "removed",
+    "coordinates": "removed",
+    "credentials": "not-exported"
+  },
+  "keyManager": {
+    "active": true,
+    "productConnected": true,
+    "probedAt": 1790279322937,
+    "keys": [
+      {
+        "identifier": "CameraMode",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": true,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.camera.CameraMode",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "CameraType",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.camera.CameraType",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "CameraVideoStreamSourceRange",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.util.ArrayList",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "Connection",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Boolean",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "SerialNumber",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.String",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "StartRecord",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": false,
+          "canSet": false,
+          "canListen": false,
+          "canPerformAction": true
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey$ActionKey",
+        "probeMode": "metadata_only",
+        "runtimeStatus": "temporarily_unavailable"
+      },
+      {
+        "identifier": "StartShootPhoto",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": false,
+          "canSet": false,
+          "canListen": false,
+          "canPerformAction": true
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey$ActionKey",
+        "probeMode": "metadata_only",
+        "runtimeStatus": "temporarily_unavailable"
+      },
+      {
+        "identifier": "StopRecord",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": false,
+          "canSet": false,
+          "canListen": false,
+          "canPerformAction": true
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey$ActionKey",
+        "probeMode": "metadata_only",
+        "runtimeStatus": "temporarily_unavailable"
+      },
+      {
+        "identifier": "CameraZoomRatios",
+        "family": "camera",
+        "componentIndex": "LEFT_OR_MAIN",
+        "cameraLensType": "CAMERA_LENS_ZOOM",
+        "operations": {
+          "canGet": true,
+          "canSet": true,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Double",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "CameraMode",
+        "family": "camera",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": true,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "CameraType",
+        "family": "camera",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.camera.CameraType",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "CameraVideoStreamSourceRange",
+        "family": "camera",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.util.ArrayList",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "Connection",
+        "family": "camera",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "SerialNumber",
+        "family": "camera",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "CameraMode",
+        "family": "camera",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": true,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "CameraType",
+        "family": "camera",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.camera.CameraType",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "CameraVideoStreamSourceRange",
+        "family": "camera",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.util.ArrayList",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "Connection",
+        "family": "camera",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "SerialNumber",
+        "family": "camera",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "AircraftLocation3D",
+        "family": "flight_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.common.LocationCoordinate3D",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278874950
+      },
+      {
+        "identifier": "CompassHeading",
+        "family": "flight_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Double",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790279322937
+      },
+      {
+        "identifier": "Connection",
+        "family": "flight_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Boolean",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773305
+      },
+      {
+        "identifier": "HomeLocation",
+        "family": "flight_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": true,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.common.LocationCoordinate2D",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773305
+      },
+      {
+        "identifier": "SerialNumber",
+        "family": "flight_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.String",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773305
+      },
+      {
+        "identifier": "Connection",
+        "family": "gimbal",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Boolean",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "RotateBySpeed",
+        "family": "gimbal",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": false,
+          "canSet": false,
+          "canListen": false,
+          "canPerformAction": true
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey$ActionKey",
+        "probeMode": "metadata_only",
+        "runtimeStatus": "temporarily_unavailable"
+      },
+      {
+        "identifier": "Connection",
+        "family": "gimbal",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "Connection",
+        "family": "gimbal",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "Connection",
+        "family": "payload",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "PayloadProductName",
+        "family": "payload",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "Connection",
+        "family": "payload",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773307
+      },
+      {
+        "identifier": "PayloadProductName",
+        "family": "payload",
+        "componentIndex": "RIGHT",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "Connection",
+        "family": "payload",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "PayloadProductName",
+        "family": "payload",
+        "componentIndex": "UP",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "error",
+        "lastObservedAt": 1790278773308
+      },
+      {
+        "identifier": "Connection",
+        "family": "product",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Boolean",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773305
+      },
+      {
+        "identifier": "FirmwareVersion",
+        "family": "product",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": false,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.String",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773305
+      },
+      {
+        "identifier": "ProductType",
+        "family": "product",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.product.ProductType",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773305
+      },
+      {
+        "identifier": "ControlMode",
+        "family": "remote_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": true,
+          "canListen": false,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "dji.sdk.keyvalue.value.remotecontroller.ControlMode",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "FirmwareVersion",
+        "family": "remote_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": false,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.String",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "RcGPSInfo",
+        "family": "remote_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "temporarily_unavailable",
+        "lastObservedAt": 1790278777233
+      },
+      {
+        "identifier": "RcRK3399SirialNumber",
+        "family": "remote_controller",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.String",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      },
+      {
+        "identifier": "Connection",
+        "family": "remote_controller",
+        "componentIndex": "LEFT_OR_MAIN",
+        "operations": {
+          "canGet": true,
+          "canSet": false,
+          "canListen": true,
+          "canPerformAction": false
+        },
+        "isEvent": false,
+        "valueType": "java.lang.Boolean",
+        "concreteKeyType": "dji.sdk.keyvalue.key.DJIKey",
+        "probeMode": "cache+hardware_read",
+        "runtimeStatus": "supported",
+        "lastObservedAt": 1790278773306
+      }
+    ]
+  },
+  "evidence": {
+    "schema": "fh2.pairing-transport-evidence.v1",
+    "capturedAtMs": 1790279323470,
+    "bridge": {
+      "status": "paired"
+    },
+    "controlChannel": {
+      "status": "connected"
+    },
+    "events": [
+      {
+        "atMs": 1790278764484,
+        "source": "marker",
+        "event": "process_started"
+      },
+      {
+        "atMs": 1790278764490,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790278764523,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790278805080,
+        "source": "marker",
+        "event": "hardware_evidence_export"
+      },
+      {
+        "atMs": 1790279027375,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279027376,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279027376,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279027376,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279027377,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "error"
+      },
+      {
+        "atMs": 1790279074690,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279074691,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279074691,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "pairing"
+      },
+      {
+        "atMs": 1790279074792,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "paired"
+      },
+      {
+        "atMs": 1790279074792,
+        "source": "marker",
+        "event": "pairing_accepted"
+      },
+      {
+        "atMs": 1790279074792,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279074792,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279074793,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279074793,
+        "source": "control",
+        "event": "state_changed",
+        "status": "connecting"
+      },
+      {
+        "atMs": 1790279074818,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "paired"
+      },
+      {
+        "atMs": 1790279074818,
+        "source": "bridge",
+        "event": "heartbeat_established"
+      },
+      {
+        "atMs": 1790279074820,
+        "source": "control",
+        "event": "state_changed",
+        "status": "connected"
+      },
+      {
+        "atMs": 1790279125273,
+        "source": "marker",
+        "event": "hardware_evidence_export"
+      },
+      {
+        "atMs": 1790279228820,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "paired"
+      },
+      {
+        "atMs": 1790279229833,
+        "source": "bridge",
+        "event": "state_changed",
+        "status": "paired"
+      },
+      {
+        "atMs": 1790279234829,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279234830,
+        "source": "control",
+        "event": "state_changed",
+        "status": "error"
+      },
+      {
+        "atMs": 1790279235836,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279235837,
+        "source": "control",
+        "event": "state_changed",
+        "status": "disconnected"
+      },
+      {
+        "atMs": 1790279235838,
+        "source": "control",
+        "event": "state_changed",
+        "status": "connecting"
+      },
+      {
+        "atMs": 1790279235858,
+        "source": "control",
+        "event": "state_changed",
+        "status": "connected"
+      },
+      {
+        "atMs": 1790279323471,
+        "source": "marker",
+        "event": "hardware_evidence_export"
+      }
+    ]
+  }
+}
