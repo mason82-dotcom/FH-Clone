@@ -7,6 +7,7 @@ import {
 
 function fixture({
   markers = [],
+  bridgeEvents = [],
   controlConnected = 0,
   bridgeStatus = "paired",
   extra = {}
@@ -15,6 +16,11 @@ function fixture({
     ...markers.map((event) => ({
       atMs: 1,
       source: "marker",
+      event
+    })),
+    ...bridgeEvents.map((event) => ({
+      atMs: 5,
+      source: "bridge",
       event
     })),
     ...Array.from({ length: controlConnected }, (_, index) => ({
@@ -56,7 +62,9 @@ test("acceptance succeeds across multiple process fixtures", () => {
         name: "pair-reconnect.json",
         document: fixture({
           markers: [
-            "pairing_accepted",
+            "pairing_accepted"
+          ],
+          bridgeEvents: [
             "heartbeat_established"
           ],
           controlConnected: 2
@@ -66,7 +74,9 @@ test("acceptance succeeds across multiple process fixtures", () => {
         name: "app-restart.json",
         document: fixture({
           markers: [
-            "stored_pairing_resumed",
+            "stored_pairing_resumed"
+          ],
+          bridgeEvents: [
             "heartbeat_established"
           ],
           controlConnected: 1
@@ -98,10 +108,12 @@ test("acceptance fails when control reconnect is not evidenced", () => {
         document: fixture({
           markers: [
             "pairing_accepted",
-            "heartbeat_established",
             "stored_pairing_resumed",
             "unpair_revocation_accepted",
             "pairing_cleared_local"
+          ],
+          bridgeEvents: [
+            "heartbeat_established"
           ],
           controlConnected: 1,
           bridgeStatus: "disconnected"

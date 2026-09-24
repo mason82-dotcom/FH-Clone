@@ -14,6 +14,7 @@ export function validateEvidenceDocuments(
   const errors = [];
   const summaries = [];
   const allMarkers = [];
+  const allAcceptanceSignals = [];
   let reconnectObserved = false;
   let unpairCompleted = false;
   let keyManagerObserved = false;
@@ -59,6 +60,13 @@ export function validateEvidenceDocuments(
       if (event.source === "marker" && typeof event.event === "string") {
         markers.push(event.event);
         allMarkers.push(event.event);
+        allAcceptanceSignals.push(event.event);
+      }
+      if (
+        event.source === "bridge" &&
+        event.event === "heartbeat_established"
+      ) {
+        allAcceptanceSignals.push(event.event);
       }
       if (
         event.source === "control" &&
@@ -132,7 +140,7 @@ export function validateEvidenceDocuments(
   }
 
   if (acceptance) {
-    const requiredMarkers = [
+    const requiredSignals = [
       "pairing_accepted",
       "heartbeat_established",
       "stored_pairing_resumed",
@@ -140,9 +148,9 @@ export function validateEvidenceDocuments(
       "pairing_cleared_local"
     ];
 
-    for (const marker of requiredMarkers) {
-      if (!allMarkers.includes(marker)) {
-        errors.push(`acceptance_missing_marker:${marker}`);
+    for (const signal of requiredSignals) {
+      if (!allAcceptanceSignals.includes(signal)) {
+        errors.push(`acceptance_missing_marker:${signal}`);
       }
     }
 
