@@ -74,7 +74,11 @@ object AircraftTelemetrySource {
                 update { copy(headingDeg = heading) }
             }
 
-        refreshIdentity()
+        // DJI's own UXSDK explicitly reads these keys once in addition to
+        // listening for changes. FH2 starts its runtime after registration,
+        // so an aircraft that is already linked can otherwise have its
+        // initial FC/product state missed by listeners.
+        hydrateCurrentState()
     }
 
     fun addListener(listener: (AircraftTelemetrySnapshot) -> Unit) {
@@ -89,6 +93,30 @@ object AircraftTelemetrySource {
     fun stop() {
         if (!started.getAndSet(false)) return
         KeyManager.getInstance().cancelListen(this)
+    }
+
+    private fun hydrateCurrentState() {
+        val connected =
+            FlightControllerKey.KeyConnection.create().get(false)
+        val product =
+            ProductKey.KeyProductType
+                .create()
+                .get(ProductType.UNKNOWN)
+
+        update {
+            copy(
+                flightControllerConnected = connected,
+                productType = product.name
+            )
+        }
+
+        if (connected) {
+            refreshIdentity()
+        } else {
+            // Identity reads remain useful diagnostics on some controller
+            // firmware even while the FC connection cache is converging.
+            refreshIdentity()
+        }
     }
 
     private fun refreshIdentity() {
