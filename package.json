@@ -23,6 +23,7 @@
     "test:frontend-runtime-hardening": "node --test scripts/verify-frontend-runtime-hardening.test.mjs",
     "test:release-contract": "node scripts/release-contract-audit.mjs",
     "verify:msdk-evidence": "node scripts/verify-msdk-evidence.mjs",
+    "verify:msdk-pairing-preflight": "node scripts/msdk-pairing-preflight.mjs",
     "test:pilot2-jsbridge": "node --test scripts/verify-pilot2-jsbridge.test.mjs",
     "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs"
   },
