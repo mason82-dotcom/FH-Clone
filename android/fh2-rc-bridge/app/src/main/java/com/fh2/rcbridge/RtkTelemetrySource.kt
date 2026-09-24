@@ -40,17 +40,41 @@ object RtkTelemetrySource {
         private set
 
     private val systemListener = RTKSystemStateListener { state ->
-        if (state != null) updateSystemState(state)
+        if (state != null) {
+            runCatching {
+                updateSystemState(state)
+            }.onFailure {
+                recordError("RTK_SYSTEM_STATE_FAILED", it)
+            }
+        }
     }
 
     private val locationListener = RTKLocationInfoListener { info ->
-        if (info != null) updateLocation(info)
+        if (info != null) {
+            runCatching {
+                updateLocation(info)
+            }.onFailure {
+                recordError("RTK_LOCATION_INFO_FAILED", it)
+            }
+        }
     }
 
     fun start() {
-        if (started.getAndSet(true)) return
-        center.addRTKSystemStateListener(systemListener)
-        center.addRTKLocationInfoListener(locationListener)
+        if (!started.compareAndSet(false, true)) return
+
+        runCatching {
+            center.addRTKSystemStateListener(systemListener)
+            center.addRTKLocationInfoListener(locationListener)
+        }.onFailure {
+            runCatching {
+                center.removeRTKSystemStateListener(systemListener)
+            }
+            runCatching {
+                center.removeRTKLocationInfoListener(locationListener)
+            }
+            started.set(false)
+            recordError("RTK_LISTENER_INIT_FAILED", it)
+        }
     }
 
     fun addListener(listener: (RtkSnapshot) -> Unit) {
@@ -64,21 +88,29 @@ object RtkTelemetrySource {
 
     fun stop() {
         if (!started.getAndSet(false)) return
-        center.removeRTKSystemStateListener(systemListener)
-        center.removeRTKLocationInfoListener(locationListener)
+        runCatching {
+            center.removeRTKSystemStateListener(systemListener)
+        }
+        runCatching {
+            center.removeRTKLocationInfoListener(locationListener)
+        }
     }
 
     private fun updateSystemState(state: RTKSystemState) {
         val counts = linkedMapOf<String, Int>()
+        val satelliteInfo = state.satelliteInfo
 
-        state.satelliteInfo.mobileStationReceiver1Info.forEach {
-            counts["mobile1.${it.type.name}"] = it.count
+        satelliteInfo?.mobileStationReceiver1Info?.forEach { receiver ->
+            counts["mobile1.${receiver.type?.name ?: "UNKNOWN"}"] =
+                receiver.count
         }
-        state.satelliteInfo.mobileStationReceiver2Info.forEach {
-            counts["mobile2.${it.type.name}"] = it.count
+        satelliteInfo?.mobileStationReceiver2Info?.forEach { receiver ->
+            counts["mobile2.${receiver.type?.name ?: "UNKNOWN"}"] =
+                receiver.count
         }
-        state.satelliteInfo.baseStationReceiverInfo.forEach {
-            counts["base.${it.type.name}"] = it.count
+        satelliteInfo?.baseStationReceiverInfo?.forEach { receiver ->
+            counts["base.${receiver.type?.name ?: "UNKNOWN"}"] =
+                receiver.count
         }
 
         update {
@@ -88,7 +120,7 @@ object RtkTelemetrySource {
                 maintainAccuracyEnabled =
                     state.rtkMaintainAccuracyEnabled,
                 referenceStationSource =
-                    state.rtkReferenceStationSource.name,
+                    state.rtkReferenceStationSource?.name,
                 satelliteCounts = counts,
                 error = state.error?.toString()
             )
@@ -115,6 +147,19 @@ object RtkTelemetrySource {
                 stdAltitude = rtk?.stdAltitude,
                 rtkHeading = info.rtkHeading?.toString(),
                 realHeading = info.realHeading?.toString()
+            )
+        }
+    }
+
+    private fun recordError(
+        event: String,
+        error: Throwable
+    ) {
+        update {
+            copy(
+                error =
+                    "$event: " +
+                        (error.message ?: error.javaClass.simpleName)
             )
         }
     }
