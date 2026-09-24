@@ -8,9 +8,9 @@ Baseline:
 
 - DJI MSDK `5.18.0`
 - Android minSdk 24
-- compileSdk 36
+- compileSdk 35
 - targetSdk 35 (DJI-MSDK-5.18-Kompatibilitätsgrenze)
-- Android Build Tools 36.0.0
+- Android Build Tools 35.0.0
 - AGP 8.13.2
 - Gradle 8.13
 - Kotlin 2.3.21
@@ -423,28 +423,28 @@ Zusätzlich wird rekursiv auf verbotene Secret-Felder und nicht redigierte
 `Bearer ...`-Werte geprüft.
 
 
-## Android API 36
+## Android API 35 / DJI MSDK 5.18
 
 Der Branch verwendet jetzt:
 
 ```text
-compileSdk = 36
+compileSdk = 35
 targetSdk  = 35
 AGP        = 8.13.2
 Kotlin     = 2.3.21
-BuildTools = 36.0.0
-Core-KTX   = 1.17.0
-AppCompat  = 1.8.0
+BuildTools = 35.0.0
+Core-KTX   = 1.16.0
+AppCompat  = 1.7.1
 DJI MSDK   = 5.18.0
 ```
 
-`compileSdk 36` ist mit AGP 8.13.x unterstützt. `targetSdk 36` bleibt
-vorerst bewusst deaktiviert, weil DJI MSDK 5.18.0 Android 16 / API 36 noch
-nicht offiziell als unterstütztes Target bestätigt.
+`compileSdk 35` und `targetSdk 35` bilden die aktuell in CI und im
+DJI-MSDK-5.18-Runtimepfad validierte Baseline. Eine Anhebung auf API 36 wird
+erst nach separater MSDK-/Hardwarevalidierung vorgenommen.
 
-`androidx.core:core-ktx` bleibt bei 1.17.0. Ab Core 1.18.0 wurde die
-Compile-Basis auf API 36.1 angehoben; das würde für diese RC-App derzeit nur
-Tooling-Komplexität hinzufügen, ohne einen MSDK-Vorteil zu bringen.
+`androidx.core:core-ktx` bleibt bei 1.16.0 und `appcompat` bei 1.7.1. Diese
+Versionen sind Teil derselben API-35-Baseline und werden gemeinsam mit dem
+Android-Buildvertrag aktualisiert.
 
 Für den Build werden **JDK 17** und **Gradle 8.13** benötigt. Der erzeugte
 App-Bytecode bleibt absichtlich auf Java/Kotlin JVM 1.8, solange DJI MSDK
