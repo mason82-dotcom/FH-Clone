@@ -70,6 +70,16 @@ jobs:
           grep -F "com.cySdkyc.clx.Helper.install(this)" "$APP"
           grep -F "DjiSdkRuntime.start(this)" "$APP"
 
+      - name: Verify DJI RTK partial snapshot safety
+        shell: bash
+        run: |
+          RTK="app/src/main/java/com/fh2/rcbridge/RtkTelemetrySource.kt"
+          grep -F "val satelliteInfo = state.satelliteInfo" "$RTK"
+          grep -F "satelliteInfo?.mobileStationReceiver1Info?.forEach" "$RTK"
+          grep -F "satelliteInfo?.mobileStationReceiver2Info?.forEach" "$RTK"
+          grep -F "satelliteInfo?.baseStationReceiverInfo?.forEach" "$RTK"
+          grep -F "RTK_SYSTEM_STATE_FAILED" "$RTK"
+
       - name: Assemble debug
         run: |
           gradle :app:assembleDebug --stacktrace --no-daemon
