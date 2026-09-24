@@ -22,6 +22,7 @@ const androidReadme = read("android/fh2-rc-bridge/README.md");
 const hardwareDoc = read("docs/HARDWARE_EVIDENCE.md");
 const hardwareAudit = read("scripts/hardware-evidence-audit.mjs");
 const workflow = read(".github/workflows/director-v3-validation.yml");
+const androidWorkflow = read(".github/workflows/android-msdk-validation.yml");
 const baseManifest = read("android/fh2-rc-bridge/app/src/main/AndroidManifest.xml");
 const debugManifest = read("android/fh2-rc-bridge/app/src/debug/AndroidManifest.xml");
 const bridgeClient = read("android/fh2-rc-bridge/app/src/main/java/com/fh2/rcbridge/Fh2BridgeClient.kt");
@@ -113,8 +114,8 @@ expect(
   "node scripts/release-contract-audit.mjs",
   "director documentation gate"
 );
-expect(workflow, "FH2_APK_USAGE=hardware-pairing", "keyed APK classification");
-expect(workflow, "FH2_APK_USAGE=compile-ui-only", "unkeyed APK classification");
+expect(androidWorkflow, "FH2_APK_USAGE=hardware-pairing", "keyed APK classification");
+expect(androidWorkflow, "FH2_APK_USAGE=compile-ui-only", "unkeyed APK classification");
 expect(androidReadme, "usage=hardware-pairing", "pairing APK documentation");
 
 if (!process.exitCode) {
