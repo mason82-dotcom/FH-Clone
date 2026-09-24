@@ -397,16 +397,34 @@ Softwareseitig vorhanden:
 - Regressionstest, dass Write-Metadaten keine `control.*`-Capability erzeugen
 - Hardware-Evidence-Validator
 
-Noch offen bleibt ausschließlich die reale Produkt-/Firmware-Abnahme des
-Key-Inventars. Ein entsprechender Capture wird mit
+Die reale Produkt-/Firmware-Abnahme erfolgt mit einem lokalen Android-Capture:
 
 ```bash
 node scripts/verify-msdk-evidence.mjs --keymanager <evidence.json>
 ```
 
-geprüft. Bis diese reale Hardware-Evidence vorliegt, ist der Runtimeblock
-softwareseitig integriert, aber nicht als vollständige Hardware-Supportzusage
-zu verstehen.
+Der rohe Capture darf wegen Gerätekennungen und möglicher Positionsdaten
+**nicht** direkt eingecheckt werden. Für die öffentliche Hardware-Evidence wird
+aus dem validierten Original ein strikt whitelisted, redigiertes Fixture
+erzeugt:
+
+```bash
+npm run redact:msdk-evidence -- --real-hardware \
+  <evidence.json> \
+  docs/fixtures/msdk/keymanager-evidence.json
+
+node scripts/verify-msdk-evidence.mjs \
+  --keymanager docs/fixtures/msdk/keymanager-evidence.json
+```
+
+Der Redactor übernimmt nur den KeyManager-Vertrag, nicht-sensitive
+Runtimezustände und minimierte Transportereignisse. Seriennummern, Koordinaten,
+Credentials und freie Fehlertexte werden nicht in das öffentliche Fixture
+übernommen. Zusätzlich wird der SHA-256 des lokalen Originals als
+Provenienzbezug gespeichert.
+
+Erst das reale **und redigierte** Fixture schließt das
+`MSDK_KEYMANAGER`-Hardwaregate in der zentralen Evidence-CI.
 
 ## Offizielle DJI-Referenzen
 

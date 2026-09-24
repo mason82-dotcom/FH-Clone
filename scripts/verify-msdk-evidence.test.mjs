@@ -4,6 +4,9 @@ import test from "node:test";
 import {
   validateEvidenceDocuments
 } from "./verify-msdk-evidence.mjs";
+import {
+  redactMsdkEvidenceDocument
+} from "./redact-msdk-evidence.mjs";
 
 function fixture({
   markers = [],
@@ -263,4 +266,101 @@ test("KeyManager acceptance rejects metadata-only or disconnected captures", () 
       "keymanager_acceptance_missing_lens_scoped_key"
     )
   );
+});
+
+
+test("MSDK evidence redaction preserves KeyManager proof and removes identifiers/coordinates", () => {
+  const raw = fixture({
+    markers: ["pairing_accepted"],
+    bridgeEvents: ["heartbeat_established"],
+    controlConnected: 2,
+    extra: {
+      sdk: {
+        registered: true,
+        productConnected: true
+      },
+      gateway: {
+        serialNumber: "RC-SERIAL-SECRET",
+        rcLatitude: 49.123456,
+        rcLongitude: 8.654321
+      },
+      aircraft: {
+        productType: "DJI_MAVIC_3_ENTERPRISE_SERIES",
+        flightControllerSerial: "FC-SERIAL-SECRET",
+        latitude: 49.987654,
+        longitude: 8.123456
+      },
+      keyManager: {
+        active: true,
+        productConnected: true,
+        probedAt: 123,
+        keys: [
+          {
+            identifier: "ControlMode",
+            family: "remote_controller",
+            operations: {
+              canGet: true,
+              canSet: true,
+              canListen: false,
+              canPerformAction: false
+            },
+            probeMode: "cache+hardware_read",
+            runtimeStatus: "supported",
+            lastError: "RC-SERIAL-SECRET"
+          },
+          {
+            identifier: "CameraZoomRatios",
+            family: "camera",
+            componentIndex: "LEFT_OR_MAIN",
+            cameraLensType: "CAMERA_LENS_ZOOM",
+            operations: {
+              canGet: true,
+              canSet: false,
+              canListen: true,
+              canPerformAction: false
+            },
+            probeMode: "cache+hardware_read",
+            runtimeStatus: "unsupported_on_product"
+          }
+        ]
+      }
+    }
+  });
+
+  raw.evidence.bridge = {
+    status: "paired",
+    gatewaySn: "RC-SERIAL-SECRET",
+    aircraftSn: "FC-SERIAL-SECRET"
+  };
+  raw.evidence.events.push({
+    atMs: 50,
+    source: "bridge",
+    event: "state_changed",
+    status: "paired",
+    gatewaySn: "RC-SERIAL-SECRET",
+    aircraftSn: "FC-SERIAL-SECRET",
+    latitude: 49.123456,
+    longitude: 8.654321
+  });
+
+  const redacted = redactMsdkEvidenceDocument(raw, {
+    realHardware: true,
+    sourceSha256: "a".repeat(64)
+  });
+
+  const serialized = JSON.stringify(redacted);
+  assert.equal(redacted.realHardware, true);
+  assert.equal(redacted.synthetic, false);
+  assert.equal(redacted.redacted, true);
+  assert.equal(redacted.keyManager.keys.length, 2);
+  assert.equal(serialized.includes("RC-SERIAL-SECRET"), false);
+  assert.equal(serialized.includes("FC-SERIAL-SECRET"), false);
+  assert.equal(serialized.includes("49.123456"), false);
+  assert.equal(serialized.includes("8.654321"), false);
+
+  const validation = validateEvidenceDocuments(
+    [{ name: "redacted.json", document: redacted }],
+    { keyManager: true }
+  );
+  assert.equal(validation.ok, true);
 });
