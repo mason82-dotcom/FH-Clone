@@ -61,6 +61,73 @@ function findRow(rows, predicate) {
   });
 }
 
+function topicIdentity(topic, family) {
+  const patterns = {
+    gatewayStatus: /^sys\/product\/([^/]+)\/status$/,
+    gatewayStatusReply: /^sys\/product\/([^/]+)\/status_reply$/,
+    aircraftOsd: /^thing\/product\/([^/]+)\/osd$/,
+    aircraftState: /^thing\/product\/([^/]+)\/state$/
+  };
+  return topic?.match(patterns[family])?.[1];
+}
+
+function unique(values) {
+  return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))];
+}
+
+function validateSingleTopologyCapture(rows) {
+  const topologyRows = rows.filter((row) => {
+    const topic = topicOf(row);
+    const payload = payloadOf(row);
+    return Boolean(
+      topicIdentity(topic, "gatewayStatus") &&
+      payload?.method === "update_topo"
+    );
+  });
+  if (!topologyRows.length) {
+    fail("no update_topo message found on sys/product/{gateway}/status");
+  }
+
+  const gatewayIds = unique(
+    topologyRows.map((row) => topicIdentity(topicOf(row), "gatewayStatus"))
+  );
+  if (gatewayIds.length !== 1) {
+    fail(`capture contains ${gatewayIds.length} gateways; narrow the capture window to one target gateway`);
+  }
+
+  const aircraftRows = rows.filter((row) => {
+    const topic = topicOf(row);
+    return Boolean(
+      topicIdentity(topic, "aircraftOsd") ||
+      topicIdentity(topic, "aircraftState")
+    );
+  });
+  const aircraftIds = unique(
+    aircraftRows.map(
+      (row) =>
+        topicIdentity(topicOf(row), "aircraftOsd") ??
+        topicIdentity(topicOf(row), "aircraftState")
+    )
+  );
+  if (aircraftIds.length !== 1) {
+    fail(`capture contains ${aircraftIds.length} aircraft; narrow the capture window to one target aircraft`);
+  }
+
+  const topologyData = dataOf(payloadOf(topologyRows[0]));
+  const subDeviceIds = array(topologyData?.sub_devices ?? topologyData?.subDevices)
+    .map((entry) => string(entry?.sn))
+    .filter(Boolean);
+  if (!subDeviceIds.includes(aircraftIds[0])) {
+    fail("OSD/state aircraft is not a sub-device of the captured update_topo gateway");
+  }
+
+  return {
+    topologyRow: topologyRows[0],
+    gatewayId: gatewayIds[0],
+    aircraftId: aircraftIds[0]
+  };
+}
+
 function sanitizeProduct(product, role) {
   if (!record(product)) return undefined;
   const type = integer(product.type);
@@ -210,22 +277,20 @@ function main() {
   const rows = rowsFrom(input).filter(record);
   if (!rows.length) fail("input contains no rows/messages/events");
 
-  const topologyRow = findRow(
-    rows,
-    (topic, payload) =>
-      /^sys\/product\/[^/]+\/status$/.test(topic) &&
-      payload?.method === "update_topo"
-  );
+  const capture = validateSingleTopologyCapture(rows);
+  const topologyRow = capture.topologyRow;
   const statusReplyRow = findRow(
     rows,
-    (topic) => /^sys\/product\/[^/]+\/status_reply$/.test(topic)
+    (topic) =>
+      topicIdentity(topic, "gatewayStatusReply") === capture.gatewayId
   );
-  const osdRows = rows.filter((row) =>
-    /^thing\/product\/[^/]+\/osd$/.test(topicOf(row) ?? "")
+  const osdRows = rows.filter(
+    (row) => topicIdentity(topicOf(row), "aircraftOsd") === capture.aircraftId
   );
   const stateRow = findRow(
     rows,
-    (topic) => /^thing\/product\/[^/]+\/state$/.test(topic)
+    (topic) =>
+      topicIdentity(topic, "aircraftState") === capture.aircraftId
   );
 
   const fixedRow = osdRows.find(
