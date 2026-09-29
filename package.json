@@ -16,6 +16,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:authz": "npm run build && node --test apps/control-api/dist/authz.test.js",
     "test:msdk-evidence": "node --test scripts/verify-msdk-evidence.test.mjs",
+    "test:dji-mqtt-evidence": "node --test scripts/redact-dji-mqtt-evidence.test.mjs",
     "test:msdk-media-lifecycle": "node --test scripts/verify-msdk-media-lifecycle.test.mjs",
     "test:msdk-control-deadman": "node --test scripts/verify-msdk-control-deadman.test.mjs",
     "test:github-support-handoff": "node --test scripts/github-sensitive-data-support-handoff.test.mjs",
@@ -24,6 +25,7 @@
     "test:release-contract": "node scripts/release-contract-audit.mjs",
     "verify:msdk-evidence": "node scripts/verify-msdk-evidence.mjs",
     "redact:msdk-evidence": "node scripts/redact-msdk-evidence.mjs",
+    "redact:dji-mqtt-evidence": "node scripts/redact-dji-mqtt-evidence.mjs",
     "verify:msdk-pairing-preflight": "node scripts/msdk-pairing-preflight.mjs",
     "test:pilot2-jsbridge": "node --test scripts/verify-pilot2-jsbridge.test.mjs",
     "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs"
