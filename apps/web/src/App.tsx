@@ -1,6 +1,11 @@
 import { Fh2Workspace } from "./components/fh2/Fh2Workspace.js";
+import { PilotCloudBootstrap } from "./pilot-bootstrap/PilotCloudBootstrap.js";
 
 export function App() {
+  if (window.location.pathname === "/pilot-login") {
+    return <PilotCloudBootstrap />;
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
