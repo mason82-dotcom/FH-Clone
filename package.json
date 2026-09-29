@@ -28,6 +28,7 @@
     "redact:dji-mqtt-evidence": "node scripts/redact-dji-mqtt-evidence.mjs",
     "verify:msdk-pairing-preflight": "node scripts/msdk-pairing-preflight.mjs",
     "test:pilot2-jsbridge": "node --test scripts/verify-pilot2-jsbridge.test.mjs",
+    "test:pilot2-bootstrap": "node --test scripts/verify-pilot2-bootstrap.test.mjs",
     "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs"
   },
   "engines": {
