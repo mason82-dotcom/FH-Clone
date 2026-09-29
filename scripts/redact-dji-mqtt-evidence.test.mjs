@@ -159,3 +159,28 @@ test("redactor requires explicit real-hardware acknowledgement", () => {
   assert.notEqual(run.status, 0);
   assert.match(run.stderr, /--real-hardware/);
 });
+
+
+test("redactor rejects a capture that mixes multiple aircraft", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-"));
+  const input = path.join(dir, "raw.json");
+  const rows = fixture();
+  rows.push({
+    channel: "thing/product/OTHER-AIRCRAFT/osd",
+    payload: {
+      data: {
+        position_state: { is_fixed: 1 }
+      }
+    }
+  });
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", input],
+    { encoding: "utf8" }
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /multiple|aircraft|narrow/i);
+});
