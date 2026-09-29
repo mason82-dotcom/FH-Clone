@@ -793,3 +793,88 @@ h2 {
     margin-left: 0;
   }
 }
+
+
+/* DJI Pilot 2 dedicated Cloud API bootstrap */
+.pilot-bootstrap {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  place-items: start center;
+}
+
+.pilot-bootstrap__card {
+  width: min(680px, 100%);
+  padding: 24px;
+  border: 1px solid #27313b;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #151b22, #11171d);
+}
+
+.pilot-bootstrap__status {
+  margin: 18px 0;
+  padding: 12px 14px;
+  border: 1px solid #34414d;
+  border-radius: 10px;
+  background: #0f151b;
+  line-height: 1.5;
+}
+
+.pilot-bootstrap__status[data-stage="connected"] {
+  border-color: #365d4d;
+}
+
+.pilot-bootstrap__status[data-stage="error"] {
+  border-color: #643d42;
+}
+
+.pilot-bootstrap form,
+.pilot-bootstrap fieldset,
+.pilot-bootstrap label {
+  display: grid;
+  gap: 10px;
+}
+
+.pilot-bootstrap form {
+  gap: 16px;
+}
+
+.pilot-bootstrap fieldset {
+  padding: 16px;
+  border: 1px solid #2a3743;
+  border-radius: 12px;
+}
+
+.pilot-bootstrap legend {
+  padding: 0 6px;
+  color: #b8c4ce;
+}
+
+.pilot-bootstrap label {
+  color: #aebbc5;
+  font-size: 13px;
+}
+
+.pilot-bootstrap input {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #34414d;
+  border-radius: 8px;
+  color: #e8edf2;
+  background: #0c1218;
+}
+
+.pilot-bootstrap button {
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid #4f6f61;
+  border-radius: 9px;
+  color: #eaf4ef;
+  background: #28463a;
+  cursor: pointer;
+}
+
+.pilot-bootstrap button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

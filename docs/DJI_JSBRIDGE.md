@@ -134,9 +134,9 @@ Verbindungszustand gelesen.
 
 FH2 lädt, entlädt oder konfiguriert in diesem Block keine Module.
 
-## Explizit verbotene Browserpfade
+## Read-only Runtime: explizit verbotene Browserpfade
 
-Der CI-Guard `scripts/verify-pilot2-jsbridge.mjs` blockiert im
+Der CI-Guard `scripts/verify-pilot2-jsbridge.mjs` blockiert im allgemeinen
 Pilot-Bridge-Frontend unter anderem:
 
 - `platformVerifyLicense(...)`
@@ -150,8 +150,40 @@ Pilot-Bridge-Frontend unter anderem:
 - Media-Write-Operationen
 - Vite-Variablen für App-Key, License, Token, Passwort oder Secrets
 
-Damit kann ein späterer schreibender Pilot-2-Bootstrap nicht versehentlich
+Damit kann ein credential-tragender Pilot-2-Bootstrap nicht versehentlich
 durch eine normale Frontendänderung aktiviert werden.
+
+## V3.1: dedizierter Pilot-2-Cloud-Bootstrap
+
+Für die reale Pilot-to-Cloud-/MQTT-Hardwarequalifikation existiert getrennt
+vom read-only Runtimeblock die Route:
+
+```text
+/pilot-login
+```
+
+Sie ist ausschließlich für den DJI-Pilot-2-WebView vorgesehen. Die Seite
+führt nur nach einer ausdrücklichen Benutzeraktion folgende offizielle
+JSBridge-Schritte aus:
+
+1. `platformVerifyLicense(appId, appKey, license)`
+2. `platformIsVerified()`
+3. `platformGetRemoteControllerSN()`
+4. `platformLoadComponent("thing", ...)`
+5. `thingGetConnectState()`
+
+Der Thing-Modul-Parameter enthält den MQTT-Broker im DJI-Format
+`tcp://host:port`, Username und Passwort. App Key, License und MQTT-Passwort
+werden vom Benutzer lokal in der Pilot-2-WebView eingegeben, nicht über
+`VITE_*` eingebettet, nicht an einen FH2-HTTP-Endpunkt übertragen und nicht
+in Browser-Storage persistiert. Nach Übergabe an DJI Pilot 2 werden die
+Secret-Felder aus dem React-State geleert.
+
+Die Seite lädt **keine** WS-, Livestream-, Media-, Mission- oder
+Flight-Control-Komponente und setzt keine Workspace-Rechte. Sie erteilt weder
+FC-Stufe noch Lease, Authority oder DRC-Rechte.
+
+Der separate Test `npm run test:pilot2-bootstrap` schützt diese Grenze.
 
 ## Hardware-Evidence
 
@@ -178,8 +210,8 @@ Synthetische Fixtures zählen nicht als Hardwarebeleg.
 
 Nicht implementiert sind:
 
-- automatischer Pilot-2-Cloud-Bootstrap,
-- Ausgabe von Gateway-/MQTT-Credentials an den Browser,
+- unbeaufsichtigter/automatischer Pilot-2-Cloud-Bootstrap ohne Benutzeraktion,
+- serverseitige Ausgabe von Gateway-/MQTT-Passwörtern an den Browser,
 - API-/WS-Tokenbootstrap,
 - Workspace-Konfiguration,
 - JSBridge-Media-Write,
