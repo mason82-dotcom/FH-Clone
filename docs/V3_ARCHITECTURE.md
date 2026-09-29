@@ -164,9 +164,10 @@ unterstütztes Produkt
 = aktive Steuerung
 ```
 
-## RC-Pro-Abnahme
+## RC-Pro-Hardwareabnahme
 
-Vor dem V3 Release Candidate real zu bestätigen:
+Für eine konkrete Pilot-to-Cloud-/MQTT-Hardware-Supportzusage real zu
+bestätigen:
 
 - MQTT-Client-ID
 - Username-/Credential-Verhalten
@@ -249,7 +250,10 @@ Safety/Authority, Topologie, Normalisierung, Service-Korrelation, AuthN/AuthZ,
 Default-Deny, Basic-Link-/DRC-Trennung sowie Media-/NDVI-Verträge sind
 automatisiert abgedeckt.
 
-### Gate 4 – RC Pro
+### Gate 4 – RC Pro: HARDWAREPROFIL
+
+Dieses Gate ist für die konkrete RC-Pro-/Pilot-to-Cloud-Hardwarezusage
+erforderlich, aber kein Blocker des Software-/FC0-Basisrelease.
 
 - [ ] reale Basic-Link-Verbindung
 - [ ] `update_topo`
@@ -258,21 +262,24 @@ automatisiert abgedeckt.
 - [ ] Credential-Fehler fail-closed
 - [ ] keine unerlaubten Topics
 
-### Gate 5 – Multispektral
+### Gate 5 – Multispektral: HARDWAREPROFIL
+
+Dieses Gate ist für produktive M3M-/Radiometrie-Zusagen erforderlich, aber
+kein Blocker des Software-/FC0-Basisrelease.
 
 - [ ] Kamera-/Payload-Feldvertrag
 - [ ] M3M-Bandvertrag
 - [ ] Media-Korrelation
 - [ ] NDVI-Statusregeln
 
-### Gate 6 – Safety
+### Gate 6 – Safety: SOFTWARE PASS
 
-- [ ] FC0 als Standard
-- [ ] keine öffentlichen DRC-Steuerendpunkte
-- [ ] DRC nicht in Basic Link
-- [ ] Control Lease erforderlich
-- [ ] Dead-Man vorhanden und getestet
-- [ ] Kill Switch getestet
+- [x] FC0 als Standard
+- [x] keine öffentlichen DRC-Steuerendpunkte
+- [x] DRC nicht in Basic Link
+- [x] Control Lease erforderlich
+- [x] Dead-Man vorhanden und getestet
+- [x] Kill Switch getestet
 
 ### Gate 7 – Dokumentation
 
@@ -291,7 +298,7 @@ Parameter verfügbar.
 
 ## Feature-Freeze
 
-Bis zum Release Candidate sind nur Änderungen erlaubt, die:
+Bis zur Veröffentlichung von V3.0.0 sind nur Änderungen erlaubt, die:
 
 - ein Release-Gate schließen,
 - einen Integrationsfehler korrigieren,
