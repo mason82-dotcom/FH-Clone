@@ -1,6 +1,6 @@
 # V3.0 Release-Status
 
-Stand: 24.09.2026
+Stand: 29.09.2026
 
 ## Release-Entscheidung
 
@@ -20,9 +20,9 @@ Hardware-Evidence gegatet.
 ```text
 Software-Version: 3.0.0
 Historische Software-Baseline: 58b82f907391b8444883aa6040190fae8690e596
-Finale Tag-Grenze: aktueller grüner main nach Abschluss des Hosting-Cleanup-Gates
-Git-Tag v3.0.0: noch nicht angelegt
-GitHub Release 3.0.0: noch nicht veröffentlicht
+Finale Tag-Grenze: finaler grüner main-Commit nach diesem Abschluss-PR
+Git-Tag v3.0.0: Veröffentlichung nach finaler CI dieses Abschlussstands
+GitHub Release 3.0.0: Veröffentlichung nach finaler CI dieses Abschlussstands
 Node.js: 22.23.2 in der Direktor-CI
 npm: 11.19.1
 Root package-lock.json: vorhanden
@@ -30,11 +30,11 @@ Root package-lock.json: vorhanden
 
 Die Versionsnummer 3.0.0 ist für Root, Node-Workspaces, Lockfile und
 UgCS-Maven-Modul vereinheitlicht. Der frühere Baseline-Commit bleibt ein
-historischer Meilenstein, ist aber **nicht** das geplante Ziel des späteren
-`v3.0.0`-Tags. Die finale Artefaktgrenze soll auf dem dann aktuellen,
-vollständig validierten `main` nach Abschluss des separaten
-Repository-/Hosting-Cleanup-Gates liegen. Bis dahin bleiben die nach der
-Baseline integrierten Änderungen unter `Unreleased`.
+historischer Meilenstein, ist aber **nicht** die finale Artefaktgrenze.
+Das separate Repository-/Hosting-Cleanup-Gate wurde am 29.09.2026 nach dem
+GitHub-Support-Cleanup und der anschließenden Nicht-Erreichbarkeitsprüfung der
+bekannten Altobjekte geschlossen. Der nach diesem Abschluss-PR vollständig
+grüne `main` bildet die finale `v3.0.0`-Artefaktgrenze.
 
 ## Automatische Release-Gates
 
@@ -91,13 +91,13 @@ Noch nicht vollständig real belegt:
 Diese fehlenden Nachweise werden in der CI als Hardwarestatus sichtbar
 geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
 
-## Aktueller 3.0.0-Softwarekandidat
+## Finaler 3.0.0-Releaseumfang
 
 Der folgende Stand umfasst die historische 3.0.0-Software-Baseline plus alle
 seitdem auf `main` integrierten und softwareseitig abgenommenen
-3.0.0-Erweiterungen/Härtungen. Dieser Gesamtstand ist der Kandidat für die
-spätere `v3.0.0`-Artefaktgrenze; getaggt wird erst nach Abschluss des
-separaten Hosting-Cleanup-Gates.
+3.0.0-Erweiterungen/Härtungen. Nach Abschluss des GitHub-Hosting-Cleanup-Gates
+ist dieser Gesamtstand der finale Releaseumfang; die Veröffentlichung erfolgt
+auf dem nach diesem Abschluss-PR vollständig grünen `main`.
 
 - SDK-neutraler Aircraft Core
 - SafetyGate FC0..FC3 mit FC0 als Standard
@@ -156,7 +156,13 @@ Folgende Pfade sind in V3.0.0 nicht Teil der Hardware-Supportzusage:
 Die vollständigen vorbereiteten Release Notes stehen in
 `docs/RELEASE_NOTES_3.0.0.md`.
 
-Aktuell existieren keine offenen Merge-Kandidaten für den 3.0.0-Softwarestand.
+Das GitHub-Sensitive-Data-Removal-Gate (#73) ist abgeschlossen: GitHub Support
+hat den serverseitigen Cleanup durchgeführt, die bekannten historischen
+Commit-Objekte sind nicht mehr direkt auflösbar und die betroffenen alten
+PR-Head-Commits sind nicht mehr erreichbar.
+
+Nach Merge dieses Abschluss-PRs sind nur noch die finale grüne Direktor- und
+Android-MSDK-CI sowie anschließend Tag und GitHub Release auszuführen.
 WPML/Pilot-Waylines sind als read-only Softwarepfad integriert; reale
 Pilot-2-WPML-/Workspace-Hardwarefreigabe bleibt separat offen.
 

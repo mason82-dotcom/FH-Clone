@@ -105,7 +105,8 @@ Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 - schreibende WPML/Pilot-Wayline-Upload-, Collect- und Execution-Pfade
 - produktive M3M-Radiometrie/NDVI ohne reale M3M-Fixtures
 - nicht real belegte M3T/M4T Tele-/Thermal-Medienpfade
-- vollständige MSDK-KeyManager-Hardwarematrix ohne reales Runtime-Evidence-Fixture
+- weitere MSDK-KeyManager-Produkt-/Firmwareprofile außerhalb des real
+  belegten RC-Pro-Enterprise-/M3E-Profils
 
 ## Sicherheitsmodell
 

@@ -1,22 +1,24 @@
 # FH2 V3.0.0 – Release Notes
 
-Status: **vorbereitet, noch nicht veröffentlicht**
+Status: **final; Veröffentlichung nach grüner CI des Abschlusscommits**
 
-Stand der Vorbereitung: 23.09.2026
+Stand: 29.09.2026
 
 ## Artefaktgrenze
 
 FH2 V3.0.0 wird **nicht** rückwirkend auf den historischen
 Software-Baseline-Commit getaggt.
 
-Der Tag `v3.0.0` soll nach Abschluss des verbleibenden
-Repository-/Hosting-Cleanup-Gates auf dem dann aktuellen, vollständig durch
-Direktor- und Android-CI validierten `main` liegen.
+Das Repository-/Hosting-Cleanup-Gate wurde am 29.09.2026 nach dem
+GitHub-Support-Cleanup und der Nicht-Erreichbarkeitsprüfung der bekannten
+Altobjekte abgeschlossen. Der Tag `v3.0.0` liegt deshalb auf dem finalen,
+vollständig durch Direktor- und Android-CI validierten `main` nach diesem
+Abschluss-PR.
 
 Damit gehören alle bis zu dieser finalen Tag-Grenze integrierten
-3.0.0-Komponenten zum veröffentlichten Artefakt. Ein späteres Zurücktaggen auf
-einen älteren Zwischenstand wäre technisch irreführend, weil alle Node-
-Workspaces und die UgCS-Bridge bereits konsistent Version `3.0.0` tragen.
+3.0.0-Komponenten zum veröffentlichten Artefakt. Ein Zurücktaggen auf einen
+älteren Zwischenstand wäre technisch irreführend, weil alle Node-Workspaces
+und die UgCS-Bridge konsistent Version `3.0.0` tragen.
 
 ## Softwareumfang
 
@@ -39,6 +41,8 @@ V3.0.0 enthält insbesondere:
 - DJI WPML/KMZ read-only Parser und Pilot-Wayline-Katalog
 - Android MSDK V5 RC-Bridge mit Pairing, Heartbeat, WSS-Agent-Kanal,
   Unpair/Revocation und KeyManager-Runtimeinventar
+- reale RC-Pro-Enterprise-/M3E-MSDK-Abnahme für Pairing, Heartbeat,
+  Reconnect, Stored-Pairing-Resume, Unpair/Revocation und KeyManager-Runtime
 - fail-closed MediaManager-Lifecycle: fehlgeschlagenes Enable entfernt
   registrierte Media-Listener vor einem späteren Retry
 - Pilot-2-JSBridge read-only Runtime
@@ -92,7 +96,8 @@ als produktiv zugesagt:
 - produktive M3M-Radiometrie/NDVI
 - Pilot-2-WPML-/Workspace-Hardwarefreigabe
 - Pilot-2-JSBridge-Hardwarefreigabe
-- vollständige MSDK-KeyManager-Hardwarematrix
+- weitere MSDK-KeyManager-Produkt-/Firmwareprofile außerhalb des real
+  belegten RC-Pro-Enterprise-/M3E-Profils
 
 Diese Grenzen werden in `docs/HARDWARE_EVIDENCE.md` geführt.
 
@@ -126,17 +131,23 @@ Android-MSDK-CI:
 Fehlende reale Hardware-Evidence wird als eigener Status geführt und ersetzt
 keinen Softwaretest.
 
-## Verbleibendes Release-Gate
+## Release-Freigabe
 
-Vor Erstellung von `v3.0.0` und dem GitHub Release muss das separate
-Repository-/Hosting-Cleanup-Gate abgeschlossen sein. Bis dahin gilt:
+Das separate Repository-/Hosting-Cleanup-Gate ist abgeschlossen. GitHub
+Support hat die verbliebenen serverseitigen Referenzen/Objekte bereinigt; die
+anschließende Prüfung konnte die bekannten historischen Commit-Objekte und
+betroffenen alten PR-Head-Commits nicht mehr auflösen.
+
+Für die Veröffentlichung gilt damit:
 
 ```text
-TAG = NO
-GITHUB_RELEASE = NO
 VERSION = 3.0.0
+HOSTING_CLEANUP = PASS
 SOFTWARE_CANDIDATE = READY
+FINAL_CI = REQUIRED
+TAG = v3.0.0 nach grüner finaler CI
+GITHUB_RELEASE = nach v3.0.0-Tag
 ```
 
-Nach Abschluss dieses Gates wird der dann aktuelle grüne `main`-Commit zur
-finalen `v3.0.0`-Artefaktgrenze.
+Der nach diesem Abschluss-PR vollständig grüne `main`-Commit ist die finale
+`v3.0.0`-Artefaktgrenze.
