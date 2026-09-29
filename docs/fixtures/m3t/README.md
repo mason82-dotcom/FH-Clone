@@ -95,7 +95,7 @@ bleibt die spezifische DJI-Belichtungszeit; `Date/Time Original` und
 Für den Datei-Metadatenpfad bleibt der feinere `RtkFlag`-Status maßgeblich.
 Der reale M3T-Sample bestätigt `RtkFlag=50` für Fixed.
 
-## Noch fehlend für das vollständige M3T-Referenzfixture
+## Noch fehlend für die V3.1-M3T-Hardwarequalifikation
 
 Reale Hardwaredaten fehlen weiterhin für:
 
@@ -116,9 +116,8 @@ aktuellen `main`-Historie entfernt und `.gitignore` blockiert erneutes
 Einchecken. Das öffentliche Manifest veröffentlicht keine Commit-, Blob- oder
 Rohdateipfad-Referenzen mehr.
 
-Ein früherer Git-Objektstand ist bei GitHub jedoch weiterhin direkt über eine
-bereits bekannte Objekt-ID erreichbar. Das ist **kein Laufzeit- oder
-Hardware-Gate**, aber ein Repository-Datenschutzpunkt. Vollständige Entfernung
-aus GitHubs Objekt-/Cachebestand erfordert die separate Sensitive-Data-Removal-
-Prozedur des Hosters. Bis deren Abschluss dürfen alte Commit-/Blob-IDs nicht
-weiter dokumentiert oder verteilt werden.
+Der GitHub-Sensitive-Data-Removal-Prozess ist abgeschlossen. GitHub Support
+hat den serverseitigen Cleanup durchgeführt; die anschließend geprüften
+bekannten historischen Commit-/PR-Head-Objekte sind nicht mehr direkt
+auflösbar. Alte lokale Clones dürfen die entfernte Historie nicht erneut nach
+GitHub pushen.
