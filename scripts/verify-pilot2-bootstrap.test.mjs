@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+
+const source = fs.readFileSync(
+  "apps/web/src/pilot-bootstrap/PilotCloudBootstrap.tsx",
+  "utf8"
+);
+
+test("Pilot 2 bootstrap uses only the reviewed cloud-connect JSBridge calls", () => {
+  for (const required of [
+    ".platformVerifyLicense(",
+    ".platformLoadComponent(",
+    ".platformIsVerified(",
+    ".platformGetRemoteControllerSN(",
+    ".thingGetConnectState("
+  ]) {
+    assert.equal(source.includes(required), true, `missing ${required}`);
+  }
+
+  for (const forbidden of [
+    ".thingDisconnect(",
+    ".wsConnect(",
+    ".wsSend(",
+    ".liveshareStartLive(",
+    ".platformSetWorkspaceId(",
+    ".platformSetInformation(",
+    "localStorage",
+    "sessionStorage",
+    "VITE_DJI",
+    "VITE_PILOT",
+    "fetch(",
+    "axios"
+  ]) {
+    assert.equal(source.includes(forbidden), false, `forbidden ${forbidden}`);
+  }
+});
+
+test("Pilot 2 bootstrap does not embed an MQTT password or DJI license value", () => {
+  assert.equal(/mqttPassword\s*=\s*useState\(\s*"[^"]+"/.test(source), false);
+  assert.equal(/license\s*=\s*useState\(\s*"[^"]+"/.test(source), false);
+  assert.equal(/appKey\s*=\s*useState\(\s*"[^"]+"/.test(source), false);
+});
+
+test("Pilot 2 bootstrap requires tcp:// or ws:// broker URLs", () => {
+  assert.match(source, /\^\(tcp\|ws\):/);
+});
