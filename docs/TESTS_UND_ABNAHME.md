@@ -1,6 +1,6 @@
 # Tests und Abnahme
 
-Stand: 23.09.2026
+Stand: 29.09.2026
 
 ## Zweck
 
@@ -207,7 +207,14 @@ Reale Hardware-Nachweise bleiben getrennt offen. Dazu gehören unter anderem:
 - M3T/M4T Thermal-/Tele-Medienfixtures
 - Pilot-2-JSBridge-Session
 - Pilot-2-WPML-/Workspace-Fixtures
-- MSDK-KeyManager- und Pairing-/Transport-Evidence
+- weitere MSDK-KeyManager-Produkt-/Firmwareprofile außerhalb des real
+  belegten RC-Pro-Enterprise-/M3E-Profils
+
+Für **RC Pro Enterprise + Mavic 3 Enterprise** ist die MSDK-Hardwareabnahme
+bereits real belegt: Pairing, Heartbeat, Control-WebSocket, Server-Reconnect,
+Stored-Pairing-Resume, Unpair/Revocation, No-Resume nach Unpair und die
+KeyManager-Runtimeprüfung sind PASS. Diese Evidence erweitert ausdrücklich
+nicht die noch offenen Pilot-to-Cloud-/MQTT-Hardwareprofile.
 
 Diese Punkte verändern den Softwarestatus nicht und dürfen vor einer konkreten
 Hardware-Supportzusage nicht als bestätigt dargestellt werden.
