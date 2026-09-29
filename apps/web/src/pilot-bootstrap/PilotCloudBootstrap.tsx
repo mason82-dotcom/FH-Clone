@@ -64,7 +64,7 @@ export function PilotCloudBootstrap() {
   const [mqttPassword, setMqttPassword] = useState("");
   const [stage, setStage] = useState<Stage>("idle");
   const [message, setMessage] = useState(
-    "Bereit. Zugangsdaten werden nur an DJI Pilot 2 JSBridge übergeben und nicht gespeichert."
+    "Bereit. Zugangsdaten werden nur an DJI Pilot 2 JSBridge übergeben und nicht im Browser gespeichert."
   );
 
   const bridgeAvailable = Boolean(window.djiBridge);
@@ -260,8 +260,10 @@ export function PilotCloudBootstrap() {
         </form>
 
         <p className="muted">
-          App Key, License und MQTT-Passwort werden weder an FH2 übertragen noch
-          in LocalStorage/SessionStorage gespeichert.
+          App Key, License und MQTT-Passwort werden von dieser Seite an keinen
+          FH2-HTTP-Endpunkt gesendet und nicht in Browser-Storage gespeichert.
+          Das MQTT-Passwort wird von Pilot 2 anschließend für die Broker-
+          Authentifizierung verwendet.
         </p>
       </section>
     </main>
