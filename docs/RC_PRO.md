@@ -9,7 +9,8 @@ Es trennt bewusst:
 
 - dokumentierte DJI-Produktidentität
 - aktuell implementiertes FH2-Modell
-- Punkte, die vor V3 mit realer Hardware verifiziert werden müssen
+- Punkte, die vor einer konkreten Pilot-to-Cloud-Hardware-Supportzusage mit
+  realer Hardware verifiziert werden müssen
 
 ## Rollenmodell
 
@@ -103,7 +104,7 @@ Controller als Transport-Gateway separat modelliert wird.
 
 ## MQTT-Client-ID
 
-Wichtig für V3:
+Verbindlich für V3:
 
 ```text
 clientid != Security Identity
@@ -162,9 +163,10 @@ Für FH2 gilt für M4 + RC Plus 2:
 M3E/M3T/M3TA verwenden weder `stick_control` noch `drone_control` für
 Cloud-Flugsteuerung. Der RC-Pro-Pfad bleibt auf Cloud-Payload-Control begrenzt.
 
-## Reale V3-Prüfpunkte
+## Reale Hardware-Prüfpunkte
 
-RC-Pro-Agent #5 muss mindestens erfassen:
+Vor einer konkreten RC-Pro-/Pilot-to-Cloud-Hardware-Supportzusage ist
+mindestens zu erfassen:
 
 1. MQTT-Username
 2. MQTT-Client-ID
@@ -191,10 +193,13 @@ Aktuelle Herstellerstände gehören in
 
 ## Sicherheitsgrenze
 
-Bis die Hardwaretests abgeschlossen sind:
+Für nicht real abgenommene Pilot-to-Cloud-Profile gilt weiterhin:
 
 ```text
-FC0
-keine reale Aircraft-Control-Freigabe
+FC0 als Software-Default
+keine reale Aircraft-Control-Freigabe ohne passendes Hardwareprofil
 keine permanente DRC-Brokerberechtigung
 ```
+
+Die separat abgeschlossene MSDK-V5-Abnahme mit RC Pro Enterprise + M3E
+ersetzt diese noch offenen MQTT-/Pilot-to-Cloud-Prüfpunkte nicht.
