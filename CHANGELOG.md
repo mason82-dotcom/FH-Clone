@@ -4,12 +4,11 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
-> Der historische 3.0.0-Baseline-Commit ist **nicht** das geplante Ziel des
-> späteren `v3.0.0`-Tags. Ein `v3.0.0`-Tag und GitHub Release sind noch
-> nicht veröffentlicht. Die Einträge dieses Abschnitts werden bei der finalen
-> Veröffentlichung zusammen mit dem bestehenden 3.0.0-Abschnitt zur
-> tatsächlichen Release-Artefaktgrenze des dann aktuellen grünen `main`
-> konsolidiert.
+Keine Änderungen nach der finalen V3.0.0-Artefaktgrenze.
+
+## 3.0.0 – 2026-09-29
+
+### Abschluss nach Software-Baseline
 
 - M3E/M3T/M3TA + RC Pro auf den offiziell dokumentierten Cloud-Payload-Control-Vertrag korrigiert; Cloud-Flugsteuerung (`stick_control`/`drone_control`) bleibt für M3 aus.
 - M4E/M4T + RC Plus 2 bleibt das separate Cloud-Flight-Control-Profil.
@@ -27,8 +26,9 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - Öffentliche M3T-Fixture-Metadaten veröffentlichen keine historischen Git-Commit-/Blob-IDs oder entfernten Rohdateipfade mehr; der verpflichtende Control-Policy-Audit verhindert Regressionen.
 - Android-MSDK-Medienmanager räumt nach fehlgeschlagenem `enable` registrierte DJI-Media-Listener und den File-Cache auf; ein eigener CI-Regressionstest verhindert doppelte Listener bei späteren Retries.
 - DJI-Hardware-Evidence-Vertrag auf den kanonischen Pilot-to-Cloud-Topologiepfad `sys/product/{gateway_sn}/status` vereinheitlicht; die frühere permissive `thing/.../status`-Ausnahme ist entfernt.
-
-## 3.0.0 – 2026-09-23
+- Reale RC-Pro-Enterprise-/M3E-MSDK-Hardwareabnahme abgeschlossen: Pairing, Heartbeat, Control-WebSocket, Server-Reconnect, Stored-Pairing-Resume, Unpair/Revocation, No-Resume nach Unpair und KeyManager-Runtime sind PASS.
+- Redigiertes reales MSDK-KeyManager-Fixture mit 42 beobachteten Deskriptoren integriert; Seriennummern, Koordinaten und Credentials werden nicht veröffentlicht.
+- GitHub-Sensitive-Data-Removal-Gate abgeschlossen: Support-Cleanup durchgeführt und bekannte historische Commit-/PR-Head-Objekte anschließend nicht mehr direkt auflösbar.
 
 ### Plattform
 
