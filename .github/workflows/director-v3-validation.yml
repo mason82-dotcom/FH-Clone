@@ -100,6 +100,9 @@ jobs:
       - name: GitHub Sensitive-Data Support Handoff
         run: npm run test:github-support-handoff
 
+      - name: DJI MQTT Evidence Redaction
+        run: npm run test:dji-mqtt-evidence
+
       - name: Frontend Runtime Hardening
         run: npm run test:frontend-runtime-hardening
 
@@ -204,6 +207,9 @@ jobs:
 
       - name: GitHub Sensitive-Data Support Handoff
         run: npm run test:github-support-handoff
+
+      - name: DJI MQTT Evidence Redaction
+        run: npm run test:dji-mqtt-evidence
 
       - name: Frontend Runtime Hardening
         run: npm run test:frontend-runtime-hardening
