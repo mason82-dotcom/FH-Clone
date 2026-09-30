@@ -4,7 +4,17 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 
 ## Unreleased
 
-Keine Änderungen nach der finalen V3.0.0-Artefaktgrenze.
+### V3.1 Entwicklung
+
+- V3.1-Integrationsprogramm auf Basis des unveränderten V3.0.0-Tags gestartet.
+- Realen, redigierten RC-Pro-Enterprise-/M3E-Pilot-to-Cloud-MQTT-Capture integriert; das zentrale `M3E_RC_PRO`-Hardware-Evidence-Gate ist für alle Pflichtchecks PASS. `status_reply` bleibt als Outbound-Traffic separat informational.
+- Pilot-2-Cloud-Bootstrap für den kontrollierten `thing`-Modul-/MQTT-Verbindungsaufbau integriert, ohne Browser-Secret-Persistenz oder Control-Bootstrap.
+- Reales, redigiertes Pilot-2-JSBridge-Hardware-Fixture integriert; Plattformverifikation, Pilot-Version, exakter RC-/Aircraft-Topologie-Match und aktive Thing-Verbindung sind belegt.
+- Pilot-2-Evidence-UI gegen verschachtelte Versionsantworten und Navigation außerhalb des DJI-WebViews gehärtet.
+- V3.1-Statusdokumentation wird vom historischen V3.0.0-Releaseumfang getrennt geführt.
+- TimescaleDB-Backup/Restore als reproduzierbares CI-Betriebsgate ergänzt; Restore bleibt standardmäßig von der aktiven Quelldatenbank getrennt.
+- Passive, sanitierte MQTT-Outbound-Evidence für erfolgreiche Basic-Link-Publishes sowie ausgewählte DRC-Qualifikationsframes ergänzt; keine Command-Replay- oder AuthZ-Quelle.
+- Interner Prometheus-kompatibler `/metrics`-Endpunkt auf Port 8081 ergänzt; keine Geräteidentitäten als Metriklabels und weiterhin keine Host-Port-Exposition.
 
 ## 3.0.0 – 2026-09-29
 
