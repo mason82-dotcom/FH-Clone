@@ -5,6 +5,7 @@ import type {
   Fh2ListResult,
   Fh2ManageDevice,
   Fh2PaginatedList,
+  Fh2Pagination,
   Fh2WaylineItem
 } from "./fh2-openapi-types.js";
 
@@ -329,7 +330,7 @@ function parseListResult<T>(
   return value as Fh2ListResult<T>;
 }
 
-function isPagination(value: unknown): value is Fh2PaginatedList<never>["pagination"] {
+function isPagination(value: unknown): value is Fh2Pagination {
   return (
     isRecord(value) &&
     isPositiveInteger(value.page) &&
@@ -368,11 +369,11 @@ function isFlightTask(value: unknown): value is Fh2FlightTask {
 }
 
 function isPositiveInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && Number(value) > 0;
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && Number(value) >= 0;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function isNonEmptyString(value: unknown): value is string {
