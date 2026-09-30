@@ -429,7 +429,7 @@ if (realEvidence(wpml)) {
     wpml.pilotCatalog?.realWorkspace === true &&
     wpml.pilotCatalog?.responseValidated === true &&
     wpml.pilotCatalog?.tokenPresentInFixture !== true);
-  add("WPML_PILOT", "REQUIRED_HARDWARE", "DJI-Pilot-WebView-Listenabruf real beobachtet",
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "nativer DJI-Pilot-Listenabruf real beobachtet",
     Number.isSafeInteger(wpml.pilotCatalog?.pilotNativeListRequests) &&
     wpml.pilotCatalog.pilotNativeListRequests >= 1 &&
     typeof wpml.pilotCatalog?.lastPilotNativeListRequestAt === "string" &&
