@@ -452,6 +452,75 @@ test("keeps mapping template geometry as raw XML instead of misclassifying it as
   );
 });
 
+test("accepts current Pilot 2 mappingPrism and direct startActionGroup actions", () => {
+  const currentTemplate = templateXml
+    .replace("<wpml:templateType>waypoint</wpml:templateType>", "<wpml:templateType>mappingPrism</wpml:templateType>")
+    .replace(
+      /<Placemark>[\s\S]*?<\/Placemark>/,
+      `<Placemark>
+        <Polygon>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>8.58,49.21 8.59,49.21 8.59,49.22 8.58,49.21</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </Placemark>`
+    );
+
+  const currentWaylines = waylinesXml
+    .replace("<wpml:globalRTHHeight>120</wpml:globalRTHHeight>", "")
+    .replace(
+      /<wpml:startActionGroup>[\s\S]*?<\/wpml:startActionGroup>/,
+      `<wpml:startActionGroup>
+        <wpml:action>
+          <wpml:actionId>0</wpml:actionId>
+          <wpml:actionActuatorFunc>setFocusType</wpml:actionActuatorFunc>
+        </wpml:action>
+        <wpml:action>
+          <wpml:actionId>1</wpml:actionId>
+          <wpml:actionActuatorFunc>startSmartOblique</wpml:actionActuatorFunc>
+        </wpml:action>
+      </wpml:startActionGroup>`
+    );
+
+  const bundle = parseWpmlBundle(currentTemplate, currentWaylines);
+
+  assert.equal(bundle.template.folders[0]?.templateType, "mappingPrism");
+  assert.deepEqual(bundle.template.folders[0]?.waypoints, []);
+  assert.deepEqual(
+    bundle.waylines.folders[0]?.startActionGroups[0]?.actions.map(
+      (action) => action.actuator
+    ),
+    ["setFocusType", "startSmartOblique"]
+  );
+
+  assert.equal(
+    bundle.issues.some((issue) => issue.code === "template.type_unknown"),
+    false
+  );
+  assert.equal(
+    bundle.issues.some((issue) => issue.code === "action_group.id_invalid"),
+    false
+  );
+  assert.equal(
+    bundle.issues.some((issue) => issue.code === "action_group.range_invalid"),
+    false
+  );
+  assert.equal(
+    bundle.issues.some((issue) => issue.code === "action_group.trigger_missing"),
+    false
+  );
+  assert.equal(
+    bundle.issues.some(
+      (issue) =>
+        issue.code === "mission.global_rth_height_missing" &&
+        issue.level === "error"
+    ),
+    true
+  );
+});
+
 test("preserves untyped WPML content as raw XML alongside normalized fields", () => {
   const bundle = parseWpmlBundle(templateXml, waylinesXml);
   assert.match(bundle.template.rawXml, /<wpml:author>FH2 Test<\/wpml:author>/);
