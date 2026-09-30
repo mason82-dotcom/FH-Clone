@@ -17,6 +17,7 @@ services:
       - ./infra/timescale/sql/005_msdk_token_revocations.sql:/docker-entrypoint-initdb.d/006_msdk_token_revocations.sql:ro
       - ./infra/timescale/sql/006_media_assets.sql:/docker-entrypoint-initdb.d/007_media_assets.sql:ro
       - ./infra/timescale/sql/007_telemetry_history.sql:/docker-entrypoint-initdb.d/008_telemetry_history.sql:ro
+      - ./infra/timescale/sql/008_mqtt_outbound_evidence.sql:/docker-entrypoint-initdb.d/009_mqtt_outbound_evidence.sql:ro
     healthcheck:
       test:
         [
@@ -40,6 +41,7 @@ services:
     volumes:
       - ./infra/timescale/sql/006_media_assets.sql:/migrations/006_media_assets.sql:ro
       - ./infra/timescale/sql/007_telemetry_history.sql:/migrations/007_telemetry_history.sql:ro
+      - ./infra/timescale/sql/008_mqtt_outbound_evidence.sql:/migrations/008_mqtt_outbound_evidence.sql:ro
     command:
       [
         "psql",
@@ -54,7 +56,9 @@ services:
         "-f",
         "/migrations/006_media_assets.sql",
         "-f",
-        "/migrations/007_telemetry_history.sql"
+        "/migrations/007_telemetry_history.sql",
+        "-f",
+        "/migrations/008_mqtt_outbound_evidence.sql"
       ]
     restart: "no"
     networks:
