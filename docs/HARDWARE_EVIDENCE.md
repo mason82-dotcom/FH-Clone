@@ -341,7 +341,7 @@ Erforderlich:
 Für den Katalognachweis gilt zusätzlich: ein lokaler `curl`-Aufruf zählt
 nicht als Hardwareevidence. Der self-hosted Wayline-Server muss mindestens
 einen erfolgreichen Listenabruf mit der in der realen DJI-Pilot-2-WebView
-beobachteten `dji-open-platform`-Signatur registriert haben. Im öffentlichen
+beobachteten `okhttp/3.14.9`-Signatur registriert haben. Im öffentlichen
 Fixture werden davon nur Zähler und Zeitstempel übernommen; vollständiger
 User-Agent, Remote-IP, Workspace-ID und Token werden nicht gespeichert.
 
