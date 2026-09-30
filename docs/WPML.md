@@ -460,8 +460,7 @@ realen Pilot-2-HTTP-Vertragsnachweis, ohne Upload-, Storage- oder
 Execution-Semantik vorzutäuschen.
 
 Für den Hardware-Nachweis zählt FH2 normale Listenaufrufe und zusätzlich
-separat erfolgreiche Requests, deren User-Agent die in der realen
-DJI-Pilot-2-WebView beobachtete `okhttp/3.14.9`-Signatur enthält.
+separat erfolgreiche Requests, deren User-Agent die auf der realen RC Pro Enterprise im nativen DJI-Pilot-2-HTTP-Client beobachtete `okhttp/3.14.9`-Signatur enthält.
 Gespeichert werden dabei **nicht** der vollständige User-Agent, die Remote-IP,
 Workspace-ID oder der Auth-Token, sondern nur Zähler und Zeitstempel:
 
