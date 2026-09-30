@@ -103,3 +103,38 @@ test("lists devices read-only and expands airport to both DJI model classes", as
   assert.equal(seenUrl?.searchParams.get("page_size"), "25");
   assert.equal(seenMethod, "GET");
 });
+
+test("lists HMS alerts with repeated device_sn and required DJI parameters", async () => {
+  let seenUrl: URL | undefined;
+  let seenMethod: string | undefined;
+  const fetchImpl: Fh2Fetch = async (input, init) => {
+    seenUrl = new URL(String(input));
+    seenMethod = init?.method;
+    return new Response(JSON.stringify({ code: 0, data: { list: [] } }), { status: 200 });
+  };
+
+  const result = await client(fetchImpl).listHms(
+    ["aircraft-1", "aircraft-1", "gateway-1"],
+    1_700_000_000_000,
+    1_700_086_400_000,
+    2,
+    20
+  );
+
+  assert.deepEqual(result, { list: [] });
+  assert.equal(
+    seenUrl?.pathname,
+    "/openapi/v2.0/manage/api/v1/organizations/org-1/manage-devices/hms"
+  );
+  assert.deepEqual(
+    seenUrl?.searchParams.getAll("device_sn"),
+    ["aircraft-1", "gateway-1"]
+  );
+  assert.equal(seenUrl?.searchParams.get("begin_time"), "1700000000000");
+  assert.equal(seenUrl?.searchParams.get("end_time"), "1700086400000");
+  assert.equal(seenUrl?.searchParams.get("language"), "zh");
+  assert.equal(seenUrl?.searchParams.get("page"), "2");
+  assert.equal(seenUrl?.searchParams.get("page_size"), "20");
+  assert.equal(seenMethod, "GET");
+});
+
