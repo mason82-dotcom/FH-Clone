@@ -85,6 +85,13 @@ if (!publicSource.includes("pilotWaylineServer.matchWorkspace")) {
 }
 runtime.add("GET /wayline/api/v1/workspaces/{workspace_id}/waylines");
 
+if (!publicSource.includes("pilotWaylineServer.matchDuplicateNamesWorkspace")) {
+  throw new Error("Pilot Wayline duplicate-name matcher missing");
+}
+runtime.add(
+  "GET /wayline/api/v1/workspaces/{workspace_id}/waylines/duplicate-names"
+);
+
 const documented = new Set();
 for (const [path, pathItem] of Object.entries(spec.paths)) {
   if (!pathItem || typeof pathItem !== "object") {

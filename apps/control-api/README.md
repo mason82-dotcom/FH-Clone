@@ -196,14 +196,14 @@ bereitstellen:
 ```http
 GET /api/dji/pilot/wayline-server/status
 GET /wayline/api/v1/workspaces/{workspace_id}/waylines
+GET /wayline/api/v1/workspaces/{workspace_id}/waylines/duplicate-names?name=<wayline-name>
 x-auth-token: <DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN>
 ```
 
 Der eingehende Pfad ist standardmäßig deaktiviert, prüft Workspace-ID und
 Token fail-closed und liefert derzeit ausschließlich einen gültigen leeren
 Wayline-Katalog. Der Status zählt erfolgreiche Listenabrufe und separat
-Requests mit der in der realen DJI-Pilot-WebView beobachteten
-`dji-open-platform`-Signatur. Gespeichert werden davon nur Zähler und
+Requests des auf realer RC-Pro-Enterprise-Hardware beobachteten nativen DJI-Pilot-2-HTTP-Clients mit der Signatur `okhttp/3.14.9`. Gespeichert werden davon nur Zähler und
 Zeitstempel; vollständiger User-Agent, Remote-IP, Workspace-ID und Token
 werden nicht protokolliert. Andere `/wayline/`-Operationen werden nicht implementiert.
 Upload, Collect, Download-URL, STS, Favoriten-Mutationen und Execution gehören

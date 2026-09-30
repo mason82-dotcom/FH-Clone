@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { PilotWaylineServer } from "./pilot-wayline-server.js";
+import {
+  isQualifiedNativePilotRequest,
+  PilotWaylineServer
+} from "./pilot-wayline-server.js";
 
 const workspaceId = "e3dea0f5-37f2-4d79-ae58-490af3228069";
 
@@ -28,7 +31,7 @@ test("Pilot Wayline server is fail-closed until enabled with UUID and token", ()
   );
 });
 
-test("matches only the DJI Pilot Wayline list route and exact workspace", () => {
+test("matches only the supported DJI Pilot read-only Wayline routes", () => {
   const server = configured();
 
   assert.equal(
@@ -38,8 +41,20 @@ test("matches only the DJI Pilot Wayline list route and exact workspace", () => 
     workspaceId
   );
   assert.equal(
+    server.matchDuplicateNamesWorkspace(
+      `/wayline/api/v1/workspaces/${workspaceId}/waylines/duplicate-names`
+    ),
+    workspaceId
+  );
+  assert.equal(
     server.matchWorkspace(
       `/wayline/api/v1/workspaces/${workspaceId}/waylines/download`
+    ),
+    undefined
+  );
+  assert.equal(
+    server.matchDuplicateNamesWorkspace(
+      `/wayline/api/v1/workspaces/${workspaceId}/waylines/upload`
     ),
     undefined
   );
@@ -62,7 +77,7 @@ test("returns the DJI list envelope with an intentionally empty read-only catalo
   const server = configured();
   const result = server.list(
     new URL(
-      `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?page=2&page_size=25`
+      `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?file_type=5&key=&favorited=false&order_by=update_time%20desc&page_size=9&page=1`
     )
   );
 
@@ -72,8 +87,8 @@ test("returns the DJI list envelope with an intentionally empty read-only catalo
     data: {
       list: [],
       pagination: {
-        page: 2,
-        page_size: 25,
+        page: 1,
+        page_size: 9,
         total: 0
       }
     }
@@ -99,19 +114,48 @@ test("records only non-sensitive runtime observation for successful list request
   });
 });
 
-test("records only a boolean/count observation for DJI Pilot WebView requests", () => {
+test("qualifies the real native Pilot 2 okhttp signature fail-closed", () => {
+  const url = new URL(
+    `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?file_type=5&page=1&page_size=9`
+  );
+
+  assert.equal(
+    isQualifiedNativePilotRequest(url, { "user-agent": "okhttp/3.14.9" }),
+    true
+  );
+  assert.equal(
+    isQualifiedNativePilotRequest(url, {
+      "user-agent":
+        "Mozilla/5.0 (Linux; Android 10; DJI RC Pro Enterprise; wv) dji-open-platform"
+    }),
+    false
+  );
+  assert.equal(
+    isQualifiedNativePilotRequest(url, { "user-agent": "okhttp/4.12.0" }),
+    false
+  );
+  assert.equal(isQualifiedNativePilotRequest(url, {}), false);
+  assert.equal(
+    isQualifiedNativePilotRequest(
+      new URL(
+        `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?page=1&page_size=9`
+      ),
+      { "user-agent": "okhttp/3.14.9" }
+    ),
+    false
+  );
+});
+
+test("records native Pilot list evidence without persisting the user-agent", () => {
   const server = configured();
   const url = new URL(
-    `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?page=1&page_size=10`
+    `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?file_type=5&key=&favorited=false&order_by=update_time%20desc&page_size=9&page=1`
   );
 
   server.list(
     url,
-    Date.parse("2026-09-30T19:30:00.000Z"),
-    {
-      "user-agent":
-        "Mozilla/5.0 (Linux; Android 10; DJI RC Pro Enterprise; wv) dji-open-platform"
-    }
+    Date.parse("2026-09-30T21:06:59.000Z"),
+    { "user-agent": "okhttp/3.14.9" }
   );
 
   assert.deepEqual(server.status(), {
@@ -121,15 +165,56 @@ test("records only a boolean/count observation for DJI Pilot WebView requests", 
     workspaceConfigured: true,
     authConfigured: true,
     listRequests: 1,
-    lastListRequestAt: "2026-09-30T19:30:00.000Z",
-    pilotWebViewListRequests: 1,
-    lastPilotWebViewListRequestAt: "2026-09-30T19:30:00.000Z"
+    lastListRequestAt: "2026-09-30T21:06:59.000Z",
+    pilotNativeListRequests: 1,
+    lastPilotNativeListRequestAt: "2026-09-30T21:06:59.000Z"
   });
 
   assert.equal(
-    JSON.stringify(server.status()).includes("DJI RC Pro Enterprise"),
+    JSON.stringify(server.status()).includes("okhttp"),
     false
   );
+});
+
+test("implements DJI duplicate-name lookup read-only for the empty catalog", () => {
+  const server = configured();
+  const result = server.duplicateNames(
+    new URL(
+      `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines/duplicate-names?name=NeuegeometrischeRoute1`
+    ),
+    Date.parse("2026-09-30T21:07:15.000Z")
+  );
+
+  assert.deepEqual(result, {
+    code: 0,
+    message: "success",
+    data: []
+  });
+  assert.deepEqual(server.status(), {
+    enabled: true,
+    configured: true,
+    readOnly: true,
+    workspaceConfigured: true,
+    authConfigured: true,
+    listRequests: 0,
+    duplicateNameRequests: 1,
+    lastDuplicateNameRequestAt: "2026-09-30T21:07:15.000Z"
+  });
+});
+
+test("duplicate-name lookup requires at least one non-empty name", () => {
+  const server = configured();
+  for (const query of ["", "name=", "name=%20"]) {
+    assert.throws(
+      () =>
+        server.duplicateNames(
+          new URL(
+            `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines/duplicate-names?${query}`
+          )
+        ),
+      /invalid_query_name/
+    );
+  }
 });
 
 test("rejects malformed pagination instead of partially parsing it", () => {

@@ -57,9 +57,9 @@ export function buildWpmlPilotEvidence({
       responseValidated: true,
       tokenPresentInFixture: false,
       listRequests: pilotStatus.listRequests,
-      pilotWebViewListRequests: pilotStatus.pilotWebViewListRequests,
-      lastPilotWebViewListRequestAt:
-        pilotStatus.lastPilotWebViewListRequestAt,
+      pilotNativeListRequests: pilotStatus.pilotNativeListRequests,
+      lastPilotNativeListRequestAt:
+        pilotStatus.lastPilotNativeListRequestAt,
       emptyCatalogObserved: true
     }
   };
@@ -168,19 +168,19 @@ export function validatePilotStatus(status) {
   }
 
   if (
-    !Number.isSafeInteger(status.pilotWebViewListRequests) ||
-    status.pilotWebViewListRequests < 1
+    !Number.isSafeInteger(status.pilotNativeListRequests) ||
+    status.pilotNativeListRequests < 1
   ) {
     throw new Error(
-      "No DJI Pilot WebView list request observed; local curl requests do not qualify"
+      "No native DJI Pilot list request observed; local curl requests do not qualify"
     );
   }
 
   if (
-    typeof status.lastPilotWebViewListRequestAt !== "string" ||
-    !Number.isFinite(Date.parse(status.lastPilotWebViewListRequestAt))
+    typeof status.lastPilotNativeListRequestAt !== "string" ||
+    !Number.isFinite(Date.parse(status.lastPilotNativeListRequestAt))
   ) {
-    throw new Error("Pilot WebView request timestamp missing or invalid");
+    throw new Error("native DJI Pilot request timestamp missing or invalid");
   }
 }
 

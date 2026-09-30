@@ -396,10 +396,11 @@ Diagnose:
 GET /api/dji/pilot/wayline-server/status
 ```
 
-DJI-Pilot-kompatibler Listenpfad:
+DJI-Pilot-kompatible read-only Pfade:
 
 ```http
 GET /wayline/api/v1/workspaces/{workspace_id}/waylines
+GET /wayline/api/v1/workspaces/{workspace_id}/waylines/duplicate-names?name=<wayline-name>
 x-auth-token: <server secret>
 ```
 
@@ -409,21 +410,20 @@ konfigurierte Workspace-UUID und ein exakt passendes
 
 Der Diagnose-Endpunkt enthält zusätzlich ausschließlich nicht-sensitive
 Laufzeitbeobachtungen für den Hardware-Nachweis. Neben `listRequests` werden
-erfolgreiche Requests aus der realen DJI-Pilot-WebView separat gezählt, wenn
-deren User-Agent die beobachtete `dji-open-platform`-Signatur enthält:
+erfolgreiche Requests des auf realer RC-Pro-Enterprise-Hardware beobachteten nativen DJI-Pilot-2-HTTP-Clients separat gezählt, wenn deren User-Agent exakt `okhttp/3.14.9` entspricht:
 
 ```json
 {
   "listRequests": 3,
   "lastListRequestAt": "2026-09-30T19:30:00.000Z",
-  "pilotWebViewListRequests": 1,
-  "lastPilotWebViewListRequestAt": "2026-09-30T19:30:00.000Z"
+  "pilotNativeListRequests": 1,
+  "lastPilotNativeListRequestAt": "2026-09-30T19:30:00.000Z"
 }
 ```
 
 Vollständiger User-Agent, Remote-IP, Workspace-ID und Auth-Token werden dabei
 nicht gespeichert. Ein lokaler `curl`-Smoke-Test erhöht
-`pilotWebViewListRequests` nicht.
+`pilotNativeListRequests` nicht.
 
 Der aktuelle Server liefert bewusst einen leeren Katalog im DJI-Envelope:
 
