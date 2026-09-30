@@ -1,0 +1,36 @@
+{
+  "schema": "fh2.wpml-pilot-evidence.v1",
+  "generatedBy": "DJI Pilot 2",
+  "capturedAt": "2026-09-30T22:03:37.568Z",
+  "realHardware": true,
+  "synthetic": false,
+  "redacted": true,
+  "sourceSha256": "a54ff908a54a7cf5bda5843a1e3afc477a9bc247d75ccdf6b18125956b02f80b",
+  "archiveEntries": [
+    "wpmz/template.kml",
+    "wpmz/waylines.wpml"
+  ],
+  "resourceReferences": [],
+  "parserComparison": {
+    "pass": true,
+    "checks": {
+      "missionConfig": true,
+      "productEnums": true,
+      "heightModes": true,
+      "templateWaylineIds": true,
+      "continuousWaypointIndices": true
+    },
+    "acceptedIssueCodes": [
+      "mission.global_rth_height_missing"
+    ]
+  },
+  "pilotCatalog": {
+    "realWorkspace": true,
+    "responseValidated": true,
+    "tokenPresentInFixture": false,
+    "listRequests": 10,
+    "pilotNativeListRequests": 10,
+    "lastPilotNativeListRequestAt": "2026-09-30T21:39:03.299Z",
+    "emptyCatalogObserved": true
+  }
+}
