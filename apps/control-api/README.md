@@ -211,6 +211,7 @@ nicht zu diesem Vertrag.
 GET /api/fh2/status
 GET /api/fh2/devices?device_class=drone&page=1&page_size=100
 GET /api/fh2/hms?device_sn=<sn>&begin_time=<ms>&end_time=<ms>&page=1&page_size=20
+GET /api/fh2/media?page=1&size=100
 GET /api/fh2/waylines?page=1&size=100
 GET /api/fh2/flight-tasks?page=1&page_size=50
 ```
@@ -226,11 +227,17 @@ Eine ungültige Geräteklasse liefert `400 invalid_query_device_class`.
 DJI-Privatization-Vertrag fest auf `zh` gesetzt. Der Endpunkt quittiert keine
 Alarme und führt keinerlei HMS-Mutation aus.
 
+`/api/fh2/media` liest ausschließlich die FlightHub-2-Medienbibliothek des
+konfigurierten Projekts. Unterstützt werden zunächst nur `page` und `size`.
+Die FH2-Dateien werden nicht in den lokalen `MediaStore` oder die
+`MediaOverlayRegistry` übernommen; DJI-Datei-ID und lokale `MediaAsset`-ID
+bleiben getrennte Provenienzdomänen.
+
 Fehlende Konfiguration liefert `503 fh2_not_configured`; Upstreamfehler werden
 als `502 fh2_upstream_error` abgebildet.
 
 Die read-only Rückgaben sind in `src/fh2-openapi-types.ts` typisiert:
-Pagination, Devices, HMS, Waylines und Flight Tasks besitzen DJI-nahe
+Pagination, Devices, HMS, Media, Waylines und Flight Tasks besitzen DJI-nahe
 Compile-Time-Contracts. Zusätzlich prüft die Client-Grenze zur Laufzeit
 Listencontainer, Pagination und die stabilen Identitätsfelder der Ressourcen.
 Zusätzliche DJI-Felder bleiben zulässig; es wird bewusst kein starres
