@@ -76,7 +76,7 @@ export function PilotCloudBootstrap() {
 
   const bridgeAvailable = Boolean(window.djiBridge);
 
-  function configurePilotWorkspace(bridge: DjiBridgeRuntime): void {
+  function configurePilotWorkspace(bridge: NonNullable<typeof window.djiBridge>): void {
     if (!workspaceId || !UUID_PATTERN.test(workspaceId)) {
       throw new Error(
         "DJI Pilot Workspace-ID fehlt oder ist keine UUID. " +
