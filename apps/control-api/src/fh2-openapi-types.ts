@@ -81,6 +81,39 @@ export interface Fh2HmsAlert {
   [key: string]: unknown;
 }
 
+export interface Fh2MediaFile {
+  id: number;
+  name: string;
+  uuid?: string;
+  file_type?: number;
+  sub_file_type?: number;
+  path?: string;
+  size?: number;
+  url?: string;
+  preview_url?: string;
+  thumbnail_url?: string;
+  webp_url?: string;
+  panorama_webp_url?: string;
+  suffix?: string;
+  ext?: Record<string, unknown> | null;
+  mod?: number;
+  show_on_map?: boolean;
+  create_at?: string;
+  update_at?: string;
+  parent_id?: number | null;
+  file_tags?: unknown[];
+  tag_groups?: unknown[];
+  graffiti_list?: unknown[];
+  alert_image_url?: string;
+  ai_video_process_status?: number;
+  pano_tier_state?: number;
+  pano_hash_code?: string;
+  flight_id?: string;
+  drone_model_key?: string;
+  payload_model_key?: string;
+  [key: string]: unknown;
+}
+
 export interface Fh2WaylineItem {
   id: string;
   name: string;
