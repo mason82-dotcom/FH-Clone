@@ -198,6 +198,65 @@ test("redactor tolerates disconnected update_topo snapshots around one connected
   assert.equal(value.topology.data.sub_devices[0].sub_type, 1);
 });
 
+test("redactor correlates a persisted DEVICE_REDACTED outbound status_reply", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-status-reply-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+
+  rows[0].observed_at = "2026-09-30T21:37:14.677Z";
+  rows[1] = {
+    observed_at: "2026-09-30T21:37:14.723Z",
+    direction: "outbound",
+    channel: "sys/product/DEVICE_REDACTED/status_reply",
+    payload: { result: 0 }
+  };
+
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3t", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const value = JSON.parse(fs.readFileSync(output, "utf8"));
+  assert.equal(value.sourceSummary.statusReplyObserved, true);
+  assert.equal(
+    value.statusReply?.topic,
+    "sys/product/GATEWAY_REDACTED/status_reply"
+  );
+});
+
+test("redactor does not attribute an uncorrelated redacted status_reply", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-status-reply-stale-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+
+  rows[0].observed_at = "2026-09-30T21:37:14.677Z";
+  rows[1] = {
+    observed_at: "2026-09-30T21:47:14.723Z",
+    direction: "outbound",
+    channel: "sys/product/DEVICE_REDACTED/status_reply",
+    payload: { result: 0 }
+  };
+
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3t", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const value = JSON.parse(fs.readFileSync(output, "utf8"));
+  assert.equal(value.sourceSummary.statusReplyObserved, false);
+  assert.equal(value.statusReply, undefined);
+});
+
 test("redactor rejects captures containing different connected topology aircraft", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-topology-mixed-"));
   const input = path.join(dir, "raw.json");
