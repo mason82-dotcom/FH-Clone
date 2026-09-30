@@ -187,24 +187,34 @@ Der separate Test `npm run test:pilot2-bootstrap` schützt diese Grenze.
 
 ### Verlassen des Pilot-2-Menüs
 
-Das DJI-`thing`-Modul ist ein natives Pilot-2-Funktionsmodul. FH2 behandelt
-es deshalb getrennt vom Lebenszyklus des H5-WebViews:
+Ein realer RC-Pro-Enterprise-Test mit FH2 zeigte, dass der obere Zurück-Pfeil
+bei einer lediglich geladenen `thing`-Komponente den MQTT-Client beendet.
+Der Softwarepfad darf deshalb **keine** Persistenz allein aus
+`platformLoadComponent("thing", ...)` ableiten.
 
-- beim Zurückgehen aus der Drittanbieter-Cloud-Seite wird das Thing-Modul
-  **nicht** entladen,
-- FH2 ruft beim Menüwechsel keinen Thing-Disconnect auf,
-- der registrierte `onBackClick`-Handler gibt `false` zurück, damit Pilot 2
-  nur das WebView normal verlässt,
-- beim erneuten Öffnen von `/pilot-login` wird
-  `platformIsComponentLoaded("thing")` und anschließend
-  `thingGetConnectState()` gelesen; ein bereits bestehender MQTT-Link wird
-  ohne erneute Credential-Eingabe als verbunden angezeigt.
+DJI dokumentiert für den vollständigen Pilot-to-Cloud-Login nach erfolgreichem
+Cloud-/MQTT-Connect zusätzlich die Registrierung von Workspace-ID und
+Plattforminformation. FH2 setzt deshalb nach erfolgreichem Thing-Connect:
 
-Das entspricht dem Lebenszyklus im offiziellen DJI-Cloud-API-Demo: bereits
-geladene Module werden beim erneuten Öffnen erkannt und weiterverwendet.
+- `platformSetWorkspaceId(...)`
+- `platformSetInformation(...)`
 
-**Abmelden / Exit Cloud Platform** ist davon ausdrücklich verschieden. Ein
-bewusstes Beenden der Cloud-Plattform darf die native Verbindung beenden und
+Die Workspace-ID stammt aus der nicht geheimen Laufzeitvariable
+`DJI_PILOT_WORKSPACE_ID`, wird beim Web-Build an
+`VITE_DJI_PILOT_WORKSPACE_ID` weitergereicht und muss eine UUID sein.
+App Key, License und MQTT-Passwort bleiben davon getrennt und werden weiterhin
+nicht ins Web-Bundle geschrieben.
+
+Der registrierte `onBackClick`-Handler entspricht weiter dem normalen
+Pilot-2-Root-WebView-Verhalten. FH2 ruft weder `thingDisconnect()` noch
+`platformUnloadComponent("thing")` noch `platformStopSelf()` auf.
+
+Ob der DJI-native Cloud-/MQTT-Link nach Wechsel in die Flugansicht tatsächlich
+aktiv bleibt, ist ein **reales Hardware-Gate** und wird nicht aus dem
+JavaScript-Lebenszyklus abgeleitet. Der Zustand muss serverseitig über
+EMQX-Clientzahl und fortlaufende `dji-cloud`-Telemetrie bestätigt werden.
+
+**Abmelden / Exit Cloud Platform** ist ausdrücklich ein Disconnect-Vorgang und
 wird von FH2 nicht verhindert.
 
 ## Hardware-Evidence
@@ -235,7 +245,7 @@ Nicht implementiert sind:
 - unbeaufsichtigter/automatischer Pilot-2-Cloud-Bootstrap ohne Benutzeraktion,
 - serverseitige Ausgabe von Gateway-/MQTT-Passwörtern an den Browser,
 - API-/WS-Tokenbootstrap,
-- Workspace-Konfiguration,
+- serverseitige Ausgabe oder automatische Erzeugung von Workspace-Credentials,
 - JSBridge-Media-Write,
 - JSBridge-Livestream-Control,
 - Mission-/Wayline-Write über JSBridge.

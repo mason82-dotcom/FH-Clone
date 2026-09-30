@@ -104,13 +104,19 @@ mit FlightHub-2-OpenAPI-Waylines gleichzusetzen.
 | --- | --- | --- |
 | `DJI_PILOT_WAYLINE_ENABLED` | `false` | aktiviert den read-only Pilot-Wayline-Katalog |
 | `DJI_PILOT_BASE_URL` | leer | Basis-URL des Pilot-to-Cloud-HTTPS-Servers |
-| `DJI_PILOT_WORKSPACE_ID` | leer | Workspace-ID für Waypoint-Dateien |
+| `DJI_PILOT_WORKSPACE_ID` | leer | stabile Workspace-UUID für Pilot-to-Cloud; serverseitig für Waypoints und beim Web-Build als nicht-geheime Pilot-2-Workspace-ID verwendet |
 | `DJI_PILOT_AUTH_TOKEN` | leer | serverseitiges `x-auth-token`; Secret |
 | `DJI_PILOT_TIMEOUT_MS` | `15000` | Request-Timeout |
 
 Der Token bleibt ausschließlich serverseitig. FH2 implementiert hier nur die
 Waypoint-Dateiliste per GET; STS, Upload, Download-Proxy, Collect und
 Missionsausführung bleiben außerhalb dieses read-only Vertrags.
+
+`DJI_PILOT_WORKSPACE_ID` ist **kein Secret**. Für den dedizierten
+Pilot-2-Cloud-Bootstrap wird derselbe Wert beim Web-Image-Build als
+`VITE_DJI_PILOT_WORKSPACE_ID` eingebettet, damit DJI Pilot 2 nach erfolgreichem
+MQTT-Login die Workspace-/Plattformsession registrieren kann. Der Wert muss
+UUID-Format besitzen.
 
 Details: [WPML.md](WPML.md).
 

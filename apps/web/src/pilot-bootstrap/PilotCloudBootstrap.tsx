@@ -50,7 +50,14 @@ function asBoolean(raw: unknown): boolean {
   return false;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function PilotCloudBootstrap() {
+  const workspaceId = String(
+    import.meta.env.VITE_DJI_PILOT_WORKSPACE_ID ?? ""
+  ).trim();
+
   const defaultHost = useMemo(() => {
     const hostname = window.location.hostname || "192.168.178.63";
     return `tcp://${hostname}:1885`;
@@ -69,13 +76,34 @@ export function PilotCloudBootstrap() {
 
   const bridgeAvailable = Boolean(window.djiBridge);
 
+  function configurePilotWorkspace(bridge: NonNullable<typeof window.djiBridge>): void {
+    if (!workspaceId || !UUID_PATTERN.test(workspaceId)) {
+      throw new Error(
+        "DJI Pilot Workspace-ID fehlt oder ist keine UUID. " +
+        "Setze DJI_PILOT_WORKSPACE_ID auf dem Pi und baue das Web-Image neu."
+      );
+    }
+
+    decodeEnvelope(
+      bridge.platformSetWorkspaceId(workspaceId),
+      "platformSetWorkspaceId"
+    );
+    decodeEnvelope(
+      bridge.platformSetInformation(
+        "FH2",
+        "FH2 On-Premises",
+        "FH2 Pilot-to-Cloud"
+      ),
+      "platformSetInformation"
+    );
+  }
+
   useEffect(() => {
     const bridge = window.djiBridge;
     if (!bridge) return;
 
-    // DJI Pilot 2 owns the native Thing module. Leaving the WebView/menu must
-    // not unload or disconnect it. Returning false lets Pilot 2 close only the
-    // WebView while the already loaded native module remains active.
+    // Match DJI's documented/default root-WebView behavior. Persistence of the
+    // native cloud session is verified independently on real hardware.
     bridge.onBackClick = () => false;
 
     try {
@@ -88,10 +116,11 @@ export function PilotCloudBootstrap() {
         : false;
 
       if (thingConnected) {
+        configurePilotWorkspace(bridge);
         setStage("connected");
         setMessage(
-          "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden. " +
-          "Die Verbindung bleibt beim Verlassen dieses Menüs aktiv."
+          "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden und der " +
+          "FH2-Workspace ist registriert."
         );
       } else if (thingLoaded) {
         setStage("waiting");
@@ -174,8 +203,12 @@ export function PilotCloudBootstrap() {
         try {
           const connected = asBoolean(raw);
           if (connected) {
+            configurePilotWorkspace(bridge);
             setStage("connected");
-            setMessage("DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden. Die Verbindung bleibt beim Verlassen dieses Menüs aktiv.");
+            setMessage(
+              "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden und der " +
+              "FH2-Workspace ist registriert."
+            );
           } else {
             setStage("waiting");
             setMessage("Pilot 2 hat den MQTT-Link noch nicht als verbunden gemeldet.");
@@ -208,8 +241,12 @@ export function PilotCloudBootstrap() {
       await new Promise((resolve) => window.setTimeout(resolve, 750));
       const connected = asBoolean(bridge.thingGetConnectState());
       if (connected) {
+        configurePilotWorkspace(bridge);
         setStage("connected");
-        setMessage("DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden.");
+        setMessage(
+          "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden und der " +
+          "FH2-Workspace ist registriert."
+        );
       } else {
         setStage("waiting");
         setMessage(
@@ -330,10 +367,12 @@ export function PilotCloudBootstrap() {
         </p>
 
         <p className="muted">
-          Zurück zur normalen Pilot-2-Ansicht beendet nur dieses WebView. FH2
-          trennt oder entlädt das native Thing-Modul beim Zurückgehen nicht;
-          die MQTT-Verbindung bleibt deshalb aktiv. <strong>Abmelden</strong>
-          beendet dagegen die Cloud-Plattform und darf die Verbindung trennen.
+          Nach erfolgreicher MQTT-Verbindung registriert FH2 den konfigurierten
+          DJI-Pilot-Workspace und die Plattforminformation. Der vorherige reale
+          Test ohne Workspace-Registrierung zeigte, dass der obere Zurück-Pfeil
+          den MQTT-Client beendet. Die Persistenz nach Wechsel in die
+          Pilot-2-Flugansicht wird deshalb separat als Hardware-Gate geprüft.
+          <strong> Abmelden</strong> beendet die Cloud-Plattform ausdrücklich.
         </p>
       </section>
     </main>

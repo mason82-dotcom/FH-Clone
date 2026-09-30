@@ -8,6 +8,12 @@ interface DjiBridgeRuntime {
   platformGetAircraftSN(): unknown;
   platformIsComponentLoaded(name: string): unknown;
   platformLoadComponent(name: string, param: string): unknown;
+  platformSetWorkspaceId(workspaceId: string): unknown;
+  platformSetInformation(
+    platformName: string,
+    workspaceName: string,
+    description: string
+  ): unknown;
   thingGetConnectState(): unknown;
   wsGetConnectState(): unknown;
   onBackClick?: () => boolean;
