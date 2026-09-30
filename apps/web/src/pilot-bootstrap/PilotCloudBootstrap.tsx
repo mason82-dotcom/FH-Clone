@@ -361,6 +361,14 @@ export function PilotCloudBootstrap() {
           </button>
         </form>
 
+        {stage === "connected" && (
+          <p>
+            <a href="/pilot-evidence">
+              Read-only JSBridge-Hardware-Evidence erfassen
+            </a>
+          </p>
+        )}
+
         <p className="muted">
           App Key, License und MQTT-Passwort werden von dieser Seite an keinen
           FH2-HTTP-Endpunkt gesendet und nicht in Browser-Storage gespeichert.
