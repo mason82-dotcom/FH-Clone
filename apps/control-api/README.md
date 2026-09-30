@@ -229,6 +229,12 @@ Alarme und führt keinerlei HMS-Mutation aus.
 Fehlende Konfiguration liefert `503 fh2_not_configured`; Upstreamfehler werden
 als `502 fh2_upstream_error` abgebildet.
 
+Die read-only Rückgaben sind in `src/fh2-openapi-types.ts` typisiert:
+Pagination, Devices, HMS, Waylines und Flight Tasks besitzen DJI-nahe
+Compile-Time-Contracts. Zusätzliche Upstream-Felder bleiben zulässig. Diese
+Typisierung ist bewusst keine zusätzliche Runtime-Schema-Validierung und ändert
+das bisherige Proxy-Verhalten nicht.
+
 Die Wayline-/Flight-Task-IDs aus diesem Pfad können später über den
 `MissionExternalReference`-Vertrag mit lokalen Flugsitzungen korreliert
 werden. Eine Korrelation entsteht nicht automatisch durch Zeitnähe.

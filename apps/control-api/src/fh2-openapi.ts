@@ -1,4 +1,25 @@
 import { randomUUID } from "node:crypto";
+import type {
+  Fh2FlightTask,
+  Fh2HmsAlert,
+  Fh2ListResult,
+  Fh2ManageDevice,
+  Fh2PaginatedList,
+  Fh2WaylineItem
+} from "./fh2-openapi-types.js";
+
+export type {
+  Fh2DeviceModel,
+  Fh2FlightTask,
+  Fh2FlightTaskException,
+  Fh2FlightTaskFolderInfo,
+  Fh2HmsAlert,
+  Fh2ListResult,
+  Fh2ManageDevice,
+  Fh2PaginatedList,
+  Fh2Pagination,
+  Fh2WaylineItem
+} from "./fh2-openapi-types.js";
 
 export class Fh2OpenApiError extends Error {}
 export class Fh2OpenApiNotConfigured extends Fh2OpenApiError {}
@@ -57,17 +78,23 @@ export class Fh2OpenApiClient {
     };
   }
 
-  async listWaylines(page = 1, pageSize = 100): Promise<unknown> {
+  async listWaylines(
+    page = 1,
+    pageSize = 100
+  ): Promise<Fh2PaginatedList<Fh2WaylineItem>> {
     this.requireProject();
-    return this.get(
+    return this.get<Fh2PaginatedList<Fh2WaylineItem>>(
       `/openapi/v2.0/wayline/api/v1/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/web-waylines`,
       { page, size: pageSize }
     );
   }
 
-  async listFlightTasks(page = 1, pageSize = 50): Promise<unknown> {
+  async listFlightTasks(
+    page = 1,
+    pageSize = 50
+  ): Promise<Fh2PaginatedList<Fh2FlightTask>> {
     this.requireProject();
-    return this.get(
+    return this.get<Fh2PaginatedList<Fh2FlightTask>>(
       `/openapi/v2.0/task/api/v2/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/flight-tasks`,
       { page, page_size: pageSize }
     );
@@ -77,7 +104,7 @@ export class Fh2OpenApiClient {
     deviceModelClass = "drone",
     page = 1,
     pageSize = 100
-  ): Promise<unknown> {
+  ): Promise<Fh2PaginatedList<Fh2ManageDevice>> {
     this.requireOrganization();
     const classes =
       deviceModelClass === "airport"
@@ -87,7 +114,7 @@ export class Fh2OpenApiClient {
     for (const value of classes) params.append("device_model_class", value);
     params.set("page", String(page));
     params.set("page_size", String(pageSize));
-    return this.get(
+    return this.get<Fh2PaginatedList<Fh2ManageDevice>>(
       `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices`,
       params
     );
@@ -99,7 +126,7 @@ export class Fh2OpenApiClient {
     endTimeMs: number,
     page = 1,
     pageSize = 20
-  ): Promise<unknown> {
+  ): Promise<Fh2ListResult<Fh2HmsAlert>> {
     this.requireOrganization();
     const uniqueSns = [
       ...new Set(deviceSns.map((value) => value.trim()).filter(Boolean))
@@ -116,16 +143,16 @@ export class Fh2OpenApiClient {
     params.set("page", String(page));
     params.set("page_size", String(pageSize));
 
-    return this.get(
+    return this.get<Fh2ListResult<Fh2HmsAlert>>(
       `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices/hms`,
       params
     );
   }
 
-  private async get(
+  private async get<T>(
     path: string,
     params: URLSearchParams | Record<string, string | number>
-  ): Promise<unknown> {
+  ): Promise<T> {
     this.requireBase();
     const baseUrl = this.options.baseUrl!.trim().replace(/\/+$/, "");
     const url = new URL(`${baseUrl}${path}`);
@@ -171,10 +198,10 @@ export class Fh2OpenApiClient {
             : `FH2 OpenAPI business error ${String(code)}`
         );
       }
-      if ("data" in payload) return payload.data;
+      if ("data" in payload) return payload.data as T;
     }
 
-    return payload;
+    return payload as T;
   }
 
   private headers(): Record<string, string> {
