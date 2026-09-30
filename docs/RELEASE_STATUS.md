@@ -44,13 +44,25 @@ V3.1-Nachweise integriert:
 - M3E `update_topo`, Aircraft-OSD, Aircraft-State, Kamera-`payload_index`
   `66-0-0`, RTK-Fixed und separater Nicht-Fixed-Zustand,
 - kontrollierter Pilot-2-Cloud-Bootstrap für das DJI-`thing`-Modul,
+- self-hosted **read-only** Pilot-Wayline-Listenserver auf dem DJI-kompatiblen
+  Workspace-Pfad, mit separatem `x-auth-token`, strengem Workspace-Match und
+  weiterhin gesperrten Upload-/STS-/Download-/Execution-Pfaden,
+- Pilot-2-Bootstrap lädt das `api`- und `mission`-Modul erst nach
+  ausdrücklicher Benutzeraktion; der Wayline-Token wird nicht in
+  Browser-Storage oder Build-Variablen persistiert,
 - reales, redigiertes Pilot-2-JSBridge-Hardware-Fixture mit
   Plattformverifikation, Pilot-Version, exaktem RC-/Aircraft-Topologie-Match
-  und aktiver Thing-Verbindung.
+  und aktiver Thing-Verbindung,
+- TimescaleDB-Backup/Restore als echtes Dump-/Restore-Betriebsgate,
+- passive sanitierte MQTT-Outbound-Evidence und interner
+  Prometheus-`/metrics`-Endpunkt ohne Geräteidentitäten als Labels.
 
 Damit sind die früher als vollständig offen geführten M3E-MQTT- und
-Pilot-2-JSBridge-Basisnachweise geschlossen. Noch offene Produktprofile und
-Medien-/Missionsevidence bleiben davon getrennt.
+Pilot-2-JSBridge-Basisnachweise geschlossen. Der Wayline-Softwarepfad ist
+read-only integriert; ein **realer Pilot-2-Wayline-Katalog-/KMZ-Nachweis**
+bleibt weiterhin Hardware-Evidence und wird nicht durch den leeren
+Self-Hosted-Katalog ersetzt. Noch offene Produktprofile und Medien-Evidence
+bleiben davon getrennt.
 
 ## Automatische Release-Gates
 
