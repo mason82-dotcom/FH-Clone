@@ -474,7 +474,10 @@ Es gibt keinen versteckten Standardzeitraum; fehlende oder unplausible
 HMS-Queryparameter liefern HTTP 400.
 
 Redirects werden nicht verfolgt; nur HTTP 2xx und DJI Businesscode `0`
-gelten als Erfolg.
+gelten als Erfolg. Erfolgreiche Antworten werden zusätzlich minimal strukturell
+geprüft: Listencontainer, Pagination und stabile Ressourcenidentitäten müssen
+plausibel sein. Zusätzliche DJI-Felder bleiben zulässig. Eine strukturell
+ungültige Upstream-Antwort wird als `502 fh2_upstream_error` abgebildet.
 
 Fehlende Konfiguration:
 
