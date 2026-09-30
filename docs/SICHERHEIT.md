@@ -169,6 +169,24 @@ Als geheim behandeln:
 - NTRIP-Credentials
 - Datenbankpasswörter
 
+## Docker-Build-Kontext
+
+Der Repository-Root wird als Docker-Build-Kontext verwendet. Deshalb muss
+`.dockerignore` mindestens lokale Secrets und nicht versionierte Hardwaredaten
+aus dem Build-Kontext ausschließen.
+
+Pflichtausschlüsse sind insbesondere:
+
+- `.git`
+- `.env` und lokale `.env.*`-Varianten; `.env.example` bleibt erlaubt
+- `local-fixtures/`
+- `node_modules/`, Build-Ausgaben und lokale Runtime-Artefakte
+- Dumps, Backups und Logs
+
+Dockerfiles dürfen Secrets nicht über `COPY`, Build-Argumente oder
+Build-Cache-Schichten übernehmen. Laufzeit-Secrets werden ausschließlich über
+die Runtime-Konfiguration injiziert.
+
 ## Audit
 
 Sicherheitsrelevante Entscheidungen sollen mindestens erfassen:
