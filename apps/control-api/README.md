@@ -231,9 +231,11 @@ als `502 fh2_upstream_error` abgebildet.
 
 Die read-only Rückgaben sind in `src/fh2-openapi-types.ts` typisiert:
 Pagination, Devices, HMS, Waylines und Flight Tasks besitzen DJI-nahe
-Compile-Time-Contracts. Zusätzliche Upstream-Felder bleiben zulässig. Diese
-Typisierung ist bewusst keine zusätzliche Runtime-Schema-Validierung und ändert
-das bisherige Proxy-Verhalten nicht.
+Compile-Time-Contracts. Zusätzlich prüft die Client-Grenze zur Laufzeit
+Listencontainer, Pagination und die stabilen Identitätsfelder der Ressourcen.
+Zusätzliche DJI-Felder bleiben zulässig; es wird bewusst kein starres
+Vollschema erzwungen. Ungültige Upstream-Strukturen werden als
+`502 fh2_upstream_error` behandelt.
 
 Die Wayline-/Flight-Task-IDs aus diesem Pfad können später über den
 `MissionExternalReference`-Vertrag mit lokalen Flugsitzungen korreliert

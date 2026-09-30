@@ -225,3 +225,70 @@ test("lists typed HMS alerts with repeated device_sn and DJI parameters", async 
   assert.equal(seenUrl?.searchParams.get("page_size"), "20");
   assert.equal(seenMethod, "GET");
 });
+
+test("rejects a malformed paginated device response", async () => {
+  const fetchImpl: Fh2Fetch = async () =>
+    new Response(
+      JSON.stringify({
+        code: 0,
+        data: {
+          list: [{ device_sn: "dock-1" }]
+        }
+      }),
+      { status: 200 }
+    );
+
+  await assert.rejects(
+    () => client(fetchImpl).listDevices(),
+    (error: unknown) =>
+      error instanceof Fh2OpenApiError &&
+      error.message === "FH2 OpenAPI Devices returned invalid pagination"
+  );
+});
+
+test("rejects a Wayline item without a stable id", async () => {
+  const fetchImpl: Fh2Fetch = async () =>
+    new Response(
+      JSON.stringify({
+        code: 0,
+        data: {
+          pagination: page(1, 100, 1),
+          list: [{ name: "Missing id" }]
+        }
+      }),
+      { status: 200 }
+    );
+
+  await assert.rejects(
+    () => client(fetchImpl).listWaylines(),
+    (error: unknown) =>
+      error instanceof Fh2OpenApiError &&
+      error.message === "FH2 OpenAPI Waylines returned invalid item at index 0"
+  );
+});
+
+test("rejects malformed optional HMS pagination", async () => {
+  const fetchImpl: Fh2Fetch = async () =>
+    new Response(
+      JSON.stringify({
+        code: 0,
+        data: {
+          pagination: {
+            page: 1,
+            page_size: 20,
+            total: "1"
+          },
+          list: [{ device_sn: "aircraft-1", level: 1 }]
+        }
+      }),
+      { status: 200 }
+    );
+
+  await assert.rejects(
+    () => client(fetchImpl).listHms(["aircraft-1"], 1, 2),
+    (error: unknown) =>
+      error instanceof Fh2OpenApiError &&
+      error.message === "FH2 OpenAPI HMS returned invalid pagination"
+  );
+});
+
