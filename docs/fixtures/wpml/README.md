@@ -16,7 +16,7 @@ Vor dem Export müssen beide Teile real beobachtet sein:
 
 1. DJI Pilot 2 hat den self-hosted read-only Wayline-Listenpfad tatsächlich
    aufgerufen. Der Serverstatus muss mindestens
-   `pilotWebViewListRequests >= 1` zeigen.
+   `pilotNativeListRequests >= 1` zeigen.
 2. Ein echtes, von DJI Pilot 2 erzeugtes KMZ liegt lokal vor und enthält
    `wpmz/template.kml` und `wpmz/waylines.wpml`.
 
@@ -25,7 +25,7 @@ Lokale `curl`-Aufrufe zählen **nicht** als Pilot-Hardware-Evidence.
 Der Control-API-Status enthält keine Tokens, Workspace-ID, Seriennummern,
 Koordinaten oder vollständigen User-Agent-Strings. Für den Pilot-2-Nachweis
 wird nur gezählt, ob ein erfolgreicher Listenabruf mit der in der realen
-DJI-Pilot-WebView beobachteten `dji-open-platform`-Signatur angekommen ist.
+nativen DJI-Pilot-HTTP-Client beobachteten `okhttp/3.14.9`-Signatur angekommen ist.
 
 ## Status prüfen
 
@@ -43,8 +43,8 @@ Erwartet nach einem realen Pilot-2-Listenabruf:
   "configured": true,
   "readOnly": true,
   "listRequests": 1,
-  "pilotWebViewListRequests": 1,
-  "lastPilotWebViewListRequestAt": "..."
+  "pilotNativeListRequests": 1,
+  "lastPilotNativeListRequestAt": "..."
 }
 ```
 
@@ -83,7 +83,7 @@ Der Exporter:
 - speichert nur den SHA-256 des Original-KMZ und strukturelle Metadaten,
 - übernimmt keine XML-Inhalte, Koordinaten, Workspace-ID oder Tokens,
 - akzeptiert den Pilot-Katalogteil nur nach real beobachtetem
-  DJI-Pilot-WebView-Abruf.
+  nativen DJI-Pilot-HTTP-Client-Abruf.
 
 Anschließend:
 
