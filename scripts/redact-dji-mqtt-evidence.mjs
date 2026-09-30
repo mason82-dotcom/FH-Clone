@@ -95,6 +95,56 @@ function topicIdentity(topic, family) {
   return topic?.match(patterns[family])?.[1];
 }
 
+function observedAtMs(row) {
+  for (const key of ["observed_at", "observedAt", "received_at", "receivedAt"]) {
+    const value = string(row?.[key]);
+    if (!value) continue;
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function correlatedStatusReplyRow(rows, capture) {
+  const direct = findRow(
+    rows,
+    (topic) =>
+      topicIdentity(topic, "gatewayStatusReply") === capture.gatewayId
+  );
+  if (direct) return direct;
+
+  // mqtt_outbound_messages intentionally redacts the product identity in the
+  // persisted channel to DEVICE_REDACTED. Accept such a row only when it is an
+  // outbound status_reply temporally correlated with an observed update_topo
+  // from the single validated gateway in this capture.
+  const topologyTimes = rows
+    .filter((row) => {
+      const topic = topicOf(row);
+      const payload = payloadOf(row);
+      return (
+        topicIdentity(topic, "gatewayStatus") === capture.gatewayId &&
+        payload?.method === "update_topo"
+      );
+    })
+    .map(observedAtMs)
+    .filter((value) => value !== undefined);
+
+  if (!topologyTimes.length) return undefined;
+
+  return rows.find((row) => {
+    const topic = topicOf(row);
+    if (
+      row?.direction !== "outbound" ||
+      topicIdentity(topic, "gatewayStatusReply") !== "DEVICE_REDACTED"
+    ) {
+      return false;
+    }
+    const replyAt = observedAtMs(row);
+    if (replyAt === undefined) return false;
+    return topologyTimes.some((topologyAt) => Math.abs(replyAt - topologyAt) <= 5_000);
+  });
+}
+
 function unique(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.length > 0))];
 }
@@ -404,11 +454,7 @@ function main() {
   const capture = validateSingleTopologyCapture(rows);
   const profile = validateProfile(capture, profileName, rows);
   const topologyRow = capture.topologyRow;
-  const statusReplyRow = findRow(
-    rows,
-    (topic) =>
-      topicIdentity(topic, "gatewayStatusReply") === capture.gatewayId
-  );
+  const statusReplyRow = correlatedStatusReplyRow(rows, capture);
   const osdRows = rows.filter(
     (row) => topicIdentity(topicOf(row), "aircraftOsd") === capture.aircraftId
   );
