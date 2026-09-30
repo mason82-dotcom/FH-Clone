@@ -638,6 +638,57 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, pilotWaylineServer.status());
     }
 
+    const pilotDuplicateNamesWorkspaceId =
+      pilotWaylineServer.matchDuplicateNamesWorkspace(url.pathname);
+    if (pilotDuplicateNamesWorkspaceId !== undefined) {
+      if (request.method !== "GET") {
+        return json(response, 405, {
+          code: 405,
+          message: "read_only_wayline_server"
+        });
+      }
+
+      if (!pilotWaylineServer.configured) {
+        return json(response, 503, {
+          code: 503,
+          message: "pilot_wayline_server_not_configured"
+        });
+      }
+
+      if (!pilotWaylineServer.workspaceMatches(pilotDuplicateNamesWorkspaceId)) {
+        return json(response, 404, {
+          code: 404,
+          message: "workspace_not_found"
+        });
+      }
+
+      if (!pilotWaylineServer.authenticate(request.headers)) {
+        return json(response, 401, {
+          code: 401,
+          message: "unauthorized"
+        });
+      }
+
+      try {
+        return json(
+          response,
+          200,
+          pilotWaylineServer.duplicateNames(url, Date.now())
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.startsWith("invalid_query_")
+        ) {
+          return json(response, 400, {
+            code: 400,
+            message: error.message
+          });
+        }
+        throw error;
+      }
+    }
+
     const pilotWaylineWorkspaceId = pilotWaylineServer.matchWorkspace(
       url.pathname
     );
