@@ -147,10 +147,10 @@ test("Pilot 2 bootstrap configures workspace before loading the Thing module", (
 test("Pilot 2 bootstrap exposes evidence navigation whenever JSBridge is available", () => {
   assert.match(
     source,
-    /\{bridgeAvailable && \([\s\S]*?<a href="\/pilot-evidence">/
+    /\{bridgeAvailable && \([\s\S]*?<a[\s\S]*?href="\/pilot-evidence"/
   );
   assert.equal(
-    /\{stage === "connected" && \([\s\S]*?<a href="\/pilot-evidence">/.test(source),
+    /\{stage === "connected" && \([\s\S]*?<a[\s\S]*?href="\/pilot-evidence"/.test(source),
     false,
     "Evidence navigation must not depend on an active MQTT link"
   );
