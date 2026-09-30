@@ -133,6 +133,21 @@ GET /api/dji/topology
 
 Liefert bekannte Gateway-/Sub-Device-Beziehungen.
 
+### DJI Pilot 2 JSBridge Evidence
+
+```http
+POST /api/dji/pilot2/evidence
+GET  /api/dji/pilot2/evidence/latest
+```
+
+Der POST-Pfad nimmt den read-only Pilot-2-Runtime-Snapshot entgegen, prüft
+RC + Aircraft gegen die aktuelle `update_topo`-Runtime und hasht beide
+Identitäten unmittelbar. Im Evidence-Store verbleiben nur SHA-256-Identitäten,
+Produktmetadaten, Modulstatus und Pilot-Version.
+
+Der GET-Pfad liefert ausschließlich diesen redigierten In-Memory-Snapshot.
+Er erzeugt keine Cloud-Control-, Lease-, FC- oder DRC-Rechte.
+
 ### DJI-Control-Runtime – read-only
 
 ```http

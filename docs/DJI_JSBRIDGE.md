@@ -225,6 +225,42 @@ wird von FH2 nicht verhindert.
 
 Die Softwareintegration ist unabhängig von der realen Pilot-2-Abnahme.
 
+Für die reale Abnahme existiert die dedizierte Route:
+
+```text
+/pilot-evidence
+```
+
+Sie verwendet ausschließlich den bereits verifizierten read-only
+`DjiPilotBridgeClient`. Der Browser sendet RC-/Aircraft-Identität nur an den
+lokalen Control-API-Endpunkt:
+
+```http
+POST /api/dji/pilot2/evidence
+```
+
+Die Control API prüft das Identitätspaar exakt gegen die aktuelle
+DJI-`update_topo`-Runtime, hasht beide Identitäten unmittelbar per SHA-256 und
+hält ausschließlich die redigierte Evidence im Arbeitsspeicher. Roh-
+Seriennummern werden nicht über den Evidence-Endpunkt zurückgegeben und nicht
+als Evidence persistiert.
+
+Der zuletzt erfolgreiche redigierte Capture ist lokal abrufbar über:
+
+```http
+GET /api/dji/pilot2/evidence/latest
+```
+
+Auf dem Pi wird daraus das öffentliche Fixture erzeugt:
+
+```bash
+npm run export:pilot2-evidence -- --real-hardware
+```
+
+Der Exporter führt zusätzlich den Browser-Safety-/Secret-Scan des aktuellen
+Quellstands aus. Nur bei grünem Scan wird
+`browserBundleSecretScanPass=true` in das Fixture geschrieben.
+
 Für eine Hardware-Supportzusage bleibt ein reales, redigiertes Fixture unter
 
 `docs/fixtures/pilot2/jsbridge-session.json`
