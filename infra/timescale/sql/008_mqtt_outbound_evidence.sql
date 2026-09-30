@@ -1,6 +1,8 @@
 -- Passive evidence for MQTT messages that FH2 actually published.
 -- This table is diagnostic only and MUST NOT be used as a source of
 -- authorization, control authority, DRC session state or command replay.
+-- device_id contains only a SHA-256 correlation value and channel contains a
+-- redacted product identifier; raw gateway/aircraft serials must not be stored.
 CREATE TABLE IF NOT EXISTS mqtt_outbound_messages (
   observed_at  TIMESTAMPTZ NOT NULL,
   adapter_id   TEXT NOT NULL,
