@@ -34,6 +34,7 @@ Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. De
 - Continuous Aggregate `telemetry_1m`
 - `002_rtk_fix_enum.sql` erzwingt für `is_fixed` ausschließlich `0/1/2/3` oder `NULL`
 - `007_telemetry_history.sql` legt `raw_messages` und `normalized_parameters` als 1-Tages-Hypertables mit 24-Monats-Retention an
+- `008_mqtt_outbound_evidence.sql` legt die passive, sanitierte `mqtt_outbound_messages`-Evidence mit 30-Tage-Retention an
 - bestehende Volumes erhalten neue Tabellen über den idempotenten `db-migrations`-One-Shot
 
 ## Produktkennung
@@ -113,6 +114,22 @@ Adapter-Rohmeldungen als auch sämtliche normalisierten ParameterSamples.
 Ausgewählte kanonische Flug-/RTK-Werte werden während aktiver Missionen
 zusätzlich in die bestehende `telemetry`-Hypertable projiziert.
 
+
+## Backup und Restore
+
+Der vollständige Betriebsablauf einschließlich Restore-Gate ist unter
+[Backup und Restore](../../docs/BACKUP_RESTORE.md) dokumentiert.
+
+Kurzform:
+
+```bash
+sh scripts/backup-timescale.sh ~/fh2-backups/fh2.dump
+FH2_RESTORE_DATABASE=fhclone_restore_test \
+  sh scripts/restore-timescale.sh ~/fh2-backups/fh2.dump
+```
+
+Ein In-Place-Restore über die aktive `fhclone`-Datenbank ist standardmäßig
+gesperrt.
 
 ## Weiterführende Dokumentation
 

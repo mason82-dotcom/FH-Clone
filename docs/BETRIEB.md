@@ -335,3 +335,23 @@ Ein Fehler in einem Cleanup-Schritt verhindert die übrigen Cleanup-Schritte
 nicht. Nach Abschluss wird der Gesamtfehler jedoch als fehlerhafter
 Prozess-Shutdown sichtbar; ein teilweise fehlgeschlagener Shutdown wird nicht
 mehr mit Exitcode 0 kaschiert.
+
+## Monitoring und Observability
+
+Die Control API stellt unter dem **internen** Port `8081` einen
+Prometheus-kompatiblen read-only Endpunkt bereit:
+
+```text
+GET /metrics
+```
+
+Er enthält ausschließlich Betriebsmetriken ohne Geräte-/Gateway-Identitäten
+als Labels. Dazu gehören DJI-MQTT-Verbindungszustand, aktive Missionen,
+DRC-/MSDK-Runtime-Zähler, Persistenzqueue-Zustände, erfolgreiche
+MQTT-Outbound-Publishes und AuthZ-Entscheidungen.
+
+Der Endpunkt wird nicht über den Host-Port veröffentlicht und ist keine
+Control- oder AuthZ-Schnittstelle. Der Root-Runtime-Test prüft seine
+Erreichbarkeit aus dem Container sowie die Nicht-Exposition von Port 8081.
+
+Details: [Observability](OBSERVABILITY.md).

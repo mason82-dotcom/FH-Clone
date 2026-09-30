@@ -17,6 +17,7 @@ Zeitreihentelemetrie.
 - TimescaleDB-Hypertable `telemetry` für die missionsbezogene Flugprojektion
 - TimescaleDB-Hypertable `raw_messages` für sanitierte Adapter-Rohmeldungen
 - TimescaleDB-Hypertable `normalized_parameters` für vollständige normalisierte Parameterhistorie mit Adapter-Provenienz
+- TimescaleDB-Hypertable `mqtt_outbound_messages` für kurzlebige, sanitierte passive MQTT-Outbound-Evidence
 - kontinuierliches Minutenaggregat `telemetry_1m`
 - MissionStore und TelemetryStore in der Control API
 - Öffnen und Schließen automatisch erkannter Missionssitzungen
@@ -25,10 +26,10 @@ Zeitreihentelemetrie.
 - Persistenz von Gateway-Topologie, AuthN/AuthZ-Audit und MediaAssets
 - idempotenter Migrations-/Upgrade-Pfad im Root-Compose
 - separater TimescaleDB-Compose-Unterstack mit gepinntem Image `timescale/timescaledb:2.30.1-pg16`
+- vollständiger Custom-Format-Backup-/Restore-Pfad mit automatischem Restore-Gate
 
 ### Noch offen als Betriebs-/Historienausbau
 
-- dokumentierter Backup-/Restore-Ablauf für die vollständige Datenbank
 - Last-/Kapazitätsmessung der 24-Monats-Retention mit realistischen Telemetrieraten
 - optionale öffentliche Historien-API; die Persistenz selbst benötigt dafür keinen Schreibendpunkt
 - vollständige Rehydrierung aller nicht-autorisierenden Inventar-/Analyse-Registries ist nur bei konkretem Bedarf sinnvoll; Control-Rechte bleiben absichtlich runtime-only
@@ -211,4 +212,38 @@ Credential-Speicher mit Passwort-Hashes.
 - `telemetry_1m` bleibt als missionsbezogenes Analyseaggregat erhalten
 - keine Secrets in Missions-/Telemetriedaten
 - Root-Compose startet Datenbank und Migration reproduzierbar
-- Backup-/Restore und Kapazitätsplanung bleiben Betriebsaufgaben
+- Backup/Restore wird mit einem echten Dump in eine frische Testdatenbank geprüft
+- Kapazitätsplanung der 24-Monats-Retention bleibt Betriebsaufgabe
+
+
+## Backup und Restore
+
+Der operative Ablauf ist in [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
+dokumentiert. `scripts/backup-timescale.sh` erzeugt einen vollständigen
+PostgreSQL-Custom-Dump; `scripts/restore-timescale.sh` stellt standardmäßig
+nur in eine separate Zieldatenbank wieder her.
+
+Die Direktor-CI prüft den vollständigen Zyklus mit
+`scripts/test-timescale-backup-restore.sh`. Persistierte Inventar- und
+Credential-Daten bleiben erhalten, dürfen aber keine aktiven Runtime-Control-
+Rechte rekonstruieren.
+
+## Passive MQTT-Outbound-Evidence
+
+`mqtt_outbound_messages` speichert nur Nachrichten, deren MQTT-Publish durch
+den jeweiligen FH2-Transport bereits erfolgreich bestätigt wurde. Der Store
+ist diagnostisch und besitzt 30 Tage Retention.
+
+Basic-Link-`services` und `status_reply` werden beobachtet. Für den
+DRC-Transport werden dauerhaft nur qualifikationsrelevante
+`heart_beat`-/`drone_emergency_stop`-Envelopes persistiert;
+hochfrequente Stick-/Velocity-Control-Frames werden nicht als Historie
+aufgebaut.
+
+Credential-/Secret-Felder werden vor Persistenz auf reine
+`*_present`-Marker reduziert. Geräte-/Gateway-Identitäten werden in
+`device_id` ausschließlich als SHA-256-Korrelation gespeichert; der
+Identitätsabschnitt im MQTT-Topic wird als `DEVICE_REDACTED` ersetzt.
+Unbekannte Topic-Formen werden vollständig als `<redacted-channel>`
+abgelegt. Die Tabelle ist ausdrücklich keine Quelle für AuthZ, Control
+Authority, DRC-Rehydration oder Command Replay.

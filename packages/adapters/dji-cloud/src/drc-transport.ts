@@ -3,9 +3,17 @@ import type { DjiMqttPublisher, DrcBrokerCredentials, MqttQos } from "./drc.js";
 
 export type DrcTransportLossReason = "mqtt_close" | "mqtt_offline";
 
+export interface DrcPublishedMessage {
+  topic: string;
+  payload: unknown;
+  qos: MqttQos;
+  sentAt: number;
+}
+
 export interface DrcBrokerTransportOptions {
   onConnected?: () => void | Promise<void>;
   onLost?: (reason: DrcTransportLossReason) => void | Promise<void>;
+  onPublished?: (message: DrcPublishedMessage) => void | Promise<void>;
 }
 
 /**
@@ -122,5 +130,14 @@ export class DrcBrokerTransport implements DjiMqttPublisher {
         error ? reject(error) : resolve()
       );
     });
+    this.invokeHook(
+      () => this.options.onPublished?.({
+        topic,
+        payload,
+        qos,
+        sentAt: Date.now()
+      }),
+      "onPublished"
+    );
   }
 }

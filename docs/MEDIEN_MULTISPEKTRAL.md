@@ -478,16 +478,15 @@ Siehe [RTK_NTRIP.md](RTK_NTRIP.md).
 
 ## Persistenz
 
-V3 soll mindestens speichern können:
+Der aktuelle `MediaStore` persistiert validierte `MediaAsset`-Objekte in
+`media_assets`. Neben indexierbaren Kernfeldern wie Device, Sensor,
+ProcessingProfile, Aufnahmezeit, Mission und Position bleibt das vollständige
+normalisierte Domainobjekt als JSONB erhalten. Damit gehen insbesondere
+Sensor-/Bandzuordnung, CaptureContext, Quellenklassifikation und
+Validierungsinformationen beim Neustart nicht verloren.
 
-- Originalmetadaten
-- normalisierte Media-Metadaten
-- Quellenklassifikation
-- Sensor-/Bandzuordnung
-- Konfliktstatus
-- Missionsbezug
-- ProcessingProfile
-- Validierungsstatus
+Die Persistenz erzeugt keine Runtime-Control-Rechte; rehydrierte MediaAssets
+werden ausschließlich in read-only Analyse-/Overlay-Registries übernommen.
 
 ## Hardware-/Fixture-Abnahme vor V3-RC
 
@@ -514,13 +513,12 @@ Erwartete Statusbeispiele:
 | widersprüchliche authoritative Bandangaben | NDVI_PARTIAL + Konflikt |
 | RGB-only | NOT_NDVI_CAPABLE |
 
-## Noch offen vor V3-RC
+## Noch offen für das reale M3M-Hardwareprofil
 
 - reale Hardwarefixtures gegen den dokumentierten EXIF/XMP-Vertrag
 - parserseitige Verifikation der konkreten Namespace-/Tag-Darstellung
-- endgültige kanonische Normalisierungskeys für diese Dateifelder
-- Persistenzschema für MediaAsset/SensorSource/SpectralBand/CaptureContext
-- reale Ausführung der vorhandenen NDVI-Validierungstests nach R1
+- Plausibilisierung der vorhandenen kanonischen Normalisierung gegen einen
+  vollständigen realen Capture-Satz
 - exakter M3M-Cloud-`payload_index`, sofern er im Runtime-Pfad benötigt wird
 
 Die **physikalische M3M-Banddefinition und NDVI-Entscheidungsregeln sind

@@ -101,6 +101,31 @@ if [ "$internal_health" != "200:ok" ]; then
   exit 1
 fi
 
+internal_metrics="$(
+  docker compose --env-file .env exec -T control-api \
+    node -e "
+      fetch('http://127.0.0.1:8081/metrics')
+        .then(async r => {
+          const body = await r.text();
+          if (!r.ok) process.exit(3);
+          process.stdout.write(body);
+        })
+        .catch(() => process.exit(2));
+    "
+)"
+printf '%s\n' "$internal_metrics" | grep -q '^fh2_dji_mqtt_connected ' || {
+  echo "FEHLER: interne Metrik fh2_dji_mqtt_connected fehlt."
+  exit 1
+}
+printf '%s\n' "$internal_metrics" | grep -q '^# TYPE fh2_mqtt_outbound_total counter$' || {
+  echo "FEHLER: MQTT-Outbound-Counter fehlt."
+  exit 1
+}
+if printf '%s\n' "$internal_metrics" | grep -Eq '(gateway_sn|aircraft_sn|clientid|username)='; then
+  echo "FEHLER: identitaetsbezogene Labels duerfen nicht in /metrics erscheinen."
+  exit 1
+fi
+
 echo "[6/13] EMQX Health prüfen"
 if ! docker compose --env-file .env exec -T emqx \
   /opt/emqx/bin/emqx ctl status >/dev/null

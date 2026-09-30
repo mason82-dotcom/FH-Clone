@@ -1,15 +1,17 @@
-# FH-Clone – FH2 V3.0
+# FH-Clone – FH2 V3.1 Entwicklung auf V3.0.0
 
 FH-Clone ist die modulare, lokale Integrationsplattform für DJI-Enterprise-
 Fluggeräte, FlightHub-2-nahe Funktionen, DJI Cloud API, RTK, Medien,
 Multispektral-Verarbeitung und Groundstation-Anbindung.
 
-Der freigegebene Basisstand ist **FH2 V3.0.0**. Der Release ist als
-Software-/FC0-Basisstand definiert. DJI Dock 1–3, Multi-Dock und
-PSDK-Payloads sind projektweit deaktiviert. Für Mavic 3 Enterprise + RC Pro
-ist nur Cloud-Payload-Control vorgesehen; Cloud-Flugsteuerung bleibt dort
+Der unveränderte freigegebene Basisstand ist **FH2 V3.0.0**. Darauf läuft
+die **V3.1-Entwicklung** mit zusätzlichen realen Hardware-Evidenzen,
+read-only Pilot-2-/Wayline-Integration und Betriebs-/Integrationshärtung. DJI Dock 1–3, Multi-Dock und PSDK-Payloads
+bleiben projektweit deaktiviert. Für Mavic 3 Enterprise + RC Pro ist
+Cloud-Control auf Payload-Control begrenzt; Cloud-Flugsteuerung bleibt dort
 gesperrt. Matrice 4 + RC Plus 2 besitzt das separate Cloud-Flight-Control-
-Profil. Reale Hardwarefreigaben benötigen weiterhin die dokumentierte Abnahme.
+Profil. Reale Hardwarefreigaben benötigen weiterhin das jeweils passende
+dokumentierte Evidence-Gate.
 
 ## Projektziel
 
@@ -219,16 +221,20 @@ Kompatibilität sind über den Dokumentationsindex verlinkt.
 
 ## Projektsteuerung
 
-Für V3 gilt ein Feature-Freeze. Manager, RC Pro, Multispektral und DJI-MQTT
-arbeiten ausschließlich an den Release-Gates.
+Der veröffentlichte V3.0.0-Tag bleibt eine unveränderliche Artefaktgrenze.
+Neue Funktionen, Hardwareprofile und zusätzliche Evidence werden ausschließlich
+als V3.1-Änderungen über Pull Requests gegen `main` integriert.
 
-Nur der **Direktor** startet und bewertet die zentrale CI.
+Für V3.1 gelten weiterhin die bestehenden Safety-Grenzen:
 
-Nach erfolgreicher Freigabe von V3.0 ist das Projekt abgeschlossen:
+- Core bleibt SDK-neutral.
+- FC0 bleibt Standard.
+- M3E/M3T/M3TA erhalten keine Cloud-Flugsteuerung.
+- M4-Flight-Control bleibt hinter FC3, Lease, DJI Authority, DRC-Sitzung,
+  Dead-Man und realem Hardware-Evidence gegatet.
+- Dock 1–3, Multi-Dock und PSDK bleiben deaktiviert.
+- Hardwareclaims benötigen reproduzierbare reale Evidence.
 
-```text
-V3.0 fertig -> Issues schließen -> main einfrieren -> Feierabend
-```
-
-Eine V3.1 oder weitere Entwicklung beginnt nur nach einem neuen ausdrücklichen
-Auftrag des Projektinhabers.
+Die zentrale CI bewertet Software-, Runtime-, Migrations-, Dokumentations- und
+Evidence-Gates; fehlende reale Hardware wird nicht durch synthetische Daten
+ersetzt.
