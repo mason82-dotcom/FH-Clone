@@ -361,11 +361,16 @@ export function PilotCloudBootstrap() {
           </button>
         </form>
 
-        {stage === "connected" && (
+        {bridgeAvailable && (
           <p>
             <a href="/pilot-evidence">
               Read-only JSBridge-Hardware-Evidence erfassen
             </a>
+            <br />
+            <span className="muted">
+              Die Evidence-Seite benötigt die DJI-JSBridge, aber keinen aktiven MQTT-Link.
+              Öffne sie über diesen Link, damit sie im aktuellen Pilot-2-WebView bleibt.
+            </span>
           </p>
         )}
 
