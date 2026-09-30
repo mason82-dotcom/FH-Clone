@@ -57,6 +57,15 @@ export interface WpmlActionGroup {
   actions: WpmlAction[];
 }
 
+/**
+ * DJI Pilot 2 emits wpml:startActionGroup as an initial-actions container.
+ * Unlike wpml:actionGroup it has no group id/range/trigger metadata.
+ */
+export interface WpmlStartActionGroup {
+  rawXml: string;
+  actions: WpmlAction[];
+}
+
 export interface WpmlWaypoint {
   rawXml: string;
   index: number;
@@ -99,7 +108,7 @@ export interface WpmlWaylineFolder {
   executeHeightMode: string;
   autoFlightSpeedMps?: number;
   /** Optional DJI initial actions executed before the wayline begins. */
-  startActionGroups: WpmlActionGroup[];
+  startActionGroups: WpmlStartActionGroup[];
   waypoints: WpmlWaypoint[];
 }
 
