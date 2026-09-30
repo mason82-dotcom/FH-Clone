@@ -115,22 +115,35 @@ test("records only non-sensitive runtime observation for successful list request
 });
 
 test("qualifies the real native Pilot 2 okhttp signature fail-closed", () => {
+  const url = new URL(
+    `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?file_type=5&page=1&page_size=9`
+  );
+
   assert.equal(
-    isQualifiedNativePilotRequest({ "user-agent": "okhttp/3.14.9" }),
+    isQualifiedNativePilotRequest(url, { "user-agent": "okhttp/3.14.9" }),
     true
   );
   assert.equal(
-    isQualifiedNativePilotRequest({
+    isQualifiedNativePilotRequest(url, {
       "user-agent":
         "Mozilla/5.0 (Linux; Android 10; DJI RC Pro Enterprise; wv) dji-open-platform"
     }),
     false
   );
   assert.equal(
-    isQualifiedNativePilotRequest({ "user-agent": "okhttp/4.12.0" }),
+    isQualifiedNativePilotRequest(url, { "user-agent": "okhttp/4.12.0" }),
     false
   );
-  assert.equal(isQualifiedNativePilotRequest({}), false);
+  assert.equal(isQualifiedNativePilotRequest(url, {}), false);
+  assert.equal(
+    isQualifiedNativePilotRequest(
+      new URL(
+        `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?page=1&page_size=9`
+      ),
+      { "user-agent": "okhttp/3.14.9" }
+    ),
+    false
+  );
 });
 
 test("records native Pilot list evidence without persisting the user-agent", () => {
