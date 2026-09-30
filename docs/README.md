@@ -55,7 +55,7 @@ Hardwareabnahme missverstanden werden.
 | Dokument | Inhalt | Status |
 | --- | --- | --- |
 | [MISSIONEN.md](MISSIONEN.md) | automatische Flugsitzungen und Missionskorrelation | Implementiert/V3-Ziel |
-| [WPML.md](WPML.md) | DJI WPML/KMZ, template.kml, waylines.wpml und Pilot-Wayline-Katalog | Implementiert/read-only |
+| [WPML.md](WPML.md) | DJI WPML/KMZ, template.kml, waylines.wpml und Pilot-Wayline-Katalog | Read-only Client + self-hosted Listenserver implementiert; reale KMZ/Katalog-Evidence offen |
 | [MEDIEN_MULTISPEKTRAL.md](MEDIEN_MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | Implementiert; reale M3M-Fixtures offen |
 | [FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) | Abgrenzung zum stabilen M4-/FH2-Manager-Pfad | Referenz |
 | [FH2_OPENAPI_FEHLERCODES.md](FH2_OPENAPI_FEHLERCODES.md) | FlightHub-2-/OpenAPI-nahe DJI-Fehlercodes | Referenz |
