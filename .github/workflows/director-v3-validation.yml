@@ -97,6 +97,7 @@ jobs:
           npm run test:pilot2-jsbridge
           npm run verify:pilot2-jsbridge
           npm run test:pilot2-bootstrap
+          npm run test:pilot2-evidence
 
       - name: GitHub Sensitive-Data Support Handoff
         run: npm run test:github-support-handoff
@@ -206,6 +207,7 @@ jobs:
           npm run test:pilot2-jsbridge
           npm run verify:pilot2-jsbridge
           npm run test:pilot2-bootstrap
+          npm run test:pilot2-evidence
 
       - name: GitHub Sensitive-Data Support Handoff
         run: npm run test:github-support-handoff
