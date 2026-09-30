@@ -172,7 +172,7 @@ export function validatePilotStatus(status) {
     status.pilotNativeListRequests < 1
   ) {
     throw new Error(
-      "No DJI native DJI Pilot list request observed; local curl requests do not qualify"
+      "No native DJI Pilot list request observed; local curl requests do not qualify"
     );
   }
 
