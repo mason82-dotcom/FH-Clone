@@ -33,7 +33,9 @@
     "test:pilot2-evidence": "node --test scripts/export-pilot2-jsbridge-evidence.test.mjs",
     "export:pilot2-evidence": "node scripts/export-pilot2-jsbridge-evidence.mjs",
     "test:backup-restore": "sh scripts/test-timescale-backup-restore.sh",
-    "test:control-api-openapi": "node scripts/verify-control-api-openapi.mjs"
+    "test:control-api-openapi": "node scripts/verify-control-api-openapi.mjs",
+    "test:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node --test scripts/export-wpml-pilot-evidence.test.mjs",
+    "export:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node scripts/export-wpml-pilot-evidence.mjs"
   },
   "engines": {
     "node": ">=22.12.0",
