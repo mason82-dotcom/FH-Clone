@@ -24,8 +24,7 @@ Lokale `curl`-Aufrufe zählen **nicht** als Pilot-Hardware-Evidence.
 
 Der Control-API-Status enthält keine Tokens, Workspace-ID, Seriennummern,
 Koordinaten oder vollständigen User-Agent-Strings. Für den Pilot-2-Nachweis
-wird nur gezählt, ob ein erfolgreicher Listenabruf mit der in der realen
-nativen DJI-Pilot-HTTP-Client beobachteten `okhttp/3.14.9`-Signatur angekommen ist.
+wird nur gezählt, ob ein erfolgreicher Listenabruf mit der auf realer RC-Pro-Enterprise-Hardware im nativen DJI-Pilot-2-HTTP-Client beobachteten `okhttp/3.14.9`-Signatur angekommen ist.
 
 ## Status prüfen
 
@@ -83,7 +82,7 @@ Der Exporter:
 - speichert nur den SHA-256 des Original-KMZ und strukturelle Metadaten,
 - übernimmt keine XML-Inhalte, Koordinaten, Workspace-ID oder Tokens,
 - akzeptiert den Pilot-Katalogteil nur nach real beobachtetem
-  nativen DJI-Pilot-HTTP-Client-Abruf.
+  nativen DJI-Pilot-2-HTTP-Abruf.
 
 Anschließend:
 
