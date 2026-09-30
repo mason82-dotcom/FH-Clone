@@ -9,11 +9,25 @@ const FORBIDDEN_KEY =
   /^(?:authorization|bearer(?:token)?|password|secret|token|api[_-]?key|client[_-]?secret|device[_-]?secret|nonce)$/i;
 const RAW_BEARER =
   /Bearer\s+(?!<redacted>)[A-Za-z0-9._~+/=-]+/i;
+const MQTT_EVIDENCE_FORBIDDEN_KEY =
+  /^(?:authorization|bearer(?:token)?|password|secret|token|api[_-]?key|client[_-]?(?:secret|id)|device[_-]?secret|nonce|username|address|user[_-]?(?:id|callsign))$/i;
 
 export interface TelemetryStoreOptions {
   connectionString?: string;
   queueCapacity?: number;
   retryIntervalMs?: number;
+}
+
+export type MqttEvidenceTransport = "basic" | "drc";
+
+export interface MqttOutboundEvidence {
+  adapterId: string;
+  transport: MqttEvidenceTransport;
+  deviceId?: string;
+  observedAt: number;
+  channel: string;
+  qos: 0 | 1;
+  payload: unknown;
 }
 
 interface TelemetryPendingWrite {
@@ -131,6 +145,53 @@ export class TelemetryStore {
     });
   }
 
+  enqueueMqttOutbound(message: MqttOutboundEvidence): void {
+    if (!this.pool) return;
+    const payload = sanitizeMqttOutboundEvidencePayload(message.payload);
+    assertTelemetryPersistenceSafe(payload, "$.mqttOutbound");
+    const method =
+      typeof payload === "object" &&
+      payload !== null &&
+      !Array.isArray(payload) &&
+      typeof (payload as Record<string, unknown>).method === "string"
+        ? (payload as Record<string, unknown>).method as string
+        : null;
+
+    this.enqueue("mqtt_outbound", async () => {
+      await this.pool!.query(
+        `INSERT INTO mqtt_outbound_messages (
+           observed_at,
+           adapter_id,
+           transport,
+           device_id,
+           channel,
+           qos,
+           method,
+           payload
+         ) VALUES (
+           to_timestamp($1 / 1000.0),
+           $2,
+           $3,
+           $4,
+           $5,
+           $6,
+           $7,
+           $8::jsonb
+         )`,
+        [
+          message.observedAt,
+          message.adapterId,
+          message.transport,
+          message.deviceId ?? null,
+          message.channel,
+          message.qos,
+          method,
+          JSON.stringify(payload)
+        ]
+      );
+    });
+  }
+
   enqueueParameter(
     sample: ParameterSample,
     missionId?: string,
@@ -193,6 +254,9 @@ export class TelemetryStore {
       await this.pool.query("SELECT 1 FROM raw_messages LIMIT 0");
       await this.pool.query(
         "SELECT 1 FROM normalized_parameters LIMIT 0"
+      );
+      await this.pool.query(
+        "SELECT 1 FROM mqtt_outbound_messages LIMIT 0"
       );
       this.queue?.kick();
       return this.queue?.status.healthy ?? true;
@@ -381,6 +445,49 @@ function scanValue(
   }
 
   seen.delete(value);
+}
+
+export function sanitizeMqttOutboundEvidencePayload(
+  value: unknown,
+  seen = new Set<object>()
+): unknown {
+  if (value === undefined) return null;
+
+  if (Array.isArray(value)) {
+    if (seen.has(value)) {
+      throw new Error("mqtt_outbound_evidence_circular");
+    }
+    seen.add(value);
+    const result = value.map((entry) =>
+      sanitizeMqttOutboundEvidencePayload(entry, seen)
+    );
+    seen.delete(value);
+    return result;
+  }
+
+  if (typeof value !== "object" || value === null) {
+    if (typeof value === "string" && RAW_BEARER.test(value)) {
+      return "<redacted>";
+    }
+    return value;
+  }
+
+  if (seen.has(value)) {
+    throw new Error("mqtt_outbound_evidence_circular");
+  }
+  seen.add(value);
+
+  const result: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (MQTT_EVIDENCE_FORBIDDEN_KEY.test(key)) {
+      result[`${key}_present`] = entry !== undefined && entry !== null;
+      continue;
+    }
+    result[key] = sanitizeMqttOutboundEvidencePayload(entry, seen);
+  }
+
+  seen.delete(value);
+  return result;
 }
 
 function finiteNumber(value: unknown): number | undefined {
