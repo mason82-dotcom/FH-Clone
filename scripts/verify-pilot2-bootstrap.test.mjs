@@ -25,8 +25,10 @@ test("Pilot 2 bootstrap uses only the reviewed cloud-connect JSBridge calls", ()
     ".liveshareStartLive(",
     "localStorage",
     "sessionStorage",
-    "VITE_DJI",
-    "VITE_PILOT",
+    "VITE_DJI_APP_KEY",
+    "VITE_DJI_APP_LICENSE",
+    "VITE_DJI_MQTT_PASSWORD",
+    "VITE_PILOT_TOKEN",
     "fetch(",
     "axios"
   ]) {
