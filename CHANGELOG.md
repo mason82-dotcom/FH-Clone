@@ -11,6 +11,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - Pilot-2-Cloud-Bootstrap für den kontrollierten `thing`-Modul-/MQTT-Verbindungsaufbau integriert, ohne Browser-Secret-Persistenz oder Control-Bootstrap.
 - Reales, redigiertes Pilot-2-JSBridge-Hardware-Fixture integriert; Plattformverifikation, Pilot-Version, exakter RC-/Aircraft-Topologie-Match und aktive Thing-Verbindung sind belegt.
 - Pilot-2-Evidence-UI gegen verschachtelte Versionsantworten und Navigation außerhalb des DJI-WebViews gehärtet.
+- Self-hosted read-only Pilot-Wayline-Listenpfad integriert; Workspace und Token werden fail-closed geprüft, Pilot 2 lädt API-/Mission-Modul nur nach expliziter Aktion und Upload/STS/Download/Execution bleiben gesperrt.
 - V3.1-Statusdokumentation wird vom historischen V3.0.0-Releaseumfang getrennt geführt.
 - TimescaleDB-Backup/Restore als reproduzierbares CI-Betriebsgate ergänzt; Restore bleibt standardmäßig von der aktiven Quelldatenbank getrennt.
 - Passive, sanitierte MQTT-Outbound-Evidence für erfolgreiche Basic-Link-Publishes sowie ausgewählte DRC-Qualifikationsframes ergänzt; keine Command-Replay- oder AuthZ-Quelle.
