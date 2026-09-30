@@ -135,9 +135,14 @@ export class DjiPilotBridgeClient {
   }
 
   getVersion(): DjiPilotVersion | undefined {
-    const value = unwrap(
-      runtime().platformGetVersion(),
-      "platformGetVersion"
+    // DJI Pilot 2 JSBridge responses are JSON envelopes. For
+    // platformGetVersion the envelope data itself can also be a JSON string,
+    // so decode once more after unwrapping the outer response.
+    const value = decodeRaw(
+      unwrap(
+        runtime().platformGetVersion(),
+        "platformGetVersion"
+      )
     );
     return isRecord(value)
       ? (value as DjiPilotVersion)
