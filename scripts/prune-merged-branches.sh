@@ -31,10 +31,11 @@ done < <(
     | sort -u
 )
 
-mapfile -t merged_heads < <(
-  gh api --paginate "/repos/$repo/pulls?state=closed&per_page=100&sort=updated&direction=desc" \
-    --jq '.[] | select(.merged_at != null) | [.head.repo.full_name, .head.ref] | @tsv' \
-    | awk -F '\t' -v repo="$repo" '$1 == repo { print $2 }' \
+mapfile -t remote_branches < <(
+  git for-each-ref \
+    --format='%(refname:strip=3)' \
+    refs/remotes/origin/ \
+    | grep -v '^HEAD$' \
     | sort -u
 )
 
@@ -42,9 +43,8 @@ deleted=0
 eligible=0
 skipped_open=0
 skipped_unmerged_tip=0
-skipped_missing=0
 
-for branch in "${merged_heads[@]}"; do
+for branch in "${remote_branches[@]}"; do
   [[ "$branch" == "$default_branch" ]] && continue
 
   if [[ -n "${open_heads[$branch]:-}" ]]; then
@@ -54,11 +54,9 @@ for branch in "${merged_heads[@]}"; do
   fi
 
   remote_ref="refs/remotes/origin/$branch"
-  if ! git show-ref --verify --quiet "$remote_ref"; then
-    ((skipped_missing += 1))
-    continue
-  fi
 
+  # Content-loss guard: every commit reachable from the branch tip must already
+  # be reachable from the default branch. Diverged or ahead branches remain.
   if ! git merge-base --is-ancestor "$remote_ref" "refs/remotes/origin/$default_branch"; then
     echo "SKIP unmerged-tip: $branch"
     ((skipped_unmerged_tip += 1))
@@ -71,7 +69,7 @@ for branch in "${merged_heads[@]}"; do
     continue
   fi
 
-  echo "DELETE merged branch: $branch"
+  echo "DELETE fully-merged branch: $branch"
   gh api --method DELETE "/repos/$repo/git/refs/heads/$branch" >/dev/null
   ((deleted += 1))
 done
@@ -82,4 +80,3 @@ echo "  eligible=$eligible"
 echo "  deleted=$deleted"
 echo "  skipped_open=$skipped_open"
 echo "  skipped_unmerged_tip=$skipped_unmerged_tip"
-echo "  skipped_missing=$skipped_missing"
