@@ -65,6 +65,7 @@ import { queryInt } from "./http-query.js";
 import { markAllDrcTransportsLost } from "./drc-runtime.js";
 import { Pilot2EvidenceStore, parsePilot2EvidenceCapture } from "./pilot2-evidence.js";
 import { createPilotWaylineServerFromEnv } from "./pilot-wayline-server.js";
+import { ControlApiMetrics } from "./metrics.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -74,6 +75,7 @@ const pilotWaylineServer = createPilotWaylineServerFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
 const pilot2Evidence = new Pilot2EvidenceStore();
+const metrics = new ControlApiMetrics();
 
 const msdkTokenRevocations = new MsdkTokenRevocationStore({
   connectionString: process.env.DATABASE_URL
@@ -90,13 +92,15 @@ const msdkBridge = new MsdkBridgeService({
 const topologyStore = await createTopologyStore();
 const topologyPersistence = createTopologyPersistenceQueue(topologyStore);
 const gatewayCredentials = await createGatewayCredentialStore();
+let persistDjiMqttOutbound: NonNullable<DjiCloudAdapterOptions["onMqttOutbound"]> =
+  () => undefined;
 let drcSessions: DrcSessionManager | undefined;
 const djiOptions = getDjiOptions(topologyPersistence, async (gatewaySn, drcState) => {
   await drcSessions?.applyDrcStatus(gatewaySn, drcState);
 }, async (reason) => {
   if (!drcSessions) return;
   await markAllDrcTransportsLost(drcSessions, reason);
-});
+}, (message) => persistDjiMqttOutbound(message));
 const dji = djiOptions ? new DjiCloudAdapter(djiOptions) : undefined;
 const controlGuards = new RuntimeControlGuardRegistry();
 const msdkControl = new MsdkControlHub({
@@ -170,6 +174,29 @@ const telemetryStore = new TelemetryStore({
     ? { connectionString: process.env.TIMESCALE_URL }
     : {})
 });
+persistDjiMqttOutbound = (message) => {
+  const method = mqttPayloadMethod(message.payload);
+  metrics.observeMqttOutbound(message.transport, method);
+
+  if (
+    message.transport === "drc" &&
+    method !== "heart_beat" &&
+    method !== "drone_emergency_stop"
+  ) {
+    return;
+  }
+
+  const deviceId = mqttTopicDeviceId(message.topic);
+  telemetryStore.enqueueMqttOutbound({
+    adapterId: "dji-cloud",
+    transport: message.transport,
+    ...(deviceId ? { deviceId } : {}),
+    observedAt: message.sentAt,
+    channel: message.topic,
+    qos: message.qos,
+    payload: message.payload
+  });
+};
 const rtk = new RtkTelemetryService({
   resolveGatewaySn: (deviceId) => dji?.resolveGatewaySn(deviceId),
   resolveMissionId: (deviceId) => missions.getActive(deviceId)?.missionId
@@ -785,6 +812,30 @@ const internalServer = createServer(async (request, response) => {
       return json(response, 200, { status: "ok", service: "control-api-internal" });
     }
 
+    if (request.method === "GET" && request.url === "/metrics") {
+      return textResponse(
+        response,
+        200,
+        metrics.render({
+          uptimeSeconds: process.uptime(),
+          djiConfigured: Boolean(dji),
+          djiConnected: dji?.isConnected ?? false,
+          activeMissions: missions.listActive().length,
+          mediaAssets: mediaOverlays.size(),
+          activeDrcSessions: drcRuntimeContext.size,
+          msdkAgents: msdkBridge.listAgents().length,
+          msdkControlSessions: msdkControl
+            .listSessions()
+            .filter((session) => session.state !== "closed")
+            .length,
+          missionQueue: missionPersistence.status,
+          telemetryQueue: telemetryStore.status,
+          topologyQueue: topologyPersistence.status
+        }),
+        "text/plain; version=0.0.4; charset=utf-8"
+      );
+    }
+
     if (request.method === "POST" && request.url === "/internal/emqx/authn") {
       try {
         const body = await readJson<unknown>(request, 16_384);
@@ -1107,7 +1158,8 @@ if (dji) {
 function getDjiOptions(
   topologyPersistence: TopologyPersistenceQueue,
   onDrcStatus: NonNullable<DjiCloudAdapterOptions["onDrcStatus"]>,
-  onDrcTransportLost: NonNullable<DjiCloudAdapterOptions["onDrcTransportLost"]>
+  onDrcTransportLost: NonNullable<DjiCloudAdapterOptions["onDrcTransportLost"]>,
+  onMqttOutbound: NonNullable<DjiCloudAdapterOptions["onMqttOutbound"]>
 ): DjiCloudAdapterOptions | undefined {
   const brokerUrl = process.env.DJI_MQTT_URL;
   if (!brokerUrl) return undefined;
@@ -1119,9 +1171,35 @@ function getDjiOptions(
     clientId: process.env.DJI_MQTT_CLIENT_ID ?? "fh-clone-backend",
     onDrcStatus,
     onDrcTransportLost,
+    onMqttOutbound,
     ...(process.env.DJI_CLOUD_API_VERSION ? { apiVersion: process.env.DJI_CLOUD_API_VERSION } : {}),
     ...(topologyPersistence.enabled ? { onTopologyChange: (change: import("@fh-clone/adapter-dji-cloud").TopologyChange) => topologyPersistence.enqueue(change) } : {})
   };
+}
+
+function mqttTopicDeviceId(topic: string): string | undefined {
+  const parts = topic.split("/");
+  if (
+    parts.length >= 4 &&
+    (parts[0] === "thing" || parts[0] === "sys") &&
+    parts[1] === "product" &&
+    parts[2]
+  ) {
+    return parts[2];
+  }
+  return undefined;
+}
+
+function mqttPayloadMethod(payload: unknown): string | undefined {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    !Array.isArray(payload) &&
+    typeof (payload as Record<string, unknown>).method === "string"
+  ) {
+    return (payload as Record<string, unknown>).method as string;
+  }
+  return undefined;
 }
 
 function listenServer(
@@ -1143,6 +1221,20 @@ function json(response: ServerResponse, status: number, body: unknown): void {
   const encoded = Buffer.from(JSON.stringify(body));
   response.statusCode = status;
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("cache-control", "no-store");
+  response.setHeader("content-length", encoded.length);
+  response.end(encoded);
+}
+
+function textResponse(
+  response: ServerResponse,
+  status: number,
+  body: string,
+  contentType = "text/plain; charset=utf-8"
+): void {
+  const encoded = Buffer.from(body);
+  response.statusCode = status;
+  response.setHeader("content-type", contentType);
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-length", encoded.length);
   response.end(encoded);
@@ -1254,6 +1346,8 @@ function enqueueAuthzAudit(
   },
   latencyUs: number
 ): void {
+  metrics.observeAuthzDecision(decision.result, decision.reason);
+
   const runtimeDrc = decision.gatewaySn
     ? drcRuntimeContext.get(decision.gatewaySn)
     : undefined;
