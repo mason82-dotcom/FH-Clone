@@ -1,13 +1,33 @@
+import { useEffect, useState } from "react";
 import { Fh2Workspace } from "./components/fh2/Fh2Workspace.js";
 import { PilotCloudBootstrap } from "./pilot-bootstrap/PilotCloudBootstrap.js";
 import { PilotJsbridgeEvidence } from "./pilot-evidence/PilotJsbridgeEvidence.js";
 
 export function App() {
-  if (window.location.pathname === "/pilot-login") {
-    return <PilotCloudBootstrap />;
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function navigate(path: string): void {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+    }
+    setPathname(path);
   }
 
-  if (window.location.pathname === "/pilot-evidence") {
+  if (pathname === "/pilot-login") {
+    return (
+      <PilotCloudBootstrap
+        onOpenEvidence={() => navigate("/pilot-evidence")}
+      />
+    );
+  }
+
+  if (pathname === "/pilot-evidence") {
     return <PilotJsbridgeEvidence />;
   }
 
