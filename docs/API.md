@@ -410,8 +410,7 @@ konfigurierte Workspace-UUID und ein exakt passendes
 
 Der Diagnose-Endpunkt enthält zusätzlich ausschließlich nicht-sensitive
 Laufzeitbeobachtungen für den Hardware-Nachweis. Neben `listRequests` werden
-erfolgreiche Requests aus der realen nativen DJI-Pilot-HTTP-Client separat gezählt, wenn
-deren User-Agent die beobachtete `okhttp/3.14.9`-Signatur enthält:
+erfolgreiche Requests des auf realer RC-Pro-Enterprise-Hardware beobachteten nativen DJI-Pilot-2-HTTP-Clients separat gezählt, wenn deren User-Agent exakt `okhttp/3.14.9` entspricht:
 
 ```json
 {
