@@ -277,8 +277,8 @@ test("flags non-contiguous waypoint indexes and missing execution RTH height", (
 
 test("requires positive trigger parameters for repeated timing/distance triggers", () => {
   const invalidTrigger = waylinesXml
-    .replace("<wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>",
-             "<wpml:actionTriggerType>multipleDistance</wpml:actionTriggerType>");
+    .replaceAll("<wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>",
+                "<wpml:actionTriggerType>multipleDistance</wpml:actionTriggerType>");
   const bundle = parseWpmlBundle(templateXml, invalidTrigger);
   assert.equal(
     bundle.waylines.issues.some((issue) => issue.code === "action_group.trigger_param_invalid"),
