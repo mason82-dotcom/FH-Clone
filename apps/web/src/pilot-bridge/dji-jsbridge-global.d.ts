@@ -10,6 +10,8 @@ interface DjiBridgeRuntime {
   platformLoadComponent(name: string, param: string): unknown;
   thingGetConnectState(): unknown;
   wsGetConnectState(): unknown;
+  onBackClick?: () => boolean;
+  onStopPlatform?: () => void;
 }
 
 declare global {
