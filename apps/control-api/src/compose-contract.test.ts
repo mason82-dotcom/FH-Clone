@@ -63,3 +63,17 @@ test("backend network remains internal", () => {
     /\n  backend:\s*\n\s+internal:\s*true/
   );
 });
+
+
+test("Pilot Wayline server configuration is explicit and disabled by default", () => {
+  const controlApi = serviceBlock("control-api");
+
+  assert.match(
+    controlApi,
+    /DJI_PILOT_WAYLINE_SERVER_ENABLED:\s*\$\{DJI_PILOT_WAYLINE_SERVER_ENABLED:-false\}/
+  );
+  assert.match(
+    controlApi,
+    /DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN:\s*\$\{DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN:-\}/
+  );
+});
