@@ -99,6 +99,39 @@ test("records only non-sensitive runtime observation for successful list request
   });
 });
 
+test("records only a boolean/count observation for DJI Pilot WebView requests", () => {
+  const server = configured();
+  const url = new URL(
+    `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines?page=1&page_size=10`
+  );
+
+  server.list(
+    url,
+    Date.parse("2026-09-30T19:30:00.000Z"),
+    {
+      "user-agent":
+        "Mozilla/5.0 (Linux; Android 10; DJI RC Pro Enterprise; wv) dji-open-platform"
+    }
+  );
+
+  assert.deepEqual(server.status(), {
+    enabled: true,
+    configured: true,
+    readOnly: true,
+    workspaceConfigured: true,
+    authConfigured: true,
+    listRequests: 1,
+    lastListRequestAt: "2026-09-30T19:30:00.000Z",
+    pilotWebViewListRequests: 1,
+    lastPilotWebViewListRequestAt: "2026-09-30T19:30:00.000Z"
+  });
+
+  assert.equal(
+    JSON.stringify(server.status()).includes("DJI RC Pro Enterprise"),
+    false
+  );
+});
+
 test("rejects malformed pagination instead of partially parsing it", () => {
   const server = configured();
 
