@@ -23,15 +23,32 @@ export function PilotJsbridgeEvidence() {
   );
   const [result, setResult] = useState<RedactedEvidenceResponse | null>(null);
 
-  const canCapture = useMemo(() => {
-    return Boolean(
-      pilot.state === "ready" &&
-      pilot.snapshot.verified &&
-      pilot.snapshot.version &&
-      pilot.snapshot.identity.remoteControllerSn &&
-      pilot.snapshot.identity.aircraftSn
-    );
-  }, [pilot]);
+  const readiness = useMemo(() => ({
+    jsbridge: pilot.state === "ready",
+    license: pilot.snapshot.verified,
+    version: Boolean(pilot.snapshot.version),
+    remoteController: Boolean(
+      pilot.snapshot.identity.remoteControllerSn
+    ),
+    aircraft: Boolean(pilot.snapshot.identity.aircraftSn)
+  }), [
+    pilot.snapshot.identity.aircraftSn,
+    pilot.snapshot.identity.remoteControllerSn,
+    pilot.snapshot.verified,
+    pilot.snapshot.version,
+    pilot.state
+  ]);
+
+  const canCapture = Object.values(readiness).every(Boolean);
+  const missingRequirements = Object.entries(readiness)
+    .filter(([, available]) => !available)
+    .map(([name]) => name);
+  const displayedMessage =
+    stage === "idle"
+      ? canCapture
+        ? "Bereit für einen redigierten Pilot-2-JSBridge-Hardware-Capture."
+        : `Warte auf JSBridge-Pflichtdaten: ${missingRequirements.join(", ")}.`
+      : message;
 
   async function capture() {
     if (!canCapture) {
@@ -119,13 +136,27 @@ export function PilotJsbridgeEvidence() {
               : "geladen, nicht verbunden"
             : "nicht geladen"}
           <br />
-          <strong>Status:</strong> {message}
+          <strong>Pilot-Version:</strong>{" "}
+          {readiness.version ? "verfügbar" : "fehlt"}
+          <br />
+          <strong>RC-Identität:</strong>{" "}
+          {readiness.remoteController ? "verfügbar" : "fehlt"}
+          <br />
+          <strong>Aircraft-Identität:</strong>{" "}
+          {readiness.aircraft ? "verfügbar" : "fehlt"}
+          <br />
+          <strong>Status:</strong> {displayedMessage}
         </div>
 
         <button
           type="button"
           onClick={() => void capture()}
           disabled={!canCapture || stage === "capturing"}
+          title={
+            canCapture
+              ? "Capture bereit"
+              : `Fehlt: ${missingRequirements.join(", ")}`
+          }
         >
           Redigierte JSBridge-Evidence erfassen
         </button>
