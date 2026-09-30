@@ -64,11 +64,13 @@ import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
 import { queryInt } from "./http-query.js";
 import { markAllDrcTransportsLost } from "./drc-runtime.js";
 import { Pilot2EvidenceStore, parsePilot2EvidenceCapture } from "./pilot2-evidence.js";
+import { createPilotWaylineServerFromEnv } from "./pilot-wayline-server.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
 const fh2 = createFh2OpenApiFromEnv();
 const djiPilotWaylines = createDjiPilotWaylineCatalogFromEnv();
+const pilotWaylineServer = createPilotWaylineServerFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
 const pilot2Evidence = new Pilot2EvidenceStore();
@@ -518,6 +520,61 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/fh2/status") {
       return json(response, 200, fh2.status());
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/dji/pilot/wayline-server/status"
+    ) {
+      return json(response, 200, pilotWaylineServer.status());
+    }
+
+    const pilotWaylineWorkspaceId = pilotWaylineServer.matchWorkspace(
+      url.pathname
+    );
+    if (pilotWaylineWorkspaceId !== undefined) {
+      if (request.method !== "GET") {
+        return json(response, 405, {
+          code: 405,
+          message: "read_only_wayline_server"
+        });
+      }
+
+      if (!pilotWaylineServer.configured) {
+        return json(response, 503, {
+          code: 503,
+          message: "pilot_wayline_server_not_configured"
+        });
+      }
+
+      if (!pilotWaylineServer.workspaceMatches(pilotWaylineWorkspaceId)) {
+        return json(response, 404, {
+          code: 404,
+          message: "workspace_not_found"
+        });
+      }
+
+      if (!pilotWaylineServer.authenticate(request.headers)) {
+        return json(response, 401, {
+          code: 401,
+          message: "unauthorized"
+        });
+      }
+
+      try {
+        return json(response, 200, pilotWaylineServer.list(url));
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.startsWith("invalid_query_")
+        ) {
+          return json(response, 400, {
+            code: 400,
+            message: error.message
+          });
+        }
+        throw error;
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/dji/pilot/waylines/status") {
