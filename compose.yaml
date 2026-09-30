@@ -197,6 +197,7 @@ services:
         VITE_FH2_DRONE_SN: "${VITE_FH2_DRONE_SN:-}"
         VITE_FH2_WAYLINE_ID: "${VITE_FH2_WAYLINE_ID:-}"
         VITE_FH2_FLIGHT_PATH_ID: "${VITE_FH2_FLIGHT_PATH_ID:-}"
+        VITE_DJI_PILOT_WORKSPACE_ID: "${DJI_PILOT_WORKSPACE_ID:-}"
     depends_on:
       control-api:
         condition: service_healthy
