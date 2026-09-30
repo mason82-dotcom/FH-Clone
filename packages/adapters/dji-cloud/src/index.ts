@@ -34,6 +34,14 @@ import {
   sanitizeGloballyDisabledDjiFields
 } from "./feature-policy.js";
 
+export interface DjiMqttOutboundObservation {
+  transport: "basic" | "drc";
+  topic: string;
+  payload: unknown;
+  qos: 0 | 1;
+  sentAt: number;
+}
+
 export interface DjiCloudAdapterOptions {
   brokerUrl: string;
   username?: string;
@@ -53,6 +61,8 @@ export interface DjiCloudAdapterOptions {
   onDrcStatus?: (gatewaySn: string, drcState: 0 | 1 | 2, receivedAt: number) => void | Promise<void>;
   /** Optional inventory sink. Never used to hydrate runtime authorization state. */
   onTopologyChange?: (change: import("./topology.js").TopologyChange) => void | Promise<void>;
+  /** Passive observation after a MQTT publish has succeeded. Never controls publish success. */
+  onMqttOutbound?: (message: DjiMqttOutboundObservation) => void | Promise<void>;
 }
 
 interface PendingServiceRequest {
@@ -127,7 +137,15 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
   constructor(private readonly options: DjiCloudAdapterOptions) {
     this.drcTransport = new DrcBrokerTransport({
       onConnected: () => this.options.onDrcTransportConnected?.(),
-      onLost: (reason) => this.options.onDrcTransportLost?.(reason)
+      onLost: (reason) => this.options.onDrcTransportLost?.(reason),
+      onPublished: (message) =>
+        this.observeOutbound(
+          "drc",
+          message.topic,
+          message.payload,
+          message.qos,
+          message.sentAt
+        )
     });
     this.drc = new DrcController(this, this.drcTransport);
   }
@@ -347,7 +365,15 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
         JSON.stringify(envelope),
         { qos: 1 },
         (error?: Error) => {
-          if (!error) return;
+          if (!error) {
+            this.observeOutbound(
+              "basic",
+              `thing/product/${gatewaySn}/services`,
+              envelope,
+              1
+            );
+            return;
+          }
           clearTimeout(timer);
           this.pendingServices.delete(tid);
           reject(error);
@@ -568,12 +594,39 @@ export class DjiCloudAdapter implements AircraftAdapter, DjiServiceRequester {
       data: { result: 0 }
     };
 
+    const topic = `sys/product/${gatewaySn}/status_reply`;
     await new Promise<void>((resolve, reject) => {
       client.publish(
-        `sys/product/${gatewaySn}/status_reply`,
+        topic,
         JSON.stringify(reply),
         { qos: 1 },
         (error?: Error) => error ? reject(error) : resolve()
+      );
+    });
+    this.observeOutbound("basic", topic, reply, 1);
+  }
+
+  private observeOutbound(
+    transport: "basic" | "drc",
+    topic: string,
+    payload: unknown,
+    qos: 0 | 1,
+    sentAt = Date.now()
+  ): void {
+    void Promise.resolve()
+      .then(() =>
+        this.options.onMqttOutbound?.({
+          transport,
+          topic,
+          payload,
+          qos,
+          sentAt
+        })
+      )
+      .catch((error: unknown) => {
+      console.error(
+        "DJI MQTT outbound evidence callback failed",
+        error instanceof Error ? error.message : String(error)
       );
     });
   }
