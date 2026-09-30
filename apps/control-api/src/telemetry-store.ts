@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Pool } from "pg";
 import type {
   ParameterSample,
@@ -148,6 +149,10 @@ export class TelemetryStore {
   enqueueMqttOutbound(message: MqttOutboundEvidence): void {
     if (!this.pool) return;
     const payload = sanitizeMqttOutboundEvidencePayload(message.payload);
+    const deviceId = message.deviceId
+      ? hashMqttEvidenceIdentifier(message.deviceId)
+      : undefined;
+    const channel = sanitizeMqttOutboundEvidenceChannel(message.channel);
     assertTelemetryPersistenceSafe(payload, "$.mqttOutbound");
     const method =
       typeof payload === "object" &&
@@ -182,8 +187,8 @@ export class TelemetryStore {
           message.observedAt,
           message.adapterId,
           message.transport,
-          message.deviceId ?? null,
-          message.channel,
+          deviceId ?? null,
+          channel,
           message.qos,
           method,
           JSON.stringify(payload)
@@ -445,6 +450,24 @@ function scanValue(
   }
 
   seen.delete(value);
+}
+
+export function hashMqttEvidenceIdentifier(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function sanitizeMqttOutboundEvidenceChannel(channel: string): string {
+  const parts = channel.split("/");
+  if (
+    parts.length >= 4 &&
+    (parts[0] === "thing" || parts[0] === "sys") &&
+    parts[1] === "product" &&
+    parts[2]
+  ) {
+    parts[2] = "DEVICE_REDACTED";
+    return parts.join("/");
+  }
+  return "<redacted-channel>";
 }
 
 export function sanitizeMqttOutboundEvidencePayload(
