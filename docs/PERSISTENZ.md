@@ -241,5 +241,9 @@ hochfrequente Stick-/Velocity-Control-Frames werden nicht als Historie
 aufgebaut.
 
 Credential-/Secret-Felder werden vor Persistenz auf reine
-`*_present`-Marker reduziert. Die Tabelle ist ausdrücklich keine Quelle für
-AuthZ, Control Authority, DRC-Rehydration oder Command Replay.
+`*_present`-Marker reduziert. Geräte-/Gateway-Identitäten werden in
+`device_id` ausschließlich als SHA-256-Korrelation gespeichert; der
+Identitätsabschnitt im MQTT-Topic wird als `DEVICE_REDACTED` ersetzt.
+Unbekannte Topic-Formen werden vollständig als `<redacted-channel>`
+abgelegt. Die Tabelle ist ausdrücklich keine Quelle für AuthZ, Control
+Authority, DRC-Rehydration oder Command Replay.
