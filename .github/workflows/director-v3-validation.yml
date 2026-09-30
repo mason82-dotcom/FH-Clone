@@ -92,6 +92,9 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: Control API OpenAPI Contract
+        run: npm run test:control-api-openapi
+
       - name: Pilot2 JSBridge Safety
         run: |
           npm run test:pilot2-jsbridge
@@ -213,6 +216,9 @@ jobs:
 
       - name: Tests
         run: npm test
+
+      - name: Control API OpenAPI Contract
+        run: npm run test:control-api-openapi
 
       - name: Pilot2 JSBridge Safety
         run: |
