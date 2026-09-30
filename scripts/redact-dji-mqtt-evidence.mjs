@@ -330,13 +330,23 @@ function main() {
   }
   args.splice(realIndex, 1);
 
+  const profileIndex = args.indexOf("--profile");
+  if (profileIndex < 0 || !args[profileIndex + 1]) {
+    fail("use --profile m3e or --profile m3t explicitly");
+  }
+  const profileName = args[profileIndex + 1].toLowerCase();
+  args.splice(profileIndex, 2);
+  if (!Object.hasOwn(PROFILES, profileName)) {
+    fail(`unsupported profile: ${profileName}; expected m3e or m3t`);
+  }
+
   if (args.length < 1 || args.length > 2) {
-    fail("usage: node scripts/redact-dji-mqtt-evidence.mjs --real-hardware <input.json> [output.json]");
+    fail("usage: node scripts/redact-dji-mqtt-evidence.mjs --real-hardware --profile <m3e|m3t> <input.json> [output.json]");
   }
 
   const inputPath = path.resolve(args[0]);
   const outputPath = path.resolve(
-    args[1] ?? "docs/fixtures/m3t/mqtt-evidence.json"
+    args[1] ?? PROFILES[profileName].defaultOutput
   );
 
   let rawBytes;
@@ -352,6 +362,7 @@ function main() {
   if (!rows.length) fail("input contains no rows/messages/events");
 
   const capture = validateSingleTopologyCapture(rows);
+  const profile = validateProfile(capture, profileName, rows);
   const topologyRow = capture.topologyRow;
   const statusReplyRow = findRow(
     rows,
@@ -381,6 +392,8 @@ function main() {
 
   const output = {
     schema: "fh2.dji-mqtt.v1",
+    profile: profileName,
+    expectedPayloadIndex: profile.payloadIndex,
     realHardware: true,
     synthetic: false,
     redacted: true,
