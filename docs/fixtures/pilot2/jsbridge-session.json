@@ -1,0 +1,41 @@
+{
+  "schema": "fh2.pilot2-jsbridge.v1",
+  "realHardware": true,
+  "synthetic": false,
+  "redacted": true,
+  "capturedAt": "2026-09-30T17:46:09.478Z",
+  "bridgePresent": true,
+  "platformIsVerified": true,
+  "platformVersion": "app=17.3.2.2; model=01.00.00",
+  "remoteControllerSnSha256": "f9b55b675a355f47cafa63290a782971a4d385ec6ffab3bfbbdbac0921b44dbf",
+  "aircraftSnSha256": "367273b69589d2f3db34b6ca9327a2f90568baf8755c3d4c2788d13201fcba39",
+  "topologyPairMatch": true,
+  "moduleInventoryCaptured": true,
+  "modules": {
+    "thing": true,
+    "liveshare": false,
+    "api": false,
+    "ws": false,
+    "map": false,
+    "tsa": false,
+    "media": false,
+    "mission": false
+  },
+  "thingConnected": true,
+  "topology": {
+    "gateway": {
+      "domain": "2",
+      "type": 144,
+      "subType": 0,
+      "thingVersion": "1.2.0"
+    },
+    "aircraft": {
+      "domain": "0",
+      "type": 77,
+      "subType": 0,
+      "thingVersion": "1.2.0"
+    }
+  },
+  "browserBundleSecretScanPass": true,
+  "captureSha256": "deb4197a3c613e3bc6af4e80cddffb9eb7360ca936933fa740d4adec184e1518"
+}
