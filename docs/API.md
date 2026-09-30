@@ -407,6 +407,24 @@ Der Server ist standardmäßig deaktiviert. Er akzeptiert ausschließlich die
 konfigurierte Workspace-UUID und ein exakt passendes
 `DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN`. Bei gleicher Tokenlänge erfolgt der Wertvergleich mit `timingSafeEqual`.
 
+Der Diagnose-Endpunkt enthält zusätzlich ausschließlich nicht-sensitive
+Laufzeitbeobachtungen für den Hardware-Nachweis. Neben `listRequests` werden
+erfolgreiche Requests aus der realen DJI-Pilot-WebView separat gezählt, wenn
+deren User-Agent die beobachtete `dji-open-platform`-Signatur enthält:
+
+```json
+{
+  "listRequests": 3,
+  "lastListRequestAt": "2026-09-30T19:30:00.000Z",
+  "pilotWebViewListRequests": 1,
+  "lastPilotWebViewListRequestAt": "2026-09-30T19:30:00.000Z"
+}
+```
+
+Vollständiger User-Agent, Remote-IP, Workspace-ID und Auth-Token werden dabei
+nicht gespeichert. Ein lokaler `curl`-Smoke-Test erhöht
+`pilotWebViewListRequests` nicht.
+
 Der aktuelle Server liefert bewusst einen leeren Katalog im DJI-Envelope:
 
 ```json
