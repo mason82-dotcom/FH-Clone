@@ -8,6 +8,19 @@ import type {
   Fh2WaylineItem
 } from "./fh2-openapi-types.js";
 
+export type {
+  Fh2DeviceModel,
+  Fh2FlightTask,
+  Fh2FlightTaskException,
+  Fh2FlightTaskFolderInfo,
+  Fh2HmsAlert,
+  Fh2ListResult,
+  Fh2ManageDevice,
+  Fh2PaginatedList,
+  Fh2Pagination,
+  Fh2WaylineItem
+} from "./fh2-openapi-types.js";
+
 export class Fh2OpenApiError extends Error {}
 export class Fh2OpenApiNotConfigured extends Fh2OpenApiError {}
 
@@ -65,7 +78,10 @@ export class Fh2OpenApiClient {
     };
   }
 
-  async listWaylines(page = 1, pageSize = 100): Promise<Fh2PaginatedList<Fh2WaylineItem>> {
+  async listWaylines(
+    page = 1,
+    pageSize = 100
+  ): Promise<Fh2PaginatedList<Fh2WaylineItem>> {
     this.requireProject();
     return this.get<Fh2PaginatedList<Fh2WaylineItem>>(
       `/openapi/v2.0/wayline/api/v1/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/web-waylines`,
@@ -73,7 +89,10 @@ export class Fh2OpenApiClient {
     );
   }
 
-  async listFlightTasks(page = 1, pageSize = 50): Promise<Fh2PaginatedList<Fh2FlightTask>> {
+  async listFlightTasks(
+    page = 1,
+    pageSize = 50
+  ): Promise<Fh2PaginatedList<Fh2FlightTask>> {
     this.requireProject();
     return this.get<Fh2PaginatedList<Fh2FlightTask>>(
       `/openapi/v2.0/task/api/v2/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/flight-tasks`,
