@@ -110,36 +110,39 @@ function validateSingleTopologyCapture(rows) {
     fail(`capture contains ${gatewayIds.length} gateways; narrow the capture window to one target gateway`);
   }
 
-  const aircraftRows = rows.filter((row) => {
-    const topic = topicOf(row);
-    return Boolean(
-      topicIdentity(topic, "aircraftOsd") ||
-      topicIdentity(topic, "aircraftState")
-    );
-  });
-  const aircraftIds = unique(
-    aircraftRows.map(
-      (row) =>
-        topicIdentity(topicOf(row), "aircraftOsd") ??
-        topicIdentity(topicOf(row), "aircraftState")
-    )
+  const topologyData = dataOf(payloadOf(topologyRows[0]));
+  const subDeviceIds = unique(
+    array(topologyData?.sub_devices ?? topologyData?.subDevices)
+      .map((entry) => string(entry?.sn))
   );
-  if (aircraftIds.length !== 1) {
-    fail(`capture contains ${aircraftIds.length} aircraft; narrow the capture window to one target aircraft`);
+  if (subDeviceIds.length !== 1) {
+    fail(`capture topology contains ${subDeviceIds.length} sub-devices; expected exactly one target aircraft`);
   }
 
-  const topologyData = dataOf(payloadOf(topologyRows[0]));
-  const subDeviceIds = array(topologyData?.sub_devices ?? topologyData?.subDevices)
-    .map((entry) => string(entry?.sn))
-    .filter(Boolean);
-  if (!subDeviceIds.includes(aircraftIds[0])) {
-    fail("OSD/state aircraft is not a sub-device of the captured update_topo gateway");
+  // Pilot 2 can publish Thing OSD for both the RC gateway and its aircraft.
+  // Only non-gateway Thing identities are aircraft candidates here.
+  const observedAircraftIds = unique(
+    rows
+      .map(
+        (row) =>
+          topicIdentity(topicOf(row), "aircraftOsd") ??
+          topicIdentity(topicOf(row), "aircraftState")
+      )
+      .filter((id) => id && id !== gatewayIds[0])
+  );
+
+  const unexpected = observedAircraftIds.filter((id) => id !== subDeviceIds[0]);
+  if (unexpected.length) {
+    fail("capture contains telemetry for aircraft outside the captured update_topo pair; narrow the capture window");
+  }
+  if (!observedAircraftIds.includes(subDeviceIds[0])) {
+    fail("captured update_topo aircraft has no OSD/state telemetry in the input");
   }
 
   return {
     topologyRow: topologyRows[0],
     gatewayId: gatewayIds[0],
-    aircraftId: aircraftIds[0]
+    aircraftId: subDeviceIds[0]
   };
 }
 
