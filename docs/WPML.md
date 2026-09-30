@@ -461,15 +461,15 @@ Execution-Semantik vorzutäuschen.
 
 Für den Hardware-Nachweis zählt FH2 normale Listenaufrufe und zusätzlich
 separat erfolgreiche Requests, deren User-Agent die in der realen
-DJI-Pilot-2-WebView beobachtete `dji-open-platform`-Signatur enthält.
+DJI-Pilot-2-WebView beobachtete `okhttp/3.14.9`-Signatur enthält.
 Gespeichert werden dabei **nicht** der vollständige User-Agent, die Remote-IP,
 Workspace-ID oder der Auth-Token, sondern nur Zähler und Zeitstempel:
 
 ```json
 {
   "listRequests": 3,
-  "pilotWebViewListRequests": 1,
-  "lastPilotWebViewListRequestAt": "2026-09-30T19:30:00.000Z"
+  "pilotNativeListRequests": 1,
+  "lastPilotNativeListRequestAt": "2026-09-30T19:30:00.000Z"
 }
 ```
 
