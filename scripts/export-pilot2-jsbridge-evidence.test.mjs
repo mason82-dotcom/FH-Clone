@@ -130,3 +130,25 @@ test("Pilot 2 evidence page is read-only and does not persist browser state", ()
     assert.equal(source.includes(forbidden), false, `forbidden: ${forbidden}`);
   }
 });
+
+
+test("Pilot 2 evidence readiness exposes only availability, not raw identities", () => {
+  const client = fs.readFileSync(
+    "apps/web/src/pilot-bridge/client.ts",
+    "utf8"
+  );
+  const page = fs.readFileSync(
+    "apps/web/src/pilot-evidence/PilotJsbridgeEvidence.tsx",
+    "utf8"
+  );
+
+  assert.match(
+    client,
+    /decodeRaw\(\s*unwrap\(\s*runtime\(\)\.platformGetVersion\(\)/
+  );
+  assert.equal(page.includes("Pilot-Version:"), true);
+  assert.equal(page.includes("RC-Identität:"), true);
+  assert.equal(page.includes("Aircraft-Identität:"), true);
+  assert.equal(page.includes("readiness.remoteController ? \"verfügbar\" : \"fehlt\""), true);
+  assert.equal(page.includes("readiness.aircraft ? \"verfügbar\" : \"fehlt\""), true);
+});
