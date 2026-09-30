@@ -25,6 +25,7 @@ gateway_sn
    |
    +-- M3M aus der MSDK-Bridge
        device_sn
+```
 
 M3M wird damit im FH2-Gerätebaum wie die übrigen M3-Aircraft als Subdevice
 der realen RC-Pro-SN geführt. Die Beziehung stammt bei M3M aus MSDK V5 und
@@ -32,9 +33,10 @@ ist ausdrücklich **keine** synthetische DJI-Cloud-`update_topo`-Meldung.
 
 Ohne eindeutige Cloud-Enumeration erhält M3M weiterhin kein automatisches
 Pilot-to-Cloud-Live-Control-Profil.
-```
 
-Die Zuordnung wird über `update_topo` gelernt.
+Die Cloud-Zuordnung wird über `update_topo` gelernt. Die zusätzliche
+MSDK-Subdevice-Beziehung wird ausschließlich aus dem authentifizierten
+RC-Bridge-Snapshot abgeleitet.
 
 Typischer Topic-Pfad:
 
