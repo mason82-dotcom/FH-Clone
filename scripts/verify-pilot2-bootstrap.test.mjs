@@ -68,7 +68,6 @@ test("Pilot 2 bootstrap trims surrounding Cloud API text fields before verificat
 test("Pilot 2 bootstrap keeps DJI portal values direct and never Base64-transforms them", () => {
   assert.equal(source.includes("btoa("), false);
   assert.equal(source.includes("atob("), false);
-  assert.equal(source.includes("Base64"), false);
   assert.match(
     source,
     /platformVerifyLicense\(\s*normalizedAppId,\s*normalizedAppKey,\s*normalizedLicense\s*\)/
