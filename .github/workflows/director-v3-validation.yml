@@ -269,6 +269,7 @@ jobs:
                  AND to_regclass('public.media_assets') IS NOT NULL
                  AND to_regclass('public.raw_messages') IS NOT NULL
                  AND to_regclass('public.normalized_parameters') IS NOT NULL
+                 AND to_regclass('public.mqtt_outbound_messages') IS NOT NULL
                THEN 1 ELSE 0 END" 2>/dev/null || true)"
             if [ "$(printf '%s' "$schema_ready" | tr -d '[:space:]')" = "1" ]; then
               break
@@ -308,12 +309,16 @@ jobs:
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
             -c "SELECT 1 FROM normalized_parameters LIMIT 1;" >/dev/null
 
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM mqtt_outbound_messages LIMIT 1;" >/dev/null
+
           # Upgrade-Pfad prüfen: auf einem bestehenden Volume wird initdb nicht
           # erneut ausgeführt. Der One-Shot-Migrator muss die Tabelle daher
           # selbständig wiederherstellen können.
           docker compose --env-file .env exec -T timescaledb \
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
-            -c "DROP TABLE media_assets, raw_messages, normalized_parameters;" >/dev/null
+            -c "DROP TABLE media_assets, raw_messages, normalized_parameters, mqtt_outbound_messages;" >/dev/null
 
           docker compose --env-file .env run --rm db-migrations >/dev/null
 
@@ -328,6 +333,16 @@ jobs:
           docker compose --env-file .env exec -T timescaledb \
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
             -c "SELECT 1 FROM normalized_parameters LIMIT 1;" >/dev/null
+
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM mqtt_outbound_messages LIMIT 1;" >/dev/null
+
+      - name: Vollstaendiges Backup/Restore-Gate
+        env:
+          FH2_COMPOSE_FILE: infra/timescale/compose.yaml
+          FH2_ENV_FILE: infra/timescale/.env
+        run: sh scripts/test-timescale-backup-restore.sh
 
       - name: TimescaleDB-Logs bei Fehlern
         if: failure()
@@ -385,7 +400,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in             README.md             docs/README.md             docs/V3_ARCHITECTURE.md             docs/ARCHITECTURE.md             docs/DJI_MQTT_SECURITY.md             docs/EMQX-AUTHZ.md             docs/RC_PRO.md             docs/DRC.md             docs/RTK_NTRIP.md             docs/COMPATIBILITY.md             docs/BETRIEB.md             docs/KONFIGURATION.md             docs/FEHLERSUCHE.md             docs/GLOSSAR.md             docs/RELEASE_STATUS.md             CHANGELOG.md
+          for file in             README.md             docs/README.md             docs/V3_ARCHITECTURE.md             docs/ARCHITECTURE.md             docs/DJI_MQTT_SECURITY.md             docs/EMQX-AUTHZ.md             docs/RC_PRO.md             docs/DRC.md             docs/RTK_NTRIP.md             docs/COMPATIBILITY.md             docs/BETRIEB.md             docs/BACKUP_RESTORE.md             docs/OBSERVABILITY.md             docs/KONFIGURATION.md             docs/FEHLERSUCHE.md             docs/GLOSSAR.md             docs/RELEASE_STATUS.md             CHANGELOG.md
           do
             test -s "$file" || {
               echo "::error::Pflichtdokument '$file' fehlt oder ist leer."
