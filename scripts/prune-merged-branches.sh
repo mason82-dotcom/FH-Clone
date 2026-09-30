@@ -49,6 +49,12 @@ mapfile -t remote_branches < <(
     | sort -u
 )
 
+mapfile -t archive_refs < <(
+  git for-each-ref \
+    --format='%(refname)' \
+    refs/remotes/origin/archive/
+)
+
 deleted=0
 eligible=0
 skipped_open=0
@@ -56,6 +62,11 @@ skipped_unmerged_tip=0
 
 for branch in "${remote_branches[@]}"; do
   [[ "$branch" == "$default_branch" ]] && continue
+
+  if [[ "$branch" == archive/* ]]; then
+    echo "KEEP archive: $branch"
+    continue
+  fi
 
   if [[ -n "${open_heads[$branch]:-}" ]]; then
     echo "SKIP open-pr: $branch"
@@ -79,9 +90,21 @@ for branch in "${remote_branches[@]}"; do
   elif [[ -n "${merged_pr_heads[$merged_key]:-}" ]]; then
     safe_reason="exact-merged-pr-head"
   else
-    echo "SKIP unmerged-tip: $branch"
-    ((skipped_unmerged_tip += 1))
-    continue
+    # Legacy branches can be intentionally archived outside main. The archive
+    # ref itself is retained; only branch tips already reachable from such an
+    # archive ref are eligible for removal.
+    for archive_ref in "${archive_refs[@]}"; do
+      if git merge-base --is-ancestor "$remote_ref" "$archive_ref"; then
+        safe_reason="preserved-in-${archive_ref#refs/remotes/origin/}"
+        break
+      fi
+    done
+
+    if [[ -z "$safe_reason" ]]; then
+      echo "SKIP unmerged-tip: $branch"
+      ((skipped_unmerged_tip += 1))
+      continue
+    fi
   fi
 
   ((eligible += 1))
