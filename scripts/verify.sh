@@ -84,6 +84,32 @@ if printf '%s' "$fh2_status" | grep -Eiq '"(userToken|token|password|secret)"'; 
   exit 1
 fi
 
+fh2_devices_invalid_code="$(
+  curl -sS -o /dev/null -w '%{http_code}'     "http://127.0.0.1:$API_PORT/api/fh2/devices?device_class=invalid"
+)"
+if [ "$fh2_devices_invalid_code" != "400" ]; then
+  echo "FEHLER: FH2 Devices Query-Validierung erwartet HTTP 400, erhielt $fh2_devices_invalid_code."
+  exit 1
+fi
+
+fh2_hms_missing_device_code="$(
+  curl -sS -o /dev/null -w '%{http_code}' \
+    "http://127.0.0.1:$API_PORT/api/fh2/hms?begin_time=0&end_time=1"
+)"
+if [ "$fh2_hms_missing_device_code" != "400" ]; then
+  echo "FEHLER: FH2 HMS Query-Validierung erwartet HTTP 400 ohne device_sn, erhielt $fh2_hms_missing_device_code."
+  exit 1
+fi
+
+fh2_hms_invalid_range_code="$(
+  curl -sS -o /dev/null -w '%{http_code}' \
+    "http://127.0.0.1:$API_PORT/api/fh2/hms?device_sn=verify&begin_time=2&end_time=1"
+)"
+if [ "$fh2_hms_invalid_range_code" != "400" ]; then
+  echo "FEHLER: FH2 HMS Zeitbereich erwartet HTTP 400, erhielt $fh2_hms_invalid_range_code."
+  exit 1
+fi
+
 echo "[5/13] Interne Control API im Container prüfen"
 internal_health="$(
   docker compose --env-file .env exec -T control-api \

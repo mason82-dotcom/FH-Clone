@@ -209,13 +209,31 @@ nicht zu diesem Vertrag.
 
 ```http
 GET /api/fh2/status
+GET /api/fh2/devices?device_class=drone&page=1&page_size=100
+GET /api/fh2/hms?device_sn=<sn>&begin_time=<ms>&end_time=<ms>&page=1&page_size=20
 GET /api/fh2/waylines?page=1&size=100
 GET /api/fh2/flight-tasks?page=1&page_size=50
 ```
 
-Der FH2-Pfad verwendet ausschließlich GET. Fehlende Konfiguration liefert
-`503 fh2_not_configured`; Upstreamfehler werden als `502 fh2_upstream_error`
-abgebildet.
+Der FH2-Pfad verwendet ausschließlich GET. Für `/api/fh2/devices` sind
+`device_class=drone|airport|base_station`, `page` und `page_size` zulässig;
+`airport` fragt upstream beide DJI-Klassen `airport` und `base_station` ab.
+Eine ungültige Geräteklasse liefert `400 invalid_query_device_class`.
+
+`/api/fh2/hms` verlangt mindestens ein wiederholbares `device_sn` sowie
+`begin_time` und `end_time` in Unix-Millisekunden. `page` und
+`page_size` sind optional. Der Upstream-Parameter `language` wird gemäß
+DJI-Privatization-Vertrag fest auf `zh` gesetzt. Der Endpunkt quittiert keine
+Alarme und führt keinerlei HMS-Mutation aus.
+
+Fehlende Konfiguration liefert `503 fh2_not_configured`; Upstreamfehler werden
+als `502 fh2_upstream_error` abgebildet.
+
+Die read-only Rückgaben sind in `src/fh2-openapi-types.ts` typisiert:
+Pagination, Devices, HMS, Waylines und Flight Tasks besitzen DJI-nahe
+Compile-Time-Contracts. Zusätzliche Upstream-Felder bleiben zulässig. Diese
+Typisierung ist bewusst keine zusätzliche Runtime-Schema-Validierung und ändert
+das bisherige Proxy-Verhalten nicht.
 
 Die Wayline-/Flight-Task-IDs aus diesem Pfad können später über den
 `MissionExternalReference`-Vertrag mit lokalen Flugsitzungen korreliert
