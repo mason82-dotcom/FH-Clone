@@ -3,7 +3,7 @@
   "realHardware": true,
   "synthetic": false,
   "redacted": true,
-  "capturedAt": "2026-09-30T17:46:09.478Z",
+  "capturedAt": "2026-09-30T19:03:10.862Z",
   "bridgePresent": true,
   "platformIsVerified": true,
   "platformVersion": "app=17.3.2.2; model=01.00.00",
@@ -14,12 +14,12 @@
   "modules": {
     "thing": true,
     "liveshare": false,
-    "api": false,
+    "api": true,
     "ws": false,
     "map": false,
     "tsa": false,
     "media": false,
-    "mission": false
+    "mission": true
   },
   "thingConnected": true,
   "topology": {
@@ -37,5 +37,5 @@
     }
   },
   "browserBundleSecretScanPass": true,
-  "captureSha256": "deb4197a3c613e3bc6af4e80cddffb9eb7360ca936933fa740d4adec184e1518"
+  "captureSha256": "6b7181e8c857919689ce8415b53e568d78c54707a0ed65aa493b69085aab08d8"
 }
