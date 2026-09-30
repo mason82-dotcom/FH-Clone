@@ -13,7 +13,8 @@ test("Pilot Wayline server is fail-closed until enabled with UUID and token", ()
       configured: false,
       readOnly: true,
       workspaceConfigured: false,
-      authConfigured: false
+      authConfigured: false,
+      listRequests: 0
     }
   );
 
@@ -76,6 +77,25 @@ test("returns the DJI list envelope with an intentionally empty read-only catalo
         total: 0
       }
     }
+  });
+});
+
+test("records only non-sensitive runtime observation for successful list requests", () => {
+  const server = configured();
+  const url = new URL(
+    `http://localhost/wayline/api/v1/workspaces/${workspaceId}/waylines`
+  );
+
+  server.list(url, Date.parse("2026-09-30T18:00:00.000Z"));
+
+  assert.deepEqual(server.status(), {
+    enabled: true,
+    configured: true,
+    readOnly: true,
+    workspaceConfigured: true,
+    authConfigured: true,
+    listRequests: 1,
+    lastListRequestAt: "2026-09-30T18:00:00.000Z"
   });
 });
 
