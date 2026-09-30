@@ -338,6 +338,26 @@ Erforderlich:
    - ActionGroup/Trigger/Parameter, soweit im Fixture vorhanden
 4. ein realer, redigierter Pilot-Wayline-List-Response aus einem Workspace.
 
+Für den Katalognachweis gilt zusätzlich: ein lokaler `curl`-Aufruf zählt
+nicht als Hardwareevidence. Der self-hosted Wayline-Server muss mindestens
+einen erfolgreichen Listenabruf mit der in der realen DJI-Pilot-2-WebView
+beobachteten `dji-open-platform`-Signatur registriert haben. Im öffentlichen
+Fixture werden davon nur Zähler und Zeitstempel übernommen; vollständiger
+User-Agent, Remote-IP, Workspace-ID und Token werden nicht gespeichert.
+
+Der kanonische Exportpfad ist:
+
+```bash
+npm run export:wpml-evidence -- \
+  --real-hardware \
+  --kmz ~/fh2-evidence/wpml/pilot2-real.kmz \
+  --status-url http://127.0.0.1:8082/api/dji/pilot/wayline-server/status \
+  --out docs/fixtures/wpml/evidence.json
+```
+
+Das Original-KMZ bleibt lokal. Das öffentliche Fixture enthält nur seinen
+SHA-256 und strukturelle, redigierte Prüfergebnisse.
+
 DJI führt `template.kml`, `waylines.wpml` und den Ressourcenbereich
 `res/` als Bestandteile der WPML-Dateistruktur. Für die CI gilt deshalb
 präzise:
