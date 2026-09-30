@@ -275,6 +275,25 @@ für diesen read-only Runtimeblock.
 Ein späterer schreibender Pilot-2-Bootstrap benötigt einen eigenen
 authentisierten Backendvertrag und eine neue Abnahme.
 
+Realer Capture-Ablauf:
+
+1. Pilot-to-Cloud/MQTT muss bereits verbunden sein.
+2. In der Pilot-2-WebView `/pilot-evidence` öffnen.
+3. **Redigierte JSBridge-Evidence erfassen** auslösen.
+4. Die Control API bestätigt das RC-/Aircraft-Paar exakt gegen die aktuelle
+   Runtime-Topologie und hält nur SHA-256-Identitäten im Evidence-Snapshot.
+5. Auf dem Pi:
+
+```bash
+npm run export:pilot2-evidence -- --real-hardware
+node scripts/hardware-evidence-audit.mjs | grep 'PILOT2_JSBRIDGE'
+```
+
+Der Exporter schreibt ausschließlich
+`docs/fixtures/pilot2/jsbridge-session.json` und setzt den
+Browser-Safety-Beleg nur dann auf PASS, wenn der aktuelle
+`verify:pilot2-jsbridge`-Quellscan tatsächlich erfolgreich ist.
+
 Details: [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md).
 
 ## 7. MSDK KeyManager — REQUIRED_HARDWARE
