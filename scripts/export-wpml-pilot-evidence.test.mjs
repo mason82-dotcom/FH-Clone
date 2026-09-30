@@ -121,7 +121,8 @@ test("builds redacted evidence only after a native DJI Pilot request", () => {
       heightModes: true,
       templateWaylineIds: true,
       continuousWaypointIndices: true
-    }
+    },
+    acceptedIssueCodes: []
   });
   assert.deepEqual(evidence.pilotCatalog, {
     realWorkspace: true,
@@ -138,6 +139,28 @@ test("builds redacted evidence only after a native DJI Pilot request", () => {
   assert.equal(serialized.includes("workspaceId"), false);
   assert.equal(serialized.includes("8.588"), false);
   assert.equal(serialized.includes("49.218"), false);
+});
+
+test("accepts the exact current Pilot 2 missing-RTH deviation only for evidence", () => {
+  const currentPilotWaylines = waylinesXml.replace(
+    "    <wpml:globalRTHHeight>120</wpml:globalRTHHeight>\n",
+    ""
+  );
+  const kmz = storedZip([
+    ["wpmz/template.kml", templateXml],
+    ["wpmz/waylines.wpml", currentPilotWaylines]
+  ]);
+
+  const evidence = buildWpmlPilotEvidence({
+    kmzBytes: kmz,
+    pilotStatus,
+    realHardware: true
+  });
+
+  assert.equal(evidence.parserComparison.pass, true);
+  assert.deepEqual(evidence.parserComparison.acceptedIssueCodes, [
+    "mission.global_rth_height_missing"
+  ]);
 });
 
 test("rejects local-only Wayline requests as hardware evidence", () => {

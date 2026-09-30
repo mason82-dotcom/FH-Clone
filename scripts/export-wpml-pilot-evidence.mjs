@@ -65,6 +65,14 @@ export function buildWpmlPilotEvidence({
   };
 }
 
+const ACCEPTED_PILOT_EVIDENCE_ERROR_CODES = new Set([
+  // DJI's current Pilot 2 RC export can omit globalRTHHeight even though the
+  // published WPML reference marks it required. Keep the parser/import path
+  // fail-closed; only the hardware-evidence comparison tolerates this exact
+  // observed vendor deviation.
+  "mission.global_rth_height_missing"
+]);
+
 export function compareParsedWpml(bundle) {
   const templateConfig = bundle?.template?.missionConfig;
   const waylineConfig = bundle?.waylines?.missionConfig;
@@ -76,6 +84,23 @@ export function compareParsedWpml(bundle) {
     : [];
   const issues = Array.isArray(bundle?.issues) ? bundle.issues : [];
 
+  const blockingIssues = issues.filter(
+    (issue) =>
+      issue?.level === "error" &&
+      !ACCEPTED_PILOT_EVIDENCE_ERROR_CODES.has(issue?.code)
+  );
+  const acceptedIssueCodes = [
+    ...new Set(
+      issues
+        .filter(
+          (issue) =>
+            issue?.level === "error" &&
+            ACCEPTED_PILOT_EVIDENCE_ERROR_CODES.has(issue?.code)
+        )
+        .map((issue) => issue.code)
+    )
+  ].sort();
+
   const missionConfig =
     isRecord(templateConfig) &&
     isRecord(waylineConfig) &&
@@ -83,7 +108,7 @@ export function compareParsedWpml(bundle) {
     templateConfig.rawXml.length > 0 &&
     typeof waylineConfig.rawXml === "string" &&
     waylineConfig.rawXml.length > 0 &&
-    issues.every((issue) => issue?.level !== "error");
+    blockingIssues.length === 0;
 
   const productEnums =
     sameProductIdentity(templateConfig?.drone, waylineConfig?.drone) &&
@@ -144,7 +169,8 @@ export function compareParsedWpml(bundle) {
 
   return {
     pass: Object.values(checks).every(Boolean),
-    checks
+    checks,
+    acceptedIssueCodes
   };
 }
 

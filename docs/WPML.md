@@ -493,6 +493,26 @@ lückenlose Waypoint-Indizes sowie vorhandene `res/`-Referenzen. XML-Inhalte,
 Projektkoordinaten und Secrets werden nicht in das öffentliche Fixture
 übernommen.
 
+### Aktuell real beobachtete Pilot-2-Abweichungen
+
+Ein reales RC-Pro-Enterprise/Pilot-2-KMZ vom 2026-09-30 zeigt zusätzlich:
+
+- `templateType=mappingPrism`,
+- `wpml:startActionGroup` als Initial-Actions-Container mit direkten
+  `wpml:action`-Kindern und **ohne** normale ActionGroup-ID/Range/Trigger,
+- aktuelle Aktuatoren wie `setFocusType`, `startContinuousShooting`,
+  `stopContinuousShooting`, `startSmartOblique` und `stopSmartOblique`,
+- fehlendes `wpml:globalRTHHeight` in `waylines.wpml`, obwohl die
+  veröffentlichte DJI-WPML-Referenz dieses Element weiterhin als erforderlich
+  beschreibt.
+
+FH2 modelliert die ersten drei Punkte parserseitig. Das fehlende
+`globalRTHHeight` bleibt dagegen im allgemeinen Parser/Import ein **Fehler**,
+damit ein späterer Execution-Pfad nicht stillschweigend aufgeweicht wird.
+Nur der redigierte Hardware-Evidence-Exporter akzeptiert exakt den Issue-Code
+`mission.global_rth_height_missing` als dokumentierte Pilot-2-Abweichung und
+weist ihn im Evidence-Manifest unter `acceptedIssueCodes` aus.
+
 ## Nicht implementiert / bewusst gesperrt
 
 Aktuell **nicht** freigegeben:
