@@ -73,3 +73,33 @@ test("Pilot 2 bootstrap keeps DJI portal values direct and never Base64-transfor
     /platformVerifyLicense\(\s*normalizedAppId,\s*normalizedAppKey,\s*normalizedLicense\s*\)/
   );
 });
+
+
+test("Pilot 2 bootstrap preserves the native Thing module when leaving the menu", () => {
+  assert.equal(source.includes('.onBackClick = () => false'), true);
+  assert.equal(source.includes('.platformIsComponentLoaded("thing")'), true);
+  assert.equal(source.includes('.thingGetConnectState()'), true);
+
+  for (const forbidden of [
+    ".thingDisconnect(",
+    ".platformUnloadComponent(",
+    ".platformStopSelf("
+  ]) {
+    assert.equal(
+      source.includes(forbidden),
+      false,
+      `menu-exit path must not contain ${forbidden}`
+    );
+  }
+});
+
+test("Pilot 2 bootstrap restores connected UI state when re-entering the WebView", () => {
+  assert.match(
+    source,
+    /const thingConnected = thingLoaded[\s\S]*?thingGetConnectState\(\)/
+  );
+  assert.match(
+    source,
+    /if \(thingConnected\)[\s\S]*?setStage\("connected"\)/
+  );
+});

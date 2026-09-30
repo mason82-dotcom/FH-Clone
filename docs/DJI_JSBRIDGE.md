@@ -185,6 +185,28 @@ FC-Stufe noch Lease, Authority oder DRC-Rechte.
 
 Der separate Test `npm run test:pilot2-bootstrap` schützt diese Grenze.
 
+### Verlassen des Pilot-2-Menüs
+
+Das DJI-`thing`-Modul ist ein natives Pilot-2-Funktionsmodul. FH2 behandelt
+es deshalb getrennt vom Lebenszyklus des H5-WebViews:
+
+- beim Zurückgehen aus der Drittanbieter-Cloud-Seite wird das Thing-Modul
+  **nicht** entladen,
+- FH2 ruft beim Menüwechsel keinen Thing-Disconnect auf,
+- der registrierte `onBackClick`-Handler gibt `false` zurück, damit Pilot 2
+  nur das WebView normal verlässt,
+- beim erneuten Öffnen von `/pilot-login` wird
+  `platformIsComponentLoaded("thing")` und anschließend
+  `thingGetConnectState()` gelesen; ein bereits bestehender MQTT-Link wird
+  ohne erneute Credential-Eingabe als verbunden angezeigt.
+
+Das entspricht dem Lebenszyklus im offiziellen DJI-Cloud-API-Demo: bereits
+geladene Module werden beim erneuten Öffnen erkannt und weiterverwendet.
+
+**Abmelden / Exit Cloud Platform** ist davon ausdrücklich verschieden. Ein
+bewusstes Beenden der Cloud-Plattform darf die native Verbindung beenden und
+wird von FH2 nicht verhindert.
+
 ## Hardware-Evidence
 
 Die Softwareintegration ist unabhängig von der realen Pilot-2-Abnahme.

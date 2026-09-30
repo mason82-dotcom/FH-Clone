@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 type Stage =
   | "idle"
@@ -69,6 +69,43 @@ export function PilotCloudBootstrap() {
 
   const bridgeAvailable = Boolean(window.djiBridge);
 
+  useEffect(() => {
+    const bridge = window.djiBridge;
+    if (!bridge) return;
+
+    // DJI Pilot 2 owns the native Thing module. Leaving the WebView/menu must
+    // not unload or disconnect it. Returning false lets Pilot 2 close only the
+    // WebView while the already loaded native module remains active.
+    bridge.onBackClick = () => false;
+
+    try {
+      const verified = asBoolean(bridge.platformIsVerified());
+      const thingLoaded = verified
+        ? asBoolean(bridge.platformIsComponentLoaded("thing"))
+        : false;
+      const thingConnected = thingLoaded
+        ? asBoolean(bridge.thingGetConnectState())
+        : false;
+
+      if (thingConnected) {
+        setStage("connected");
+        setMessage(
+          "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden. " +
+          "Die Verbindung bleibt beim Verlassen dieses Menüs aktiv."
+        );
+      } else if (thingLoaded) {
+        setStage("waiting");
+        setMessage(
+          "Das DJI-Thing-Modul ist weiterhin geladen, meldet den MQTT-Link " +
+          "aber derzeit nicht als verbunden."
+        );
+      }
+    } catch (error) {
+      setStage("error");
+      setMessage(error instanceof Error ? error.message : String(error));
+    }
+  }, []);
+
   async function connect(event: FormEvent) {
     event.preventDefault();
     const bridge = window.djiBridge;
@@ -138,7 +175,7 @@ export function PilotCloudBootstrap() {
           const connected = asBoolean(raw);
           if (connected) {
             setStage("connected");
-            setMessage("DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden.");
+            setMessage("DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden. Die Verbindung bleibt beim Verlassen dieses Menüs aktiv.");
           } else {
             setStage("waiting");
             setMessage("Pilot 2 hat den MQTT-Link noch nicht als verbunden gemeldet.");
@@ -290,6 +327,13 @@ export function PilotCloudBootstrap() {
           FH2-HTTP-Endpunkt gesendet und nicht in Browser-Storage gespeichert.
           Das MQTT-Passwort wird von Pilot 2 anschließend für die Broker-
           Authentifizierung verwendet.
+        </p>
+
+        <p className="muted">
+          Zurück zur normalen Pilot-2-Ansicht beendet nur dieses WebView. FH2
+          trennt oder entlädt das native Thing-Modul beim Zurückgehen nicht;
+          die MQTT-Verbindung bleibt deshalb aktiv. <strong>Abmelden</strong>
+          beendet dagegen die Cloud-Plattform und darf die Verbindung trennen.
         </p>
       </section>
     </main>
