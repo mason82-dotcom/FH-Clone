@@ -147,3 +147,31 @@ test("Pilot 2 bootstrap exposes evidence navigation whenever JSBridge is availab
     "Evidence navigation must not depend on an active MQTT link"
   );
 });
+
+
+test("Pilot 2 bootstrap loads Wayline API and mission modules only after explicit action", () => {
+  assert.match(
+    source,
+    /platformLoadComponent\(\s*"api"[\s\S]*?host:\s*normalizedHost[\s\S]*?token:\s*waylineApiToken/
+  );
+  assert.match(
+    source,
+    /platformLoadComponent\(\s*"mission",\s*JSON\.stringify\(\{\}\)/
+  );
+  assert.equal(source.includes('platformLoadComponent("ws"'), false);
+  assert.equal(source.includes(".wsConnect("), false);
+});
+
+test("Pilot 2 Wayline token is never embedded or persisted", () => {
+  assert.equal(source.includes("VITE_DJI_PILOT_WAYLINE_TOKEN"), false);
+  assert.equal(source.includes("VITE_DJI_PILOT_AUTH_TOKEN"), false);
+  assert.equal(/waylineApiToken\s*=\s*useState\(\s*"[^"]+"/.test(source), false);
+  assert.equal(source.includes('setWaylineApiToken("");'), true);
+  assert.equal(source.includes("localStorage"), false);
+  assert.equal(source.includes("sessionStorage"), false);
+});
+
+test("Pilot 2 Wayline API defaults to the current same origin", () => {
+  assert.equal(source.includes("window.location.origin"), true);
+  assert.match(source, /\^https\?:\\\/\\\//);
+});
