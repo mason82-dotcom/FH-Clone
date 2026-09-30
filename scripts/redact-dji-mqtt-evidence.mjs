@@ -119,14 +119,41 @@ function validateSingleTopologyCapture(rows) {
     fail(`capture contains ${gatewayIds.length} gateways; narrow the capture window to one target gateway`);
   }
 
-  const topologyData = dataOf(payloadOf(topologyRows[0]));
-  const subDeviceIds = unique(
-    array(topologyData?.sub_devices ?? topologyData?.subDevices)
-      .map((entry) => string(entry?.sn))
-  );
-  if (subDeviceIds.length !== 1) {
-    fail(`capture topology contains ${subDeviceIds.length} sub-devices; expected exactly one target aircraft`);
+  // A real Pilot 2 capture can contain topology transitions. In particular,
+  // update_topo with an empty sub_devices array is a valid disconnected
+  // snapshot and must not hide a connected snapshot from the same gateway.
+  // Snapshots with more than one sub-device remain fail-closed because this
+  // evidence format qualifies exactly one RC/aircraft pair.
+  const topologySnapshots = topologyRows.map((row) => {
+    const data = dataOf(payloadOf(row));
+    return {
+      row,
+      subDeviceIds: unique(
+        array(data?.sub_devices ?? data?.subDevices)
+          .map((entry) => string(entry?.sn))
+      )
+    };
+  });
+
+  if (topologySnapshots.some((snapshot) => snapshot.subDeviceIds.length > 1)) {
+    fail("capture topology contains multiple sub-devices; narrow the capture window to one target aircraft");
   }
+
+  const connectedSnapshots = topologySnapshots.filter(
+    (snapshot) => snapshot.subDeviceIds.length === 1
+  );
+  if (!connectedSnapshots.length) {
+    fail("capture contains no connected update_topo snapshot with exactly one target aircraft");
+  }
+
+  const topologyAircraftIds = unique(
+    connectedSnapshots.flatMap((snapshot) => snapshot.subDeviceIds)
+  );
+  if (topologyAircraftIds.length !== 1) {
+    fail("capture contains multiple topology aircraft; narrow the capture window to one target aircraft");
+  }
+
+  const aircraftId = topologyAircraftIds[0];
 
   // Pilot 2 can publish Thing OSD for both the RC gateway and its aircraft.
   // Only non-gateway Thing identities are aircraft candidates here.
@@ -140,18 +167,22 @@ function validateSingleTopologyCapture(rows) {
       .filter((id) => id && id !== gatewayIds[0])
   );
 
-  const unexpected = observedAircraftIds.filter((id) => id !== subDeviceIds[0]);
+  const unexpected = observedAircraftIds.filter((id) => id !== aircraftId);
   if (unexpected.length) {
     fail("capture contains telemetry for aircraft outside the captured update_topo pair; narrow the capture window");
   }
-  if (!observedAircraftIds.includes(subDeviceIds[0])) {
+  if (!observedAircraftIds.includes(aircraftId)) {
     fail("captured update_topo aircraft has no OSD/state telemetry in the input");
   }
 
+  // Prefer the newest connected snapshot. rows from the DB capture are ordered
+  // chronologically; synthetic fixtures without timestamps preserve array order.
+  const topologyRow = connectedSnapshots.at(-1).row;
+
   return {
-    topologyRow: topologyRows[0],
+    topologyRow,
     gatewayId: gatewayIds[0],
-    aircraftId: subDeviceIds[0]
+    aircraftId
   };
 }
 
