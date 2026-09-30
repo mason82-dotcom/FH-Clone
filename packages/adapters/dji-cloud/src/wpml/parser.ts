@@ -523,9 +523,9 @@ function validateMissionConfig(
 
   if (documentKind === "waylines" && config.globalRthHeightM === undefined) {
     issues.push(
-      warning(
+      error(
         "mission.global_rth_height_missing",
-        "DJI documentation marks wpml:globalRTHHeight as required, but current Pilot 2 exports may omit it",
+        "waylines.wpml requires wpml:globalRTHHeight; current Pilot 2 exports may omit it, but execution import remains fail-closed",
         path
       )
     );
