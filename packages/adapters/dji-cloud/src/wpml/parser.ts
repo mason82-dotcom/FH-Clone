@@ -1,6 +1,7 @@
 import {
   type WpmlAction,
   type WpmlActionGroup,
+  type WpmlStartActionGroup,
   type WpmlAutoRerouteInfo,
   type WpmlBundle,
   type WpmlDroneInfo,
@@ -42,7 +43,13 @@ const DRONE_MODELS: Readonly<Record<string, string>> = {
   "100:1": "DJI Matrice 4TD"
 };
 
-const KNOWN_TEMPLATE_TYPES = new Set(["waypoint", "mapping2d", "mapping3d", "mappingStrip"]);
+const KNOWN_TEMPLATE_TYPES = new Set([
+  "waypoint",
+  "mapping2d",
+  "mapping3d",
+  "mappingStrip",
+  "mappingPrism"
+]);
 const KNOWN_FLY_TO_MODES = new Set(["safely", "pointToPoint"]);
 const KNOWN_FINISH_ACTIONS = new Set(["goHome", "noAction", "autoLand", "gotoFirstWaypoint"]);
 const KNOWN_RC_LOST_MODES = new Set(["goContinue", "executeLostAction"]);
@@ -68,7 +75,12 @@ const KNOWN_ACTIONS = new Set([
   "accurateShoot",
   "orientedShoot",
   "panoShot",
-  "recordPointCloud"
+  "recordPointCloud",
+  "setFocusType",
+  "startContinuousShooting",
+  "stopContinuousShooting",
+  "startSmartOblique",
+  "stopSmartOblique"
 ]);
 
 const PAYLOAD_MODELS: Readonly<Record<number, string>> = {
@@ -194,11 +206,10 @@ export function parseWpmlWaylines(xml: string): WpmlWaylinesDocument {
     } else if (folder.autoFlightSpeedMps <= 0) {
       issues.push(error("waylines.speed_invalid", "autoFlightSpeed must be > 0", path));
     }
-    validateActionGroups(
+    validateStartActionGroups(
       folder.startActionGroups,
       issues,
-      `${path}.startActionGroups`,
-      actionGroupIds
+      `${path}.startActionGroups`
     );
     validateWaypoints(folder.waypoints, issues, path, actionGroupIds, true);
   }
@@ -381,7 +392,7 @@ function parseWaylineFolder(xml: string): WpmlWaylineFolder {
     waylineId: xmlNumber(xml, "waylineId") ?? -1,
     executeHeightMode: xmlText(xml, "executeHeightMode") ?? "",
     ...(autoFlightSpeedMps !== undefined ? { autoFlightSpeedMps } : {}),
-    startActionGroups: xmlBlocks(xml, "startActionGroup").map(parseActionGroup),
+    startActionGroups: xmlBlocks(xml, "startActionGroup").map(parseStartActionGroup),
     waypoints: xmlBlocks(xml, "Placemark").map((block) => parseWaypoint(block, true))
   };
 }
@@ -408,6 +419,13 @@ function parseWaypoint(xml: string, execution: boolean): WpmlWaypoint {
     ...(useGlobalSpeed !== undefined ? { useGlobalSpeed } : {}),
     ...(gimbalPitchDeg !== undefined ? { gimbalPitchDeg } : {}),
     actionGroups: xmlBlocks(xml, "actionGroup").map(parseActionGroup)
+  };
+}
+
+function parseStartActionGroup(xml: string): WpmlStartActionGroup {
+  return {
+    rawXml: xml,
+    actions: xmlBlocks(xml, "action").map(parseAction)
   };
 }
 
@@ -505,9 +523,9 @@ function validateMissionConfig(
 
   if (documentKind === "waylines" && config.globalRthHeightM === undefined) {
     issues.push(
-      error(
+      warning(
         "mission.global_rth_height_missing",
-        "waylines.wpml requires wpml:globalRTHHeight",
+        "DJI documentation marks wpml:globalRTHHeight as required, but current Pilot 2 exports may omit it",
         path
       )
     );
@@ -621,6 +639,47 @@ function validateWaypoints(
   }
 }
 
+function validateStartActionGroups(
+  groups: WpmlStartActionGroup[],
+  issues: WpmlValidationIssue[],
+  path: string
+): void {
+  for (const [groupIndex, group] of groups.entries()) {
+    const groupPath = `${path}[${groupIndex}]`;
+    if (group.actions.length === 0) {
+      issues.push(
+        warning(
+          "start_action_group.empty",
+          "wpml:startActionGroup contains no actions",
+          groupPath
+        )
+      );
+    }
+    validateActions(group.actions, issues, groupPath);
+  }
+}
+
+function validateActions(
+  actions: WpmlAction[],
+  issues: WpmlValidationIssue[],
+  path: string
+): void {
+  const actionIds = new Set<number>();
+  for (const action of actions) {
+    if (!Number.isInteger(action.id) || action.id < 0 || action.id > 65_535) {
+      issues.push(error("action.id_invalid", "actionId must be in [0,65535]", path));
+    } else if (actionIds.has(action.id)) {
+      issues.push(error("action.id_duplicate", "actionId must be unique within an actionGroup", path));
+    }
+    actionIds.add(action.id);
+    if (!action.actuator) {
+      issues.push(error("action.actuator_missing", "actionActuatorFunc is required", path));
+    } else if (!KNOWN_ACTIONS.has(action.actuator)) {
+      issues.push(warning("action.actuator_unknown", `Unknown actionActuatorFunc: ${action.actuator}`, path));
+    }
+  }
+}
+
 function validateActionGroups(
   groups: WpmlActionGroup[],
   issues: WpmlValidationIssue[],
@@ -667,20 +726,7 @@ function validateActionGroups(
       );
     }
 
-    const actionIds = new Set<number>();
-    for (const action of group.actions) {
-      if (!Number.isInteger(action.id) || action.id < 0 || action.id > 65_535) {
-        issues.push(error("action.id_invalid", "actionId must be in [0,65535]", path));
-      } else if (actionIds.has(action.id)) {
-        issues.push(error("action.id_duplicate", "actionId must be unique within an actionGroup", path));
-      }
-      actionIds.add(action.id);
-      if (!action.actuator) {
-        issues.push(error("action.actuator_missing", "actionActuatorFunc is required", path));
-      } else if (!KNOWN_ACTIONS.has(action.actuator)) {
-        issues.push(warning("action.actuator_unknown", `Unknown actionActuatorFunc: ${action.actuator}`, path));
-      }
-    }
+    validateActions(group.actions, issues, path);
   }
 }
 
