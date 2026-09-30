@@ -63,6 +63,7 @@ import { normalizeMsdkBridgeSnapshot } from "./msdk-normalizer.js";
 import { MsdkTokenRevocationStore } from "./msdk-token-revocations.js";
 import { queryInt } from "./http-query.js";
 import { markAllDrcTransportsLost } from "./drc-runtime.js";
+import { Pilot2EvidenceStore, parsePilot2EvidenceCapture } from "./pilot2-evidence.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -70,6 +71,7 @@ const fh2 = createFh2OpenApiFromEnv();
 const djiPilotWaylines = createDjiPilotWaylineCatalogFromEnv();
 const ugcs = createUgcsFromEnv();
 const mediaOverlays = new MediaOverlayRegistry();
+const pilot2Evidence = new Pilot2EvidenceStore();
 
 const msdkTokenRevocations = new MsdkTokenRevocationStore({
   connectionString: process.env.DATABASE_URL
@@ -422,6 +424,51 @@ const publicServer = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/dji/topology") {
       return json(response, 200, dji?.topology.listGateways() ?? []);
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/dji/pilot2/evidence"
+    ) {
+      if (!dji) {
+        return json(response, 503, { error: "dji_not_configured" });
+      }
+
+      const body = await readJson<unknown>(request, 64_000);
+      const capture = parsePilot2EvidenceCapture(body);
+      if (!capture) {
+        return json(response, 400, {
+          error: "invalid_pilot2_evidence_capture"
+        });
+      }
+
+      try {
+        const evidence = pilot2Evidence.capture(
+          capture,
+          dji.topology.listGateways()
+        );
+        return json(response, 201, evidence);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "pilot2_topology_pair_mismatch"
+        ) {
+          return json(response, 409, {
+            error: "pilot2_topology_pair_mismatch"
+          });
+        }
+        throw error;
+      }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/dji/pilot2/evidence/latest"
+    ) {
+      const evidence = pilot2Evidence.latest();
+      return evidence
+        ? json(response, 200, evidence)
+        : json(response, 404, { error: "pilot2_evidence_not_captured" });
     }
 
     if (request.method === "GET" && url.pathname === "/api/dji/topology/persisted") {
