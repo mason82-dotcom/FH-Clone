@@ -76,3 +76,58 @@ test("broker loss marks known DJI devices offline and notifies registry", async 
   assert.equal(seen.length, 1);
   assert.equal(seen[0]?.connected, false);
 });
+
+
+test("topology status reply is passively observed only after successful publish", async () => {
+  const observed: Array<{
+    transport: string;
+    topic: string;
+    payload: unknown;
+    qos: number;
+  }> = [];
+  const adapter = new DjiCloudAdapter({
+    brokerUrl: "mqtt://unused.invalid",
+    onMqttOutbound(message) {
+      observed.push(message);
+    }
+  });
+
+  const fakeClient = {
+    publish(
+      _topic: string,
+      _payload: string,
+      _options: { qos: number },
+      callback: (error?: Error) => void
+    ) {
+      callback();
+    }
+  } as unknown as MqttClient;
+
+  const internal = adapter as unknown as {
+    client: MqttClient;
+    replyToTopologyUpdate(
+      gatewaySn: string,
+      payload: unknown
+    ): Promise<void>;
+  };
+  internal.client = fakeClient;
+
+  await internal.replyToTopologyUpdate("RC-PRO-1", {
+    tid: "T-1",
+    bid: "B-1",
+    method: "update_topo"
+  });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  assert.equal(observed.length, 1);
+  assert.equal(observed[0]?.transport, "basic");
+  assert.equal(
+    observed[0]?.topic,
+    "sys/product/RC-PRO-1/status_reply"
+  );
+  assert.equal(observed[0]?.qos, 1);
+  assert.equal(
+    (observed[0]?.payload as { method?: string }).method,
+    "update_topo"
+  );
+});
