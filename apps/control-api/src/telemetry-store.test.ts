@@ -5,6 +5,7 @@ import type { ParameterSample } from "@fh-clone/aircraft-core";
 import {
   assertParameterSamplePersistenceSafe,
   assertTelemetryPersistenceSafe,
+  sanitizeMqttOutboundEvidencePayload,
   telemetryProjectionForSample
 } from "./telemetry-store.js";
 
@@ -122,5 +123,50 @@ test("projection ignores unmapped, non-numeric and invalid enum samples", () => 
       sample("flight.position.latitude_deg", Number.NaN)
     ),
     undefined
+  );
+});
+
+
+test("MQTT outbound evidence removes credential-bearing fields without exposing values", () => {
+  const sanitized = sanitizeMqttOutboundEvidencePayload({
+    tid: "T-1",
+    method: "drc_mode_enter",
+    data: {
+      mqtt_broker: {
+        address: "mqtts://broker.example",
+        client_id: "relay-client",
+        username: "relay-user",
+        password: "relay-password",
+        device_secret: "device-secret"
+      },
+      note: "Authorization: Bearer abc.def.ghi"
+    }
+  });
+
+  assert.deepEqual(sanitized, {
+    tid: "T-1",
+    method: "drc_mode_enter",
+    data: {
+      mqtt_broker: {
+        address_present: true,
+        client_id_present: true,
+        username_present: true,
+        password_present: true,
+        device_secret_present: true
+      },
+      note: "<redacted>"
+    }
+  });
+  assert.doesNotThrow(() =>
+    assertTelemetryPersistenceSafe(sanitized)
+  );
+});
+
+test("MQTT outbound evidence rejects circular payloads", () => {
+  const payload: Record<string, unknown> = {};
+  payload.self = payload;
+  assert.throws(
+    () => sanitizeMqttOutboundEvidencePayload(payload),
+    /mqtt_outbound_evidence_circular/
   );
 });
