@@ -173,5 +173,5 @@ test("Pilot 2 Wayline token is never embedded or persisted", () => {
 
 test("Pilot 2 Wayline API defaults to the current same origin", () => {
   assert.equal(source.includes("window.location.origin"), true);
-  assert.match(source, /\^https\?:\\\/\\\//);
+  assert.equal(source.includes("/^https?:\\/\\//i"), true);
 });
