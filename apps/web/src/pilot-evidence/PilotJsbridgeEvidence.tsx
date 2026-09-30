@@ -146,6 +146,12 @@ export function PilotJsbridgeEvidence() {
           {readiness.aircraft ? "verfügbar" : "fehlt"}
           <br />
           <strong>Status:</strong> {displayedMessage}
+          {pilot.error && (
+            <>
+              <br />
+              <strong>JSBridge-Fehler:</strong> {pilot.error}
+            </>
+          )}
         </div>
 
         <button

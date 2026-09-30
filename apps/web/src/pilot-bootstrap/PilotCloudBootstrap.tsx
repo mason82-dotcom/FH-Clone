@@ -53,7 +53,11 @@ function asBoolean(raw: unknown): boolean {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export function PilotCloudBootstrap() {
+export function PilotCloudBootstrap({
+  onOpenEvidence
+}: {
+  onOpenEvidence?: () => void;
+}) {
   const workspaceId = String(
     import.meta.env.VITE_DJI_PILOT_WORKSPACE_ID ?? ""
   ).trim();
@@ -500,7 +504,14 @@ export function PilotCloudBootstrap() {
 
         {bridgeAvailable && (
           <p>
-            <a href="/pilot-evidence">
+            <a
+              href="/pilot-evidence"
+              onClick={(event) => {
+                if (!onOpenEvidence) return;
+                event.preventDefault();
+                onOpenEvidence();
+              }}
+            >
               Read-only JSBridge-Hardware-Evidence erfassen
             </a>
             <br />
