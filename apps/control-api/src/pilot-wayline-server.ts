@@ -4,6 +4,15 @@ import type { IncomingHttpHeaders } from "node:http";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/**
+ * Real RC Pro Enterprise + DJI Pilot 2 qualification on 2026-09-30 observed
+ * the native Wayline HTTP client as exactly okhttp/3.14.9.
+ *
+ * Keep this fail-closed. A changed Pilot/firmware client signature requires a
+ * new real-hardware observation instead of silently broadening the classifier.
+ */
+const QUALIFIED_NATIVE_PILOT_USER_AGENT = /^okhttp\/3\.14\.9$/i;
+
 export interface PilotWaylineServerOptions {
   enabled: boolean;
   workspaceId?: string;
@@ -18,8 +27,10 @@ export interface PilotWaylineServerStatus {
   authConfigured: boolean;
   listRequests: number;
   lastListRequestAt?: string;
-  pilotWebViewListRequests?: number;
-  lastPilotWebViewListRequestAt?: string;
+  pilotNativeListRequests?: number;
+  lastPilotNativeListRequestAt?: string;
+  duplicateNameRequests?: number;
+  lastDuplicateNameRequestAt?: string;
 }
 
 export class PilotWaylineServer {
@@ -27,8 +38,10 @@ export class PilotWaylineServer {
   private readonly authToken: string;
   private listRequests = 0;
   private lastListRequestAt: string | undefined;
-  private pilotWebViewListRequests = 0;
-  private lastPilotWebViewListRequestAt: string | undefined;
+  private pilotNativeListRequests = 0;
+  private lastPilotNativeListRequestAt: string | undefined;
+  private duplicateNameRequests = 0;
+  private lastDuplicateNameRequestAt: string | undefined;
 
   constructor(private readonly options: PilotWaylineServerOptions) {
     this.workspaceId = options.workspaceId?.trim() ?? "";
@@ -54,26 +67,33 @@ export class PilotWaylineServer {
       ...(this.lastListRequestAt
         ? { lastListRequestAt: this.lastListRequestAt }
         : {}),
-      ...(this.pilotWebViewListRequests > 0
-        ? { pilotWebViewListRequests: this.pilotWebViewListRequests }
+      ...(this.pilotNativeListRequests > 0
+        ? { pilotNativeListRequests: this.pilotNativeListRequests }
         : {}),
-      ...(this.lastPilotWebViewListRequestAt
-        ? { lastPilotWebViewListRequestAt: this.lastPilotWebViewListRequestAt }
+      ...(this.lastPilotNativeListRequestAt
+        ? { lastPilotNativeListRequestAt: this.lastPilotNativeListRequestAt }
+        : {}),
+      ...(this.duplicateNameRequests > 0
+        ? { duplicateNameRequests: this.duplicateNameRequests }
+        : {}),
+      ...(this.lastDuplicateNameRequestAt
+        ? { lastDuplicateNameRequestAt: this.lastDuplicateNameRequestAt }
         : {})
     };
   }
 
   matchWorkspace(pathname: string): string | undefined {
-    const match = pathname.match(
+    return matchWorkspacePath(
+      pathname,
       /^\/wayline\/api\/v1\/workspaces\/([^/]+)\/waylines$/
     );
-    if (!match?.[1]) return undefined;
+  }
 
-    try {
-      return decodeURIComponent(match[1]);
-    } catch {
-      return undefined;
-    }
+  matchDuplicateNamesWorkspace(pathname: string): string | undefined {
+    return matchWorkspacePath(
+      pathname,
+      /^\/wayline\/api\/v1\/workspaces\/([^/]+)\/waylines\/duplicate-names$/
+    );
   }
 
   workspaceMatches(workspaceId: string): boolean {
@@ -116,14 +136,9 @@ export class PilotWaylineServer {
     this.listRequests += 1;
     this.lastListRequestAt = new Date(nowMs).toISOString();
 
-    const userAgent = headers?.["user-agent"];
-    const observedUserAgent = Array.isArray(userAgent) ? userAgent[0] : userAgent;
-    if (
-      typeof observedUserAgent === "string" &&
-      /dji-open-platform/i.test(observedUserAgent)
-    ) {
-      this.pilotWebViewListRequests += 1;
-      this.lastPilotWebViewListRequestAt = this.lastListRequestAt;
+    if (isQualifiedNativePilotRequest(headers)) {
+      this.pilotNativeListRequests += 1;
+      this.lastPilotNativeListRequestAt = this.lastListRequestAt;
     }
 
     return {
@@ -139,6 +154,46 @@ export class PilotWaylineServer {
       }
     };
   }
+
+  duplicateNames(
+    url: URL,
+    nowMs = Date.now()
+  ) {
+    if (!this.configured) {
+      throw new Error("pilot_wayline_server_not_configured");
+    }
+
+    const names = url.searchParams
+      .getAll("name")
+      .map((name) => name.trim())
+      .filter(Boolean);
+
+    if (names.length === 0) {
+      throw new Error("invalid_query_name");
+    }
+
+    this.duplicateNameRequests += 1;
+    this.lastDuplicateNameRequestAt = new Date(nowMs).toISOString();
+
+    // The self-hosted server intentionally exposes an empty read-only catalog,
+    // therefore none of the requested names can collide with a cloud entry.
+    return {
+      code: 0,
+      message: "success",
+      data: []
+    };
+  }
+}
+
+export function isQualifiedNativePilotRequest(
+  headers?: Pick<IncomingHttpHeaders, "user-agent">
+): boolean {
+  const raw = headers?.["user-agent"];
+  const userAgent = Array.isArray(raw) ? raw[0] : raw;
+  return (
+    typeof userAgent === "string" &&
+    QUALIFIED_NATIVE_PILOT_USER_AGENT.test(userAgent.trim())
+  );
 }
 
 export function createPilotWaylineServerFromEnv(): PilotWaylineServer {
@@ -151,6 +206,20 @@ export function createPilotWaylineServerFromEnv(): PilotWaylineServer {
       ? { authToken: process.env.DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN }
       : {})
   });
+}
+
+function matchWorkspacePath(
+  pathname: string,
+  pattern: RegExp
+): string | undefined {
+  const match = pathname.match(pattern);
+  if (!match?.[1]) return undefined;
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return undefined;
+  }
 }
 
 function strictInteger(
