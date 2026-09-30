@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/aircraft-core",
     "packages/adapters/dji-cloud",
+    "packages/adapters/dji-thermal",
     "packages/adapters/ugcs",
     "apps/control-api",
     "apps/web"
@@ -35,7 +36,9 @@
     "test:backup-restore": "sh scripts/test-timescale-backup-restore.sh",
     "test:control-api-openapi": "node scripts/verify-control-api-openapi.mjs",
     "test:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node --test scripts/export-wpml-pilot-evidence.test.mjs",
-    "export:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node scripts/export-wpml-pilot-evidence.mjs"
+    "export:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node scripts/export-wpml-pilot-evidence.mjs",
+    "verify:dji-thermal-sdk": "npm run build --workspace @fh-clone/adapter-dji-thermal && node scripts/dji-thermal-sdk.mjs --action status",
+    "thermal:rjpeg": "npm run build --workspace @fh-clone/adapter-dji-thermal && node scripts/dji-thermal-sdk.mjs"
   },
   "engines": {
     "node": ">=22.12.0",

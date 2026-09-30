@@ -163,6 +163,7 @@ packages/
   aircraft-core/     SDK-neutrale Domäne und Safety
   adapters/
     dji-cloud/       DJI Cloud API / MQTT
+    dji-thermal/     DJI Thermal SDK v1.8 R-JPEG-Adapter
     ugcs/            UgCS-Groundstation-Adapter
 
 services/
@@ -208,6 +209,7 @@ Wichtige Kernunterlagen:
 - [Gesamtarchitektur](docs/ARCHITECTURE.md)
 - [Sicherheitsmodell](docs/SICHERHEIT.md)
 - [DJI-MQTT-Sicherheit](docs/DJI_MQTT_SECURITY.md)
+- [DJI Thermal SDK v1.8](docs/DJI_THERMAL_SDK.md)
 - [Datenmodell](docs/DATENMODELL.md)
 - [Persistenz](docs/PERSISTENZ.md)
 - [API-Referenz](docs/API.md)
