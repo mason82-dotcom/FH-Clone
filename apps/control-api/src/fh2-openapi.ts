@@ -4,6 +4,7 @@ import type {
   Fh2HmsAlert,
   Fh2ListResult,
   Fh2ManageDevice,
+  Fh2MediaFile,
   Fh2PaginatedList,
   Fh2Pagination,
   Fh2WaylineItem
@@ -17,6 +18,7 @@ export type {
   Fh2HmsAlert,
   Fh2ListResult,
   Fh2ManageDevice,
+  Fh2MediaFile,
   Fh2PaginatedList,
   Fh2Pagination,
   Fh2WaylineItem
@@ -77,6 +79,21 @@ export class Fh2OpenApiClient {
       projectConfigured: this.projectConfigured,
       readOnly: true
     };
+  }
+
+  async listMediaFiles(
+    page = 1,
+    pageSize = 100
+  ): Promise<Fh2PaginatedList<Fh2MediaFile>> {
+    this.requireProject();
+    return parsePaginatedList(
+      await this.get(
+        `/openapi/v2.0/media/api/v1/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/files`,
+        { page, size: pageSize }
+      ),
+      "Media Files",
+      isMediaFile
+    );
   }
 
   async listWaylines(
@@ -346,6 +363,16 @@ function isHmsAlert(value: unknown): value is Fh2HmsAlert {
     isNonEmptyString(value.device_sn) &&
     typeof value.level === "number" &&
     Number.isFinite(value.level)
+  );
+}
+
+function isMediaFile(value: unknown): value is Fh2MediaFile {
+  return (
+    isRecord(value) &&
+    typeof value.id === "number" &&
+    Number.isSafeInteger(value.id) &&
+    value.id >= 0 &&
+    typeof value.name === "string"
   );
 }
 
