@@ -434,6 +434,31 @@ Eine vorhandene Pilot-Wayline-ID wird als:
 
 mit dem bestehenden `MissionExternalReference`-Vertrag korreliert.
 
+## Self-hosted read-only Pilot-Wayline-Listenpfad
+
+FH2 kann den für DJI Pilot 2 notwendigen Listen-Endpunkt selbst bereitstellen:
+
+```http
+GET /wayline/api/v1/workspaces/{workspace_id}/waylines
+x-auth-token: <secret>
+```
+
+Der Pfad ist standardmäßig deaktiviert und wird nur aktiv, wenn
+`DJI_PILOT_WAYLINE_SERVER_ENABLED=true`, eine gültige
+`DJI_PILOT_WORKSPACE_ID` und
+`DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN` gesetzt sind.
+
+Der Web-Proxy reicht `/wayline/` an den öffentlichen Control-API-Port weiter.
+Die Pilot-2-Bootstrap-Seite kann nach ausdrücklicher Benutzeraktion das
+JSBridge-`api`-Modul mit dem aktuellen Web-Origin und einem nur lokal
+eingegebenen Token sowie anschließend das `mission`-Modul laden. Der Token
+wird nicht über `VITE_*` eingebettet und nicht in Browser-Storage
+persistiert.
+
+Der Serverkatalog ist in diesem Schritt absichtlich leer. Das erlaubt den
+realen Pilot-2-HTTP-Vertragsnachweis, ohne Upload-, Storage- oder
+Execution-Semantik vorzutäuschen.
+
 ## Nicht implementiert / bewusst gesperrt
 
 Aktuell **nicht** freigegeben:
