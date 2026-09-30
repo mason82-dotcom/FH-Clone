@@ -1,6 +1,6 @@
 # FH-Clone Dokumentation
 
-Diese Übersicht ist der verbindliche Einstieg in die V3-Dokumentation.
+Diese Übersicht ist der verbindliche Einstieg in die V3.0-Basis- und V3.1-Entwicklungsdokumentation.
 
 Alle erklärenden Projektdokumente werden auf Deutsch geführt. Technische
 Protokollnamen, API-Pfade, MQTT-Topics, JSON-Felder, Klassen- und
@@ -41,13 +41,13 @@ Hardwareabnahme missverstanden werden.
 | --- | --- | --- |
 | [DJI_MQTT_SECURITY.md](DJI_MQTT_SECURITY.md) | MQTT-Identität, AuthN/AuthZ und Basic-Link-/DRC-Trennung | V3-Ziel |
 | [EMQX-AUTHZ.md](EMQX-AUTHZ.md) | EMQX-Vertrag und interne Auth-Endpunkte | Implementiert/V3-Ziel |
-| [RC_PRO.md](RC_PRO.md) | Gateway-/Aircraft-Modell und reale RC-Pro-Prüfpunkte | Real zu verifizieren |
+| [RC_PRO.md](RC_PRO.md) | Gateway-/Aircraft-Modell und reale RC-Pro-Prüfpunkte | Implementiert; M3E-MQTT real verifiziert, weitere Profile offen |
 | [DRC.md](DRC.md) | DRC, DJI Authority, Dead-Man und Sitzungszustände | Implementiert, standardmäßig gesperrt |
 | [RTK_NTRIP.md](RTK_NTRIP.md) | RTK-/GNSS-Telemetrie und NTRIP-Zuständigkeitsgrenze | Implementiert |
 | [COMPATIBILITY.md](COMPATIBILITY.md) | DJI-SDK- und Produktstände | Referenz |
 | [MSDK_KEYMANAGER.md](MSDK_KEYMANAGER.md) | DJI MSDK V5 KeyManager-Runtime, Operationsflags, Probes und Lifecycle | Implementiert; RC Pro Enterprise + M3E real verifiziert |
 | [DJI_CAPABILITY_MATRIX.md](DJI_CAPABILITY_MATRIX.md) | DJI-Produkt-/Funktionsmatrix und FH2-Freigaben | Implementiert/Referenz |
-| [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md) | DJI Pilot 2 `window.djiBridge` als read-only UI-/Identitätsruntime | Implementiert/Hardware real zu verifizieren |
+| [DJI_JSBRIDGE.md](DJI_JSBRIDGE.md) | DJI Pilot 2 `window.djiBridge` als read-only UI-/Identitätsruntime | Implementiert; reale JSBridge-Basisevidence vorhanden |
 | [LIVESTREAM.md](LIVESTREAM.md) | Self-Hosted DJI-Livestream über MediaMTX/RTMP/WebRTC | V3-Ziel |
 
 ## Missionen, Medien und Verarbeitung
@@ -56,7 +56,7 @@ Hardwareabnahme missverstanden werden.
 | --- | --- | --- |
 | [MISSIONEN.md](MISSIONEN.md) | automatische Flugsitzungen und Missionskorrelation | Implementiert/V3-Ziel |
 | [WPML.md](WPML.md) | DJI WPML/KMZ, template.kml, waylines.wpml und Pilot-Wayline-Katalog | Implementiert/read-only |
-| [MEDIEN_MULTISPEKTRAL.md](MEDIEN_MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | V3-Ziel |
+| [MEDIEN_MULTISPEKTRAL.md](MEDIEN_MULTISPEKTRAL.md) | Medien-, Sensor-, Band- und NDVI-Vertrag | Implementiert; reale M3M-Fixtures offen |
 | [FH2_MANAGER_ALIGNMENT.md](FH2_MANAGER_ALIGNMENT.md) | Abgrenzung zum stabilen M4-/FH2-Manager-Pfad | Referenz |
 | [FH2_OPENAPI_FEHLERCODES.md](FH2_OPENAPI_FEHLERCODES.md) | FlightHub-2-/OpenAPI-nahe DJI-Fehlercodes | Referenz |
 | [FH2_STANDALONE_FRONTEND.md](FH2_STANDALONE_FRONTEND.md) | offizielle DJI Project Map, Wayline, Flight Path, Virtual Cockpit und `window.FH2` | Implementiert |
@@ -67,6 +67,8 @@ Hardwareabnahme missverstanden werden.
 | --- | --- |
 | [API.md](API.md) | öffentliche und interne HTTP-Endpunkte |
 | [BETRIEB.md](BETRIEB.md) | lokaler Betrieb und V3-Zielbetrieb |
+| [BACKUP_RESTORE.md](BACKUP_RESTORE.md) | TimescaleDB Backup, Restore und automatisches Recovery-Gate |
+| [OBSERVABILITY.md](OBSERVABILITY.md) | interne Prometheus-Metriken, Datenschutz und Runtime-Gate |
 | [KONFIGURATION.md](KONFIGURATION.md) | Umgebungsvariablen und Secrets |
 | [FEHLERSUCHE.md](FEHLERSUCHE.md) | systematische Diagnose |
 | [TESTS_UND_ABNAHME.md](TESTS_UND_ABNAHME.md) | Teststand und V3-Release-Gates |
@@ -132,4 +134,4 @@ Hardwareabnahme missverstanden werden.
 6. Sicherheitsrelevante Standardwerte ausdrücklich nennen.
 7. Technische Originalbezeichner nicht übersetzen, wenn dies den
    Protokollabgleich erschweren würde.
-8. V3.0 ist der Abschlussstand; danach keine Folgeplanung ohne neuen Auftrag.
+8. `v3.0.0` bleibt unveränderliche Releasegrenze; neue Entwicklung wird als V3.1 oder späterer Stand eindeutig davon getrennt.
