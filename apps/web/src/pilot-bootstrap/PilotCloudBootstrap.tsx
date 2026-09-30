@@ -331,10 +331,9 @@ export function PilotCloudBootstrap() {
 
         <p className="muted">
           Zurück zur normalen Pilot-2-Ansicht beendet nur dieses WebView. FH2
-          ruft weder <code>thingDisconnect()</code> noch
-          <code>platformUnloadComponent("thing")</code> auf; das native
-          Thing-Modul bleibt deshalb geladen. <strong>Abmelden</strong> beendet
-          dagegen die Cloud-Plattform und darf die Verbindung trennen.
+          trennt oder entlädt das native Thing-Modul beim Zurückgehen nicht;
+          die MQTT-Verbindung bleibt deshalb aktiv. <strong>Abmelden</strong>
+          beendet dagegen die Cloud-Plattform und darf die Verbindung trennen.
         </p>
       </section>
     </main>
