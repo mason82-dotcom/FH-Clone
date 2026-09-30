@@ -93,6 +93,35 @@ export class Fh2OpenApiClient {
     );
   }
 
+  async listHms(
+    deviceSns: string[],
+    beginTimeMs: number,
+    endTimeMs: number,
+    page = 1,
+    pageSize = 20
+  ): Promise<unknown> {
+    this.requireOrganization();
+    const uniqueSns = [
+      ...new Set(deviceSns.map((value) => value.trim()).filter(Boolean))
+    ];
+    if (uniqueSns.length === 0) {
+      throw new Fh2OpenApiError("FH2 HMS requires at least one device_sn");
+    }
+
+    const params = new URLSearchParams();
+    for (const deviceSn of uniqueSns) params.append("device_sn", deviceSn);
+    params.set("begin_time", String(beginTimeMs));
+    params.set("end_time", String(endTimeMs));
+    params.set("language", "zh");
+    params.set("page", String(page));
+    params.set("page_size", String(pageSize));
+
+    return this.get(
+      `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices/hms`,
+      params
+    );
+  }
+
   private async get(
     path: string,
     params: URLSearchParams | Record<string, string | number>

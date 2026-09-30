@@ -453,6 +453,7 @@ Endpunkt erfindet keine Wayline-ID und aktiviert keine
 ```http
 GET /api/fh2/status
 GET /api/fh2/devices?device_class=drone&page=1&page_size=100
+GET /api/fh2/hms?device_sn=<sn>&begin_time=<ms>&end_time=<ms>&page=1&page_size=20
 GET /api/fh2/waylines?page=1&size=100
 GET /api/fh2/flight-tasks?page=1&page_size=50
 ```
@@ -460,11 +461,17 @@ GET /api/fh2/flight-tasks?page=1&page_size=50
 `/api/fh2/status` enthält ausschließlich nicht-sensitive
 Konfigurationszustände und `readOnly=true`.
 
-Devices, Waylines und Flight Tasks werden ausschließlich per GET aus der FH2
-OpenAPI V2 gelesen. `device_class` akzeptiert `drone`, `airport` oder
+Devices, HMS, Waylines und Flight Tasks werden ausschließlich per GET aus der
+FH2 OpenAPI V2 gelesen. `device_class` akzeptiert `drone`, `airport` oder
 `base_station`; `airport` wird upstream als die beiden DJI-Klassen
 `airport` und `base_station` abgefragt. Ungültige Klassen liefern
 `400 {"error":"invalid_query_device_class"}`.
+
+HMS verlangt mindestens ein wiederholbares `device_sn` sowie `begin_time`
+und `end_time` als Unix-Zeit in Millisekunden. Der lokale Proxy setzt den
+von DJI Privatization dokumentierten Upstream-Parameter `language=zh` fest.
+Es gibt keinen versteckten Standardzeitraum; fehlende oder unplausible
+HMS-Queryparameter liefern HTTP 400.
 
 Redirects werden nicht verfolgt; nur HTTP 2xx und DJI Businesscode `0`
 gelten als Erfolg.
