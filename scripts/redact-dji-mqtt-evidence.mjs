@@ -27,6 +27,15 @@ function integer(value) {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
 }
 
+function identityInteger(value) {
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  if (typeof value === "string" && /^-?\d+$/.test(value.trim())) {
+    const parsed = Number(value.trim());
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 const PROFILES = {
   m3e: {
     gateway: { domain: 2, type: 144, subType: 0 },
@@ -148,15 +157,15 @@ function validateSingleTopologyCapture(rows) {
 
 function productIdentity(value) {
   return {
-    domain: integer(value?.domain),
-    type: integer(value?.type),
-    subType: integer(value?.sub_type ?? value?.subType) ?? 0
+    domain: identityInteger(value?.domain),
+    type: identityInteger(value?.type),
+    subType: identityInteger(value?.sub_type ?? value?.subType)
   };
 }
 
 function sameProduct(actual, expected) {
   return (
-    (actual.domain === null || actual.domain === expected.domain) &&
+    actual.domain === expected.domain &&
     actual.type === expected.type &&
     actual.subType === expected.subType
   );
@@ -204,16 +213,16 @@ function validateProfile(capture, profileName, rows) {
 
 function sanitizeProduct(product, role) {
   if (!record(product)) return undefined;
-  const type = integer(product.type);
-  if (type === null) return undefined;
-  const subType = integer(product.sub_type ?? product.subType) ?? 0;
+  const type = identityInteger(product.type);
+  const subType = identityInteger(product.sub_type ?? product.subType);
+  if (type === null || subType === null) return undefined;
   const out = {
     sn: role === "gateway" ? "GATEWAY_REDACTED" : "AIRCRAFT_REDACTED",
     type,
     sub_type: subType
   };
-  const domain = product.domain;
-  if (typeof domain === "number" || typeof domain === "string") out.domain = domain;
+  const domain = identityInteger(product.domain);
+  if (domain !== null) out.domain = domain;
   const thingVersion = string(product.thing_version ?? product.thingVersion ?? product.version);
   if (thingVersion) out.thing_version = thingVersion;
   const index = string(product.index);
