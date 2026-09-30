@@ -78,13 +78,26 @@ export function PilotCloudBootstrap() {
       return;
     }
 
-    if (!appId || !appKey || !license || !mqttHost || !mqttUsername || !mqttPassword) {
+    const normalizedAppId = appId.trim();
+    const normalizedAppKey = appKey.trim();
+    const normalizedLicense = license.trim();
+    const normalizedMqttHost = mqttHost.trim();
+    const normalizedMqttUsername = mqttUsername.trim();
+
+    if (
+      !normalizedAppId ||
+      !normalizedAppKey ||
+      !normalizedLicense ||
+      !normalizedMqttHost ||
+      !normalizedMqttUsername ||
+      !mqttPassword
+    ) {
       setStage("error");
       setMessage("Alle Felder sind erforderlich.");
       return;
     }
 
-    if (!/^(tcp|ws):\/\//i.test(mqttHost)) {
+    if (!/^(tcp|ws):\/\//i.test(normalizedMqttHost)) {
       setStage("error");
       setMessage("DJI Pilot 2 erwartet für das Thing-Modul tcp:// oder ws://.");
       return;
@@ -94,7 +107,11 @@ export function PilotCloudBootstrap() {
       setStage("verifying");
       setMessage("DJI Cloud API License wird in Pilot 2 verifiziert …");
       decodeEnvelope(
-        bridge.platformVerifyLicense(appId, appKey, license),
+        bridge.platformVerifyLicense(
+          normalizedAppId,
+          normalizedAppKey,
+          normalizedLicense
+        ),
         "platformVerifyLicense"
       );
 
@@ -136,9 +153,9 @@ export function PilotCloudBootstrap() {
         bridge.platformLoadComponent(
           "thing",
           JSON.stringify({
-            host: mqttHost,
+            host: normalizedMqttHost,
             connectCallback: "fh2ThingConnectCallback",
-            username: mqttUsername,
+            username: normalizedMqttUsername,
             password: mqttPassword
           })
         ),
@@ -164,7 +181,16 @@ export function PilotCloudBootstrap() {
       }
     } catch (error) {
       setStage("error");
-      setMessage(error instanceof Error ? error.message : String(error));
+      const detail = error instanceof Error ? error.message : String(error);
+      if (/bad base-64/i.test(detail)) {
+        setMessage(
+          "DJI Pilot 2 hat die Cloud-API-Lizenzdaten abgelehnt (bad base-64). " +
+          "App ID, App Key und App Basic License müssen unverändert aus derselben " +
+          "Cloud-API-App stammen. Keine Base64-Konvertierung vornehmen."
+        );
+      } else {
+        setMessage(detail);
+      }
     }
   }
 

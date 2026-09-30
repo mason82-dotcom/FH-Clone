@@ -45,3 +45,31 @@ test("Pilot 2 bootstrap does not embed an MQTT password or DJI license value", (
 test("Pilot 2 bootstrap requires tcp:// or ws:// broker URLs", () => {
   assert.match(source, /\^\(tcp\|ws\):/);
 });
+
+
+test("Pilot 2 bootstrap trims surrounding Cloud API text fields before verification", () => {
+  for (const required of [
+    "appId.trim()",
+    "appKey.trim()",
+    "license.trim()",
+    "mqttHost.trim()",
+    "mqttUsername.trim()"
+  ]) {
+    assert.equal(source.includes(required), true, `missing normalization: ${required}`);
+  }
+
+  assert.equal(
+    source.includes("mqttPassword.trim()"),
+    false,
+    "MQTT passwords must not be modified"
+  );
+});
+
+test("Pilot 2 bootstrap keeps DJI portal values direct and never Base64-transforms them", () => {
+  assert.equal(source.includes("btoa("), false);
+  assert.equal(source.includes("atob("), false);
+  assert.match(
+    source,
+    /platformVerifyLicense\(\s*normalizedAppId,\s*normalizedAppKey,\s*normalizedLicense\s*\)/
+  );
+});
