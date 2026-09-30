@@ -293,10 +293,7 @@ function parsePaginatedList<T>(
       `FH2 OpenAPI ${resource} returned invalid pagination`
     );
   }
-  return {
-    ...result,
-    pagination: result.pagination
-  };
+  return result as Fh2PaginatedList<T>;
 }
 
 function parseListResult<T>(
