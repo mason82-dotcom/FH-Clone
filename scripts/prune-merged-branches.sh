@@ -32,59 +32,7 @@ done < <(
 )
 
 declare -A merged_pr_heads=()
-while IFS=deleted=0
-eligible=0
-skipped_open=0
-skipped_unmerged_tip=0
-
-for branch in "${remote_branches[@]}"; do
-  [[ "$branch" == "$default_branch" ]] && continue
-
-  if [[ -n "${open_heads[$branch]:-}" ]]; then
-    echo "SKIP open-pr: $branch"
-    ((skipped_open += 1))
-    continue
-  fi
-
-  remote_ref="refs/remotes/origin/$branch"
-
-  tip_sha="$(git rev-parse "$remote_ref")"
-  safe_reason=""
-
-  # Primary content-loss guard: the complete branch tip is already reachable
-  # from main.
-  if git merge-base --is-ancestor "$remote_ref" "refs/remotes/origin/$default_branch"; then
-    safe_reason="ancestor-of-main"
-  # Squash/rebase merges intentionally do not preserve branch ancestry.
-  # They are safe to prune only when the *current* tip exactly equals a head
-  # SHA recorded on a merged same-repository PR. Any later branch commit makes
-  # this condition false and keeps the branch.
-  elif [[ -n "${merged_pr_heads["$branch|$tip_sha"]:-}" ]]; then
-    safe_reason="exact-merged-pr-head"
-  else
-    echo "SKIP unmerged-tip: $branch"
-    ((skipped_unmerged_tip += 1))
-    continue
-  fi
-
-  ((eligible += 1))
-  if [[ "$dry_run" == "true" ]]; then
-    echo "DRY-RUN delete ($safe_reason): $branch"
-    continue
-  fi
-
-  echo "DELETE ($safe_reason): $branch"
-  gh api --method DELETE "/repos/$repo/git/refs/heads/$branch" >/dev/null
-  ((deleted += 1))
-done
-
-echo
-echo "Repository-Hygiene:"
-echo "  eligible=$eligible"
-echo "  deleted=$deleted"
-echo "  skipped_open=$skipped_open"
-echo "  skipped_unmerged_tip=$skipped_unmerged_tip"
-\t' read -r head_repo branch head_sha; do
+while IFS=$'\t' read -r head_repo branch head_sha; do
   if [[ "$head_repo" == "$repo" && -n "$branch" && -n "$head_sha" ]]; then
     merged_pr_heads["$branch|$head_sha"]=1
   fi
@@ -97,48 +45,7 @@ mapfile -t remote_branches < <(
   git for-each-ref \
     --format='%(refname:strip=3)' \
     refs/remotes/origin/ \
-    | grep -v '^HEADdeleted=0
-eligible=0
-skipped_open=0
-skipped_unmerged_tip=0
-
-for branch in "${remote_branches[@]}"; do
-  [[ "$branch" == "$default_branch" ]] && continue
-
-  if [[ -n "${open_heads[$branch]:-}" ]]; then
-    echo "SKIP open-pr: $branch"
-    ((skipped_open += 1))
-    continue
-  fi
-
-  remote_ref="refs/remotes/origin/$branch"
-
-  # Content-loss guard: every commit reachable from the branch tip must already
-  # be reachable from the default branch. Diverged or ahead branches remain.
-  if ! git merge-base --is-ancestor "$remote_ref" "refs/remotes/origin/$default_branch"; then
-    echo "SKIP unmerged-tip: $branch"
-    ((skipped_unmerged_tip += 1))
-    continue
-  fi
-
-  ((eligible += 1))
-  if [[ "$dry_run" == "true" ]]; then
-    echo "DRY-RUN delete: $branch"
-    continue
-  fi
-
-  echo "DELETE fully-merged branch: $branch"
-  gh api --method DELETE "/repos/$repo/git/refs/heads/$branch" >/dev/null
-  ((deleted += 1))
-done
-
-echo
-echo "Repository-Hygiene:"
-echo "  eligible=$eligible"
-echo "  deleted=$deleted"
-echo "  skipped_open=$skipped_open"
-echo "  skipped_unmerged_tip=$skipped_unmerged_tip"
- \
+    | grep -v '^HEAD$' \
     | sort -u
 )
 
@@ -157,10 +64,20 @@ for branch in "${remote_branches[@]}"; do
   fi
 
   remote_ref="refs/remotes/origin/$branch"
+  tip_sha="$(git rev-parse "$remote_ref")"
+  safe_reason=""
 
-  # Content-loss guard: every commit reachable from the branch tip must already
-  # be reachable from the default branch. Diverged or ahead branches remain.
-  if ! git merge-base --is-ancestor "$remote_ref" "refs/remotes/origin/$default_branch"; then
+  # Primary content-loss guard: the complete branch tip is already reachable
+  # from main.
+  if git merge-base --is-ancestor "$remote_ref" "refs/remotes/origin/$default_branch"; then
+    safe_reason="ancestor-of-main"
+  # Squash/rebase merges intentionally do not preserve branch ancestry.
+  # They are safe to prune only when the current tip exactly equals a head
+  # SHA recorded on a merged same-repository PR. Any later branch commit makes
+  # this condition false and keeps the branch.
+  elif [[ -n "${merged_pr_heads["$branch|$tip_sha"]:-}" ]]; then
+    safe_reason="exact-merged-pr-head"
+  else
     echo "SKIP unmerged-tip: $branch"
     ((skipped_unmerged_tip += 1))
     continue
@@ -168,11 +85,11 @@ for branch in "${remote_branches[@]}"; do
 
   ((eligible += 1))
   if [[ "$dry_run" == "true" ]]; then
-    echo "DRY-RUN delete: $branch"
+    echo "DRY-RUN delete ($safe_reason): $branch"
     continue
   fi
 
-  echo "DELETE fully-merged branch: $branch"
+  echo "DELETE ($safe_reason): $branch"
   gh api --method DELETE "/repos/$repo/git/refs/heads/$branch" >/dev/null
   ((deleted += 1))
 done
