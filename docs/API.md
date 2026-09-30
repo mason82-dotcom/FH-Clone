@@ -395,8 +395,7 @@ x-auth-token: <server secret>
 
 Der Server ist standardmäßig deaktiviert. Er akzeptiert ausschließlich die
 konfigurierte Workspace-UUID und ein exakt passendes
-`DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN`. Der Tokenvergleich erfolgt
-längenkonstant.
+`DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN`. Der Bei gleicher Tokenlänge erfolgt der Wertvergleich mit `timingSafeEqual`.
 
 Der aktuelle Server liefert bewusst einen leeren Katalog im DJI-Envelope:
 
