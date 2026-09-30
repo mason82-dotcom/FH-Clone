@@ -1289,6 +1289,66 @@
         },
         "x-fh2-safety-level": "FC0"
       }
+    },
+    "/wayline/api/v1/workspaces/{workspace_id}/waylines/duplicate-names": {
+      "get": {
+        "operationId": "getPilotWaylineDuplicateNames",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "DJI-Pilot-kompatible Dublettenprüfung für Wayline-Namen",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "description": "DJI Pilot Workspace UUID",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "description": "Ein oder mehrere zu prüfende Wayline-Dateinamen",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        ],
+        "security": [
+          {
+            "pilotWaylineToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
     }
   },
   "components": {
