@@ -65,6 +65,7 @@ for branch in "${remote_branches[@]}"; do
 
   remote_ref="refs/remotes/origin/$branch"
   tip_sha="$(git rev-parse "$remote_ref")"
+  merged_key="$branch|$tip_sha"
   safe_reason=""
 
   # Primary content-loss guard: the complete branch tip is already reachable
@@ -75,7 +76,7 @@ for branch in "${remote_branches[@]}"; do
   # They are safe to prune only when the current tip exactly equals a head
   # SHA recorded on a merged same-repository PR. Any later branch commit makes
   # this condition false and keeps the branch.
-  elif [[ -n "${merged_pr_heads["$branch|$tip_sha"]:-}" ]]; then
+  elif [[ -n "${merged_pr_heads[$merged_key]:-}" ]]; then
     safe_reason="exact-merged-pr-head"
   else
     echo "SKIP unmerged-tip: $branch"
