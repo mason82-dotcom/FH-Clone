@@ -83,9 +83,13 @@ export class Fh2OpenApiClient {
     pageSize = 100
   ): Promise<Fh2PaginatedList<Fh2WaylineItem>> {
     this.requireProject();
-    return this.get<Fh2PaginatedList<Fh2WaylineItem>>(
-      `/openapi/v2.0/wayline/api/v1/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/web-waylines`,
-      { page, size: pageSize }
+    return parsePaginatedList(
+      await this.get(
+        `/openapi/v2.0/wayline/api/v1/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/web-waylines`,
+        { page, size: pageSize }
+      ),
+      "Waylines",
+      isWaylineItem
     );
   }
 
@@ -94,9 +98,13 @@ export class Fh2OpenApiClient {
     pageSize = 50
   ): Promise<Fh2PaginatedList<Fh2FlightTask>> {
     this.requireProject();
-    return this.get<Fh2PaginatedList<Fh2FlightTask>>(
-      `/openapi/v2.0/task/api/v2/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/flight-tasks`,
-      { page, page_size: pageSize }
+    return parsePaginatedList(
+      await this.get(
+        `/openapi/v2.0/task/api/v2/workspaces/${encodeURIComponent(this.options.projectId!.trim())}/flight-tasks`,
+        { page, page_size: pageSize }
+      ),
+      "Flight Tasks",
+      isFlightTask
     );
   }
 
@@ -114,9 +122,13 @@ export class Fh2OpenApiClient {
     for (const value of classes) params.append("device_model_class", value);
     params.set("page", String(page));
     params.set("page_size", String(pageSize));
-    return this.get<Fh2PaginatedList<Fh2ManageDevice>>(
-      `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices`,
-      params
+    return parsePaginatedList(
+      await this.get(
+        `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices`,
+        params
+      ),
+      "Devices",
+      isManageDevice
     );
   }
 
@@ -143,16 +155,20 @@ export class Fh2OpenApiClient {
     params.set("page", String(page));
     params.set("page_size", String(pageSize));
 
-    return this.get<Fh2ListResult<Fh2HmsAlert>>(
-      `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices/hms`,
-      params
+    return parseListResult(
+      await this.get(
+        `/openapi/v2.0/manage/api/v1/organizations/${encodeURIComponent(this.options.organizationId!.trim())}/manage-devices/hms`,
+        params
+      ),
+      "HMS",
+      isHmsAlert
     );
   }
 
-  private async get<T>(
+  private async get(
     path: string,
     params: URLSearchParams | Record<string, string | number>
-  ): Promise<T> {
+  ): Promise<unknown> {
     this.requireBase();
     const baseUrl = this.options.baseUrl!.trim().replace(/\/+$/, "");
     const url = new URL(`${baseUrl}${path}`);
@@ -198,10 +214,10 @@ export class Fh2OpenApiClient {
             : `FH2 OpenAPI business error ${String(code)}`
         );
       }
-      if ("data" in payload) return payload.data as T;
+      if ("data" in payload) return payload.data;
     }
 
-    return payload as T;
+    return payload;
   }
 
   private headers(): Record<string, string> {
@@ -259,6 +275,108 @@ function envBool(name: string, fallback: boolean): boolean {
 function envInt(name: string, fallback: number): number {
   const value = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+
+
+type Fh2ItemGuard<T> = (value: unknown) => value is T;
+
+function parsePaginatedList<T>(
+  value: unknown,
+  resource: string,
+  isItem: Fh2ItemGuard<T>
+): Fh2PaginatedList<T> {
+  const result = parseListResult(value, resource, isItem);
+  if (!isPagination(result.pagination)) {
+    throw new Fh2OpenApiError(
+      `FH2 OpenAPI ${resource} returned invalid pagination`
+    );
+  }
+  return {
+    ...result,
+    pagination: result.pagination
+  };
+}
+
+function parseListResult<T>(
+  value: unknown,
+  resource: string,
+  isItem: Fh2ItemGuard<T>
+): Fh2ListResult<T> {
+  if (!isRecord(value) || !Array.isArray(value.list)) {
+    throw new Fh2OpenApiError(
+      `FH2 OpenAPI ${resource} returned invalid list data`
+    );
+  }
+
+  for (let index = 0; index < value.list.length; index += 1) {
+    if (!isItem(value.list[index])) {
+      throw new Fh2OpenApiError(
+        `FH2 OpenAPI ${resource} returned invalid item at index ${index}`
+      );
+    }
+  }
+
+  if (
+    value.pagination !== undefined &&
+    !isPagination(value.pagination)
+  ) {
+    throw new Fh2OpenApiError(
+      `FH2 OpenAPI ${resource} returned invalid pagination`
+    );
+  }
+
+  return value as Fh2ListResult<T>;
+}
+
+function isPagination(value: unknown): value is Fh2PaginatedList<never>["pagination"] {
+  return (
+    isRecord(value) &&
+    isPositiveInteger(value.page) &&
+    isPositiveInteger(value.page_size) &&
+    isNonNegativeInteger(value.total)
+  );
+}
+
+function isManageDevice(value: unknown): value is Fh2ManageDevice {
+  return isRecord(value) && isNonEmptyString(value.device_sn);
+}
+
+function isHmsAlert(value: unknown): value is Fh2HmsAlert {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.device_sn) &&
+    typeof value.level === "number" &&
+    Number.isFinite(value.level)
+  );
+}
+
+function isWaylineItem(value: unknown): value is Fh2WaylineItem {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.id) &&
+    typeof value.name === "string"
+  );
+}
+
+function isFlightTask(value: unknown): value is Fh2FlightTask {
+  return (
+    isRecord(value) &&
+    isNonEmptyString(value.flight_task_id) &&
+    typeof value.task_name === "string"
+  );
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) > 0;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) >= 0;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
