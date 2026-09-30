@@ -1,0 +1,1351 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FH2 Control API – Public HTTP Contract",
+    "version": "3.1-dev",
+    "description": "Maschinenlesbarer Vertrag der öffentlichen FH2-Control-API. Interne Port-8081-Endpunkte und der MSDK-WebSocket werden separat dokumentiert und sind nicht Teil der OpenAPI-Pfade."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Control API public listener; Port/BIND sind konfigurierbar"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Runtime"
+    },
+    {
+      "name": "MSDK"
+    },
+    {
+      "name": "Devices"
+    },
+    {
+      "name": "DJI"
+    },
+    {
+      "name": "Pilot2"
+    },
+    {
+      "name": "Missions"
+    },
+    {
+      "name": "FlightHub2"
+    },
+    {
+      "name": "UgCS"
+    },
+    {
+      "name": "Media"
+    },
+    {
+      "name": "RTK"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "Dienststatus der öffentlichen Control API",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "tags": [
+          "Runtime"
+        ],
+        "summary": "Readiness der konfigurierten Backend-Abhängigkeiten",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/pair": {
+      "post": {
+        "operationId": "pairMsdkAgent",
+        "tags": [
+          "MSDK"
+        ],
+        "summary": "RC-Bridge mit Bootstrap-Token paaren",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/unpair": {
+      "post": {
+        "operationId": "unpairMsdkAgent",
+        "tags": [
+          "MSDK"
+        ],
+        "summary": "Gepairten MSDK-Agent widerrufen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/heartbeat": {
+      "post": {
+        "operationId": "postMsdkHeartbeat",
+        "tags": [
+          "MSDK"
+        ],
+        "summary": "Read-only MSDK Snapshot/Heartbeat ingestieren",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/agents": {
+      "get": {
+        "operationId": "listMsdkAgents",
+        "tags": [
+          "MSDK"
+        ],
+        "summary": "Bekannte MSDK-Agent-Snapshots auflisten",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices": {
+      "get": {
+        "operationId": "listDevices",
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Aktuelle lokale DeviceRegistry auflisten",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices/{device_sn}/telemetry": {
+      "get": {
+        "operationId": "getDeviceTelemetry",
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Fusionierten Telemetrie-Snapshot lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "path",
+            "required": true,
+            "description": "Aircraft-/Device-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices/{device_sn}/telemetry/sources": {
+      "get": {
+        "operationId": "getDeviceTelemetrySources",
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Telemetrie-Provenienz je Adapter lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "path",
+            "required": true,
+            "description": "Aircraft-/Device-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices/{device_sn}/capabilities": {
+      "get": {
+        "operationId": "getDeviceCapabilities",
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Read-only Capability-Sicht lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "path",
+            "required": true,
+            "description": "Aircraft-/Device-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices/{device_sn}/mission": {
+      "get": {
+        "operationId": "getDeviceMission",
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Missionszustand eines Geräts lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "path",
+            "required": true,
+            "description": "Aircraft-/Device-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices/{device_sn}/wayline": {
+      "get": {
+        "operationId": "getDeviceWaylineObservation",
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Beobachteten Wayline-Zustand lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "path",
+            "required": true,
+            "description": "Aircraft-/Device-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/devices/{device_sn}/rtk": {
+      "get": {
+        "operationId": "getDeviceRtk",
+        "tags": [
+          "RTK"
+        ],
+        "summary": "RTK-Snapshot eines Geräts lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "path",
+            "required": true,
+            "description": "Aircraft-/Device-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/topology": {
+      "get": {
+        "operationId": "getDjiTopology",
+        "tags": [
+          "DJI"
+        ],
+        "summary": "Aktuelle DJI Gateway-/Subdevice-Topologie lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/topology/persisted": {
+      "get": {
+        "operationId": "getPersistedDjiTopology",
+        "tags": [
+          "DJI"
+        ],
+        "summary": "Persistiertes DJI-Topologieinventar lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/gateways/{gateway_sn}/authority": {
+      "get": {
+        "operationId": "getDjiGatewayAuthority",
+        "tags": [
+          "DJI"
+        ],
+        "summary": "Cloud-Control-Authority eines Gateways lesen",
+        "parameters": [
+          {
+            "name": "gateway_sn",
+            "in": "path",
+            "required": true,
+            "description": "DJI Gateway-SN",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/control/runtime": {
+      "get": {
+        "operationId": "getDjiControlRuntime",
+        "tags": [
+          "DJI"
+        ],
+        "summary": "Read-only Sicht auf die DJI-Control-Runtime",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/pilot2/evidence": {
+      "post": {
+        "operationId": "capturePilot2Evidence",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "Redigierte Pilot-2-JSBridge-Hardware-Evidence erfassen",
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/JsonAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/pilot2/evidence/latest": {
+      "get": {
+        "operationId": "getLatestPilot2Evidence",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "Letzten redigierten Pilot-2-Capture lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/pilot/wayline-server/status": {
+      "get": {
+        "operationId": "getPilotWaylineServerStatus",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "Status des lokalen read-only Pilot-Wayline-Servers lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/wayline/api/v1/workspaces/{workspace_id}/waylines": {
+      "get": {
+        "operationId": "listPilotWaylineServerWaylines",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "DJI-Pilot-kompatiblen lokalen read-only Wayline-Katalog lesen",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "description": "DJI Pilot Workspace UUID",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 10
+            }
+          }
+        ],
+        "security": [
+          {
+            "pilotWaylineToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/pilot/waylines/status": {
+      "get": {
+        "operationId": "getPilotWaylineCatalogStatus",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "Status des read-only Pilot-to-Cloud-Katalogclients lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/dji/pilot/waylines": {
+      "get": {
+        "operationId": "listPilotWaylines",
+        "tags": [
+          "Pilot2"
+        ],
+        "summary": "Pilot-to-Cloud-Wayline-Dateiliste read-only lesen",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 10
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "description": "Namens-/Schlüssel-Filter",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "favorited",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "description": "DJI Sortierausdruck",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "action_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "template_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "drone_model_keys",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "payload_model_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/missions/active": {
+      "get": {
+        "operationId": "listActiveMissions",
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Aktive Missionssitzungen auflisten",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/fh2/status": {
+      "get": {
+        "operationId": "getFh2OpenApiStatus",
+        "tags": [
+          "FlightHub2"
+        ],
+        "summary": "Konfigurationsstatus des FlightHub-2-OpenAPI-V2-Clients lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/fh2/devices": {
+      "get": {
+        "operationId": "listFh2Devices",
+        "tags": [
+          "FlightHub2"
+        ],
+        "summary": "FlightHub-2-Geräteinventar read-only lesen",
+        "parameters": [
+          {
+            "name": "device_class",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "drone",
+                "airport",
+                "base_station"
+              ],
+              "default": "drone"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/fh2/hms": {
+      "get": {
+        "operationId": "listFh2Hms",
+        "tags": [
+          "FlightHub2"
+        ],
+        "summary": "FlightHub-2-HMS-Alerts read-only lesen",
+        "parameters": [
+          {
+            "name": "device_sn",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "name": "begin_time",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/fh2/media": {
+      "get": {
+        "operationId": "listFh2Media",
+        "tags": [
+          "FlightHub2"
+        ],
+        "summary": "FlightHub-2-Medienbibliothek read-only lesen",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/fh2/waylines": {
+      "get": {
+        "operationId": "listFh2Waylines",
+        "tags": [
+          "FlightHub2"
+        ],
+        "summary": "FlightHub-2-Waylines read-only lesen",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/fh2/flight-tasks": {
+      "get": {
+        "operationId": "listFh2FlightTasks",
+        "tags": [
+          "FlightHub2"
+        ],
+        "summary": "FlightHub-2-Flight-Tasks read-only lesen",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Seite",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Seitengröße",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/ugcs/status": {
+      "get": {
+        "operationId": "getUgcsStatus",
+        "tags": [
+          "UgCS"
+        ],
+        "summary": "UgCS-Bridge-Status read-only lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/ugcs/vehicles": {
+      "get": {
+        "operationId": "listUgcsVehicles",
+        "tags": [
+          "UgCS"
+        ],
+        "summary": "UgCS-Fahrzeuge read-only lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/ugcs/routes": {
+      "get": {
+        "operationId": "listUgcsRoutes",
+        "tags": [
+          "UgCS"
+        ],
+        "summary": "UgCS-Routen read-only lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/ugcs/telemetry": {
+      "get": {
+        "operationId": "getUgcsTelemetry",
+        "tags": [
+          "UgCS"
+        ],
+        "summary": "UgCS-Telemetrie read-only lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "502": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/media/overlays": {
+      "get": {
+        "operationId": "listMediaOverlays",
+        "tags": [
+          "Media"
+        ],
+        "summary": "Georeferenzierte Media-Overlays lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/rtk": {
+      "get": {
+        "operationId": "listRtkSnapshots",
+        "tags": [
+          "RTK"
+        ],
+        "summary": "Aktuelle RTK-/GNSS-Snapshots lesen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/rtk/transitions": {
+      "get": {
+        "operationId": "listRtkTransitions",
+        "tags": [
+          "RTK"
+        ],
+        "summary": "RTK-Fix-Zustandswechsel lesen",
+        "parameters": [
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "description": "Optionaler Device-Filter",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "500": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/events/rtk": {
+      "get": {
+        "operationId": "streamRtkEvents",
+        "tags": [
+          "RTK"
+        ],
+        "summary": "Server-Sent-Events für RTK lesen",
+        "parameters": [
+          {
+            "name": "device",
+            "in": "query",
+            "required": false,
+            "description": "Optionaler Device-Filter",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "MSDK Bootstrap- oder Agent-Token je Endpunkt."
+      },
+      "pilotWaylineToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-auth-token",
+        "description": "Separates Secret des lokalen read-only Pilot-Wayline-Servers."
+      }
+    },
+    "responses": {
+      "JsonOk": {
+        "description": "Erfolgreiche JSON-Antwort",
+        "content": {
+          "application/json": {
+            "schema": {}
+          }
+        }
+      },
+      "JsonAccepted": {
+        "description": "Erfolgreich erfasst/erstellt",
+        "content": {
+          "application/json": {
+            "schema": {}
+          }
+        }
+      },
+      "JsonError": {
+        "description": "Fehlerantwort",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-fh2-websocket-endpoints": [
+    {
+      "path": "/ws/msdk/control/{aircraftSn}",
+      "role": "authenticated-agent-transport",
+      "publicOperatorApi": false,
+      "description": "Authentifizierter Backend-zu-RC-Agenttransport; kein öffentlicher Operator-Control-Endpunkt."
+    }
+  ],
+  "x-fh2-internal-api": {
+    "port": 8081,
+    "documentedIn": "docs/API.md",
+    "includedInPaths": false
+  }
+}
