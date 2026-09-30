@@ -430,10 +430,10 @@ if (realEvidence(wpml)) {
     wpml.pilotCatalog?.responseValidated === true &&
     wpml.pilotCatalog?.tokenPresentInFixture !== true);
   add("WPML_PILOT", "REQUIRED_HARDWARE", "DJI-Pilot-WebView-Listenabruf real beobachtet",
-    Number.isSafeInteger(wpml.pilotCatalog?.pilotWebViewListRequests) &&
-    wpml.pilotCatalog.pilotWebViewListRequests >= 1 &&
-    typeof wpml.pilotCatalog?.lastPilotWebViewListRequestAt === "string" &&
-    Number.isFinite(Date.parse(wpml.pilotCatalog.lastPilotWebViewListRequestAt)));
+    Number.isSafeInteger(wpml.pilotCatalog?.pilotNativeListRequests) &&
+    wpml.pilotCatalog.pilotNativeListRequests >= 1 &&
+    typeof wpml.pilotCatalog?.lastPilotNativeListRequestAt === "string" &&
+    Number.isFinite(Date.parse(wpml.pilotCatalog.lastPilotNativeListRequestAt)));
 }
 
 // ---------------------------------------------------------------------------
