@@ -89,7 +89,7 @@ const pilotStatus = {
   lastPilotNativeListRequestAt: "2026-09-30T19:30:00.000Z"
 };
 
-test("builds redacted evidence only after a native native DJI Pilot request", () => {
+test("builds redacted evidence only after a native DJI Pilot request", () => {
   const kmz = storedZip([
     ["wpmz/template.kml", templateXml],
     ["wpmz/waylines.wpml", waylinesXml]
@@ -148,7 +148,7 @@ test("rejects local-only Wayline requests as hardware evidence", () => {
         pilotNativeListRequests: undefined,
         lastPilotNativeListRequestAt: undefined
       }),
-    /No DJI native DJI Pilot list request observed/
+    /No native DJI Pilot list request observed/
   );
 });
 
