@@ -136,7 +136,7 @@ export class PilotWaylineServer {
     this.listRequests += 1;
     this.lastListRequestAt = new Date(nowMs).toISOString();
 
-    if (isQualifiedNativePilotRequest(headers)) {
+    if (isQualifiedNativePilotRequest(url, headers)) {
       this.pilotNativeListRequests += 1;
       this.lastPilotNativeListRequestAt = this.lastListRequestAt;
     }
@@ -186,13 +186,15 @@ export class PilotWaylineServer {
 }
 
 export function isQualifiedNativePilotRequest(
+  url: URL,
   headers?: Pick<IncomingHttpHeaders, "user-agent">
 ): boolean {
   const raw = headers?.["user-agent"];
   const userAgent = Array.isArray(raw) ? raw[0] : raw;
   return (
     typeof userAgent === "string" &&
-    QUALIFIED_NATIVE_PILOT_USER_AGENT.test(userAgent.trim())
+    QUALIFIED_NATIVE_PILOT_USER_AGENT.test(userAgent.trim()) &&
+    url.searchParams.get("file_type") === "5"
   );
 }
 
