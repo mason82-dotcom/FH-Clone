@@ -135,3 +135,5 @@ Hardwareabnahme missverstanden werden.
 7. Technische Originalbezeichner nicht übersetzen, wenn dies den
    Protokollabgleich erschweren würde.
 8. `v3.0.0` bleibt unveränderliche Releasegrenze; neue Entwicklung wird als V3.1 oder späterer Stand eindeutig davon getrennt.
+
+- [`DJI_THERMAL_SDK.md`](DJI_THERMAL_SDK.md)
