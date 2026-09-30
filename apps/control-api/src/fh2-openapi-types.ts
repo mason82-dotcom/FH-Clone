@@ -2,16 +2,19 @@ export interface Fh2Pagination {
   page: number;
   page_size: number;
   total: number;
+  [key: string]: unknown;
 }
 
 export interface Fh2PaginatedList<T> {
   pagination: Fh2Pagination;
   list: T[];
+  [key: string]: unknown;
 }
 
 export interface Fh2ListResult<T> {
   list: T[];
   pagination?: Fh2Pagination;
+  [key: string]: unknown;
 }
 
 export interface Fh2DeviceModel {
