@@ -571,6 +571,66 @@ const publicServer = createServer(async (request, response) => {
       }
     }
 
+    if (request.method === "GET" && url.pathname === "/api/fh2/hms") {
+      const deviceSns = [
+        ...new Set(
+          url.searchParams
+            .getAll("device_sn")
+            .map((value) => value.trim())
+            .filter(Boolean)
+        )
+      ];
+      if (deviceSns.length === 0) {
+        throw new Error("invalid_query_device_sn");
+      }
+
+      const beginTimeMs = queryInt(
+        url,
+        "begin_time",
+        -1,
+        0,
+        Number.MAX_SAFE_INTEGER
+      );
+      if (beginTimeMs < 0) {
+        throw new Error("invalid_query_begin_time");
+      }
+
+      const endTimeMs = queryInt(
+        url,
+        "end_time",
+        -1,
+        0,
+        Number.MAX_SAFE_INTEGER
+      );
+      if (endTimeMs < 0) {
+        throw new Error("invalid_query_end_time");
+      }
+      if (endTimeMs < beginTimeMs) {
+        throw new Error("invalid_query_time_range");
+      }
+
+      try {
+        const page = queryInt(url, "page", 1, 1, 10_000);
+        const pageSize = queryInt(url, "page_size", 20, 1, 500);
+        return json(
+          response,
+          200,
+          await fh2.listHms(
+            deviceSns,
+            beginTimeMs,
+            endTimeMs,
+            page,
+            pageSize
+          )
+        );
+      } catch (error) {
+        if (error instanceof Fh2OpenApiNotConfigured) {
+          return json(response, 503, { error: "fh2_not_configured" });
+        }
+        throw error;
+      }
+    }
+
     if (
       request.method === "GET" &&
       url.pathname === "/api/dji/pilot/wayline-server/status"
