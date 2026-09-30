@@ -146,6 +146,62 @@ function validateSingleTopologyCapture(rows) {
   };
 }
 
+function productIdentity(value) {
+  return {
+    domain: integer(value?.domain),
+    type: integer(value?.type),
+    subType: integer(value?.sub_type ?? value?.subType) ?? 0
+  };
+}
+
+function sameProduct(actual, expected) {
+  return (
+    actual.domain === expected.domain &&
+    actual.type === expected.type &&
+    actual.subType === expected.subType
+  );
+}
+
+function validateProfile(capture, profileName, rows) {
+  const profile = PROFILES[profileName];
+  const data = dataOf(payloadOf(capture.topologyRow));
+  const gateway = productIdentity(data);
+  const subDevices = array(data?.sub_devices ?? data?.subDevices);
+  const aircraft = productIdentity(
+    subDevices.find((entry) => string(entry?.sn) === capture.aircraftId)
+  );
+
+  if (!sameProduct(gateway, profile.gateway)) {
+    fail(
+      `profile ${profileName} expects gateway ${profile.gateway.domain}/${profile.gateway.type}/${profile.gateway.subType}, ` +
+      `observed ${gateway.domain}/${gateway.type}/${gateway.subType}`
+    );
+  }
+  if (!sameProduct(aircraft, profile.aircraft)) {
+    fail(
+      `profile ${profileName} expects aircraft ${profile.aircraft.domain}/${profile.aircraft.type}/${profile.aircraft.subType}, ` +
+      `observed ${aircraft.domain}/${aircraft.type}/${aircraft.subType}`
+    );
+  }
+
+  const payloadIndexes = unique(
+    rows
+      .filter((row) => topicIdentity(topicOf(row), "aircraftOsd") === capture.aircraftId)
+      .flatMap((row) =>
+        array(dataOf(payloadOf(row))?.cameras)
+          .map((camera) => string(camera?.payload_index))
+          .filter(Boolean)
+      )
+  );
+  if (payloadIndexes.length && !payloadIndexes.includes(profile.payloadIndex)) {
+    fail(
+      `profile ${profileName} expects camera payload_index ${profile.payloadIndex}; observed ${payloadIndexes.join(", ")}`
+    );
+  }
+
+  return profile;
+}
+
 function sanitizeProduct(product, role) {
   if (!record(product)) return undefined;
   const type = integer(product.type);
