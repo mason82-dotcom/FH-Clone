@@ -100,7 +100,7 @@ test("redactor emits a public M3T MQTT evidence manifest without identifiers, co
 
   const run = spawnSync(
     process.execPath,
-    [script, "--real-hardware", input, output],
+    [script, "--real-hardware", "--profile", "m3t", input, output],
     { encoding: "utf8" }
   );
 
@@ -177,10 +177,86 @@ test("redactor rejects a capture that mixes multiple aircraft", () => {
 
   const run = spawnSync(
     process.execPath,
-    [script, "--real-hardware", input],
+    [script, "--real-hardware", "--profile", "m3t", input],
     { encoding: "utf8" }
   );
 
   assert.notEqual(run.status, 0);
   assert.match(run.stderr, /multiple|aircraft|narrow/i);
+});
+
+
+test("redactor emits M3E profile evidence only for 77/0 with payload 66-0-0", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-m3e-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+
+  rows[0].payload.data.sub_devices[0].sub_type = 0;
+  rows[2].payload.data.cameras[0].payload_index = "66-0-0";
+
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3e", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const value = JSON.parse(fs.readFileSync(output, "utf8"));
+  assert.equal(value.profile, "m3e");
+  assert.equal(value.expectedPayloadIndex, "66-0-0");
+  assert.equal(value.topology.data.sub_devices[0].sub_type, 0);
+  assert.equal(value.osd.data.cameras[0].payload_index, "66-0-0");
+});
+
+test("redactor rejects product/profile mismatches", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-profile-"));
+  const input = path.join(dir, "raw.json");
+  fs.writeFileSync(input, JSON.stringify(fixture()));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3e", input],
+    { encoding: "utf8" }
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /profile m3e expects aircraft/i);
+});
+
+test("redactor requires an explicit product profile", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-profile-"));
+  const input = path.join(dir, "raw.json");
+  fs.writeFileSync(input, JSON.stringify(fixture()));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", input],
+    { encoding: "utf8" }
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /--profile/);
+});
+
+test("gateway Thing OSD does not count as a second aircraft", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-gateway-osd-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+  rows.push({
+    channel: "thing/product/RC-PRO-SERIAL-SECRET/osd",
+    payload: { data: { app_version: "1.0", capacity_percent: 90 } }
+  });
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3t", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
 });
