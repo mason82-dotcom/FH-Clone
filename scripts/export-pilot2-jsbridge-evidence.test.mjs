@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
@@ -104,4 +105,28 @@ test("finalizer rejects incomplete module inventory and failed safety scan", () 
       }),
     /browser_bundle_safety_failed/
   );
+});
+
+
+test("Pilot 2 evidence page is read-only and does not persist browser state", () => {
+  const source = fs.readFileSync(
+    "apps/web/src/pilot-evidence/PilotJsbridgeEvidence.tsx",
+    "utf8"
+  );
+
+  assert.equal(source.includes("/api/dji/pilot2/evidence"), true);
+  for (const forbidden of [
+    "window.djiBridge",
+    ".platformVerifyLicense(",
+    ".platformLoadComponent(",
+    ".platformUnloadComponent(",
+    ".thingDisconnect(",
+    ".wsConnect(",
+    ".wsSend(",
+    "localStorage",
+    "sessionStorage",
+    "console.log"
+  ]) {
+    assert.equal(source.includes(forbidden), false, `forbidden: ${forbidden}`);
+  }
 });
