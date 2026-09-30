@@ -1,0 +1,41 @@
+name: Repository Hygiene
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Nur sichere Löschkandidaten anzeigen"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: repository-hygiene
+  cancel-in-progress: false
+
+jobs:
+  prune-merged-branches:
+    name: Gemergte Branches bereinigen
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Cleanup-Skript syntaktisch prüfen
+        run: bash -n scripts/prune-merged-branches.sh
+
+      - name: Sicher gemergte Branches löschen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FH2_DEFAULT_BRANCH: main
+          FH2_BRANCH_CLEANUP_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+        run: scripts/prune-merged-branches.sh
