@@ -85,11 +85,11 @@ const pilotStatus = {
   authConfigured: true,
   listRequests: 3,
   lastListRequestAt: "2026-09-30T19:30:00.000Z",
-  pilotWebViewListRequests: 1,
-  lastPilotWebViewListRequestAt: "2026-09-30T19:30:00.000Z"
+  pilotNativeListRequests: 1,
+  lastPilotNativeListRequestAt: "2026-09-30T19:30:00.000Z"
 };
 
-test("builds redacted evidence only after a native Pilot WebView request", () => {
+test("builds redacted evidence only after a native native DJI Pilot request", () => {
   const kmz = storedZip([
     ["wpmz/template.kml", templateXml],
     ["wpmz/waylines.wpml", waylinesXml]
@@ -128,8 +128,8 @@ test("builds redacted evidence only after a native Pilot WebView request", () =>
     responseValidated: true,
     tokenPresentInFixture: false,
     listRequests: 3,
-    pilotWebViewListRequests: 1,
-    lastPilotWebViewListRequestAt: "2026-09-30T19:30:00.000Z",
+    pilotNativeListRequests: 1,
+    lastPilotNativeListRequestAt: "2026-09-30T19:30:00.000Z",
     emptyCatalogObserved: true
   });
 
@@ -145,10 +145,10 @@ test("rejects local-only Wayline requests as hardware evidence", () => {
     () =>
       validatePilotStatus({
         ...pilotStatus,
-        pilotWebViewListRequests: undefined,
-        lastPilotWebViewListRequestAt: undefined
+        pilotNativeListRequests: undefined,
+        lastPilotNativeListRequestAt: undefined
       }),
-    /No DJI Pilot WebView list request observed/
+    /No DJI native DJI Pilot list request observed/
   );
 });
 
