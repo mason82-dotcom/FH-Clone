@@ -1,0 +1,94 @@
+{
+  "schema": "fh2.dji-mqtt.v1",
+  "profile": "m3e",
+  "expectedPayloadIndex": "66-0-0",
+  "realHardware": true,
+  "synthetic": false,
+  "redacted": true,
+  "sourceSha256": "e64bb7e6b468dcd7b6559a9725aa0703bf001bed822a43075602b96d6d4337bb",
+  "sourceSummary": {
+    "inputRows": 63,
+    "osdRows": 17,
+    "updateTopoObserved": true,
+    "statusReplyObserved": false,
+    "stateObserved": true,
+    "rtkFixedObserved": true,
+    "rtkNotFixedObserved": true
+  },
+  "topology": {
+    "topic": "sys/product/GATEWAY_REDACTED/status",
+    "method": "update_topo",
+    "data": {
+      "domain": 2,
+      "type": 144,
+      "sub_type": 0,
+      "thing_version": "1.2.0",
+      "sub_devices": [
+        {
+          "sn": "AIRCRAFT_REDACTED",
+          "type": 77,
+          "sub_type": 0,
+          "domain": 0,
+          "thing_version": "1.2.0",
+          "index": "A"
+        }
+      ]
+    }
+  },
+  "osd": {
+    "topic": "thing/product/AIRCRAFT_REDACTED/osd",
+    "data": {
+      "attitude_head": -108.4,
+      "attitude_roll": 0,
+      "attitude_pitch": 2.1,
+      "height": 159.30331420898438,
+      "elevation": 0,
+      "horizontal_speed": 0,
+      "vertical_speed": 0,
+      "latitude": null,
+      "longitude": null,
+      "position_state": {
+        "is_fixed": 0,
+        "quality": 5,
+        "gps_number": 20,
+        "rtk_number": 27
+      },
+      "battery": {
+        "batteries": [
+          {
+            "present": true
+          }
+        ]
+      },
+      "cameras": [
+        {
+          "payload_index": "66-0-0"
+        }
+      ]
+    }
+  },
+  "state": {
+    "topic": "thing/product/AIRCRAFT_REDACTED/state",
+    "data": {
+      "observed": true
+    }
+  },
+  "rtk": {
+    "fixed": {
+      "position_state": {
+        "is_fixed": 2,
+        "quality": 5,
+        "gps_number": 21,
+        "rtk_number": 27
+      }
+    },
+    "notFixed": {
+      "position_state": {
+        "is_fixed": 0,
+        "quality": 5,
+        "gps_number": 20,
+        "rtk_number": 27
+      }
+    }
+  }
+}
