@@ -5,6 +5,8 @@ import type { ParameterSample } from "@fh-clone/aircraft-core";
 import {
   assertParameterSamplePersistenceSafe,
   assertTelemetryPersistenceSafe,
+  hashMqttEvidenceIdentifier,
+  sanitizeMqttOutboundEvidenceChannel,
   sanitizeMqttOutboundEvidencePayload,
   telemetryProjectionForSample
 } from "./telemetry-store.js";
@@ -126,6 +128,25 @@ test("projection ignores unmapped, non-numeric and invalid enum samples", () => 
   );
 });
 
+
+
+
+test("MQTT outbound evidence hashes device identity and redacts topic identity", () => {
+  const rawId = "REAL-AIRCRAFT-SERIAL-123";
+  const hashed = hashMqttEvidenceIdentifier(rawId);
+  const channel = sanitizeMqttOutboundEvidenceChannel(
+    `thing/product/${rawId}/services`
+  );
+
+  assert.match(hashed, /^[a-f0-9]{64}$/);
+  assert.equal(hashed.includes(rawId), false);
+  assert.equal(channel, "thing/product/DEVICE_REDACTED/services");
+  assert.equal(channel.includes(rawId), false);
+  assert.equal(
+    sanitizeMqttOutboundEvidenceChannel("unexpected/custom/topic"),
+    "<redacted-channel>"
+  );
+});
 
 test("MQTT outbound evidence removes credential-bearing fields without exposing values", () => {
   const sanitized = sanitizeMqttOutboundEvidencePayload({
