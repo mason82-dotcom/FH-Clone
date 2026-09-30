@@ -43,3 +43,15 @@ test("browser proxy config contains no MQTT broker or credential material", () =
   assert.doesNotMatch(nginx, /mqtt:\/\//i);
   assert.doesNotMatch(nginx, /EMQX_AUTHN_TOKEN|EMQX_AUTHZ_TOKEN|MQTT_BACKEND_PASSWORD/);
 });
+
+
+test("web proxy forwards DJI Pilot Wayline API through the public control-api port", () => {
+  assert.match(
+    nginx,
+    /location \/wayline\/\s*\{[\s\S]*?proxy_pass http:\/\/control-api:8080;/
+  );
+  assert.doesNotMatch(
+    nginx,
+    /location \/wayline\/[\s\S]*?control-api:8081/
+  );
+});
