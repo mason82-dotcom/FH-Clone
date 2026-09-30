@@ -5,8 +5,8 @@ Fluggeräte, FlightHub-2-nahe Funktionen, DJI Cloud API, RTK, Medien,
 Multispektral-Verarbeitung und Groundstation-Anbindung.
 
 Der unveränderte freigegebene Basisstand ist **FH2 V3.0.0**. Darauf läuft
-die **V3.1-Entwicklung** mit zusätzlichen realen Hardware-Evidenzen und
-Betriebs-/Integrationshärtung. DJI Dock 1–3, Multi-Dock und PSDK-Payloads
+die **V3.1-Entwicklung** mit zusätzlichen realen Hardware-Evidenzen,
+read-only Pilot-2-/Wayline-Integration und Betriebs-/Integrationshärtung. DJI Dock 1–3, Multi-Dock und PSDK-Payloads
 bleiben projektweit deaktiviert. Für Mavic 3 Enterprise + RC Pro ist
 Cloud-Control auf Payload-Control begrenzt; Cloud-Flugsteuerung bleibt dort
 gesperrt. Matrice 4 + RC Plus 2 besitzt das separate Cloud-Flight-Control-
