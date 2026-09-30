@@ -1,6 +1,6 @@
-# V3.0 Release-Status
+# Release-Status: V3.0.0 Basis / V3.1 Entwicklung
 
-Stand: 29.09.2026
+Stand: 30.09.2026
 
 ## Release-Entscheidung
 
@@ -18,23 +18,39 @@ Hardware-Evidence gegatet.
 ## Versionsstand
 
 ```text
-Software-Version: 3.0.0
-Historische Software-Baseline: 58b82f907391b8444883aa6040190fae8690e596
-Finale Tag-Grenze: finaler grüner main-Commit nach diesem Abschluss-PR
-Git-Tag v3.0.0: Veröffentlichung nach finaler CI dieses Abschlussstands
-GitHub Release 3.0.0: Veröffentlichung nach finaler CI dieses Abschlussstands
+Veröffentlichter Basisrelease: 3.0.0
+Git-Tag-/Artefaktgrenze v3.0.0: 8a9544df7ef0460106704db8c31e40f10f23e728
+Aktueller Entwicklungszweig: V3.1 auf main
+Root-Paketversion während Entwicklung: 3.0.0
 Node.js: 22.23.2 in der Direktor-CI
 npm: 11.19.1
 Root package-lock.json: vorhanden
 ```
 
-Die Versionsnummer 3.0.0 ist für Root, Node-Workspaces, Lockfile und
-UgCS-Maven-Modul vereinheitlicht. Der frühere Baseline-Commit bleibt ein
-historischer Meilenstein, ist aber **nicht** die finale Artefaktgrenze.
-Das separate Repository-/Hosting-Cleanup-Gate wurde am 29.09.2026 nach dem
-GitHub-Support-Cleanup und der anschließenden Nicht-Erreichbarkeitsprüfung der
-bekannten Altobjekte geschlossen. Der nach diesem Abschluss-PR vollständig
-grüne `main` bildet die finale `v3.0.0`-Artefaktgrenze.
+Der Tag `v3.0.0` bleibt unverändert. Änderungen nach
+`8a9544df7ef0460106704db8c31e40f10f23e728` gehören zum V3.1-
+Entwicklungsstand und verändern die veröffentlichte V3.0.0-Artefaktgrenze
+nicht. Die Paketversion wird erst im Rahmen eines eigenen V3.1-Releasegates
+angehoben.
+
+
+
+## V3.1 Entwicklungsstand
+
+Seit der V3.0.0-Artefaktgrenze sind auf `main` unter anderem folgende
+V3.1-Nachweise integriert:
+
+- realer, redigierter RC-Pro-Enterprise-/M3E-Pilot-to-Cloud-MQTT-Capture,
+- M3E `update_topo`, Aircraft-OSD, Aircraft-State, Kamera-`payload_index`
+  `66-0-0`, RTK-Fixed und separater Nicht-Fixed-Zustand,
+- kontrollierter Pilot-2-Cloud-Bootstrap für das DJI-`thing`-Modul,
+- reales, redigiertes Pilot-2-JSBridge-Hardware-Fixture mit
+  Plattformverifikation, Pilot-Version, exaktem RC-/Aircraft-Topologie-Match
+  und aktiver Thing-Verbindung.
+
+Damit sind die früher als vollständig offen geführten M3E-MQTT- und
+Pilot-2-JSBridge-Basisnachweise geschlossen. Noch offene Produktprofile und
+Medien-/Missionsevidence bleiben davon getrennt.
 
 ## Automatische Release-Gates
 
@@ -77,6 +93,10 @@ Bereits real belegt:
 - reales M4T-Wide-Metadatenbeispiel im Projektbestand
 - reales, redigiertes MSDK-V5-KeyManager-Runtime-Fixture von RC Pro Enterprise + Mavic 3 Enterprise
 - KeyManager-Inventar mit 42 beobachteten Deskriptoren; `supported`, Write-/Action-Metadaten und lens-spezifischer Kamera-Kontext sind per Hardware-Audit belegt
+- reales, redigiertes RC-Pro-Enterprise-/M3E-MQTT-Fixture mit `update_topo`,
+  Aircraft-OSD/-State, Batterie, Kamera-`payload_index` und RTK-Fixed/Nicht-Fixed
+- reale Pilot-2-JSBridge-Session mit verifizierter Plattform, Pilot-Version,
+  exaktem Topologie-Paar, Modul-Inventar und aktiver Thing-Verbindung
 
 Noch nicht vollständig real belegt:
 
@@ -86,7 +106,6 @@ Noch nicht vollständig real belegt:
 - M4T Thermal-Medienfixture
 - realer M3M Narrow-Band-Capture-Satz
 - reales Pilot-2-WPML-KMZ / Workspace-Katalog
-- reale Pilot-2-JSBridge-Session für Hardwarefreigabe
 
 Diese fehlenden Nachweise werden in der CI als Hardwarestatus sichtbar
 geführt. Sie werden **nicht** durch synthetische Fixtures ersetzt.
