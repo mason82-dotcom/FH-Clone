@@ -1,9 +1,14 @@
 import { Fh2Workspace } from "./components/fh2/Fh2Workspace.js";
 import { PilotCloudBootstrap } from "./pilot-bootstrap/PilotCloudBootstrap.js";
+import { PilotJsbridgeEvidence } from "./pilot-evidence/PilotJsbridgeEvidence.js";
 
 export function App() {
   if (window.location.pathname === "/pilot-login") {
     return <PilotCloudBootstrap />;
+  }
+
+  if (window.location.pathname === "/pilot-evidence") {
+    return <PilotJsbridgeEvidence />;
   }
 
   return (
