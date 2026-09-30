@@ -16,11 +16,15 @@ export interface PilotWaylineServerStatus {
   readOnly: true;
   workspaceConfigured: boolean;
   authConfigured: boolean;
+  listRequests: number;
+  lastListRequestAt?: string;
 }
 
 export class PilotWaylineServer {
   private readonly workspaceId: string;
   private readonly authToken: string;
+  private listRequests = 0;
+  private lastListRequestAt: string | undefined;
 
   constructor(private readonly options: PilotWaylineServerOptions) {
     this.workspaceId = options.workspaceId?.trim() ?? "";
@@ -41,7 +45,11 @@ export class PilotWaylineServer {
       configured: this.configured,
       readOnly: true,
       workspaceConfigured: UUID_PATTERN.test(this.workspaceId),
-      authConfigured: this.authToken.length > 0
+      authConfigured: this.authToken.length > 0,
+      listRequests: this.listRequests,
+      ...(this.lastListRequestAt
+        ? { lastListRequestAt: this.lastListRequestAt }
+        : {})
     };
   }
 
@@ -77,7 +85,7 @@ export class PilotWaylineServer {
     );
   }
 
-  list(url: URL) {
+  list(url: URL, nowMs = Date.now()) {
     if (!this.configured) {
       throw new Error("pilot_wayline_server_not_configured");
     }
@@ -90,6 +98,9 @@ export class PilotWaylineServer {
       500,
       "page_size"
     );
+
+    this.listRequests += 1;
+    this.lastListRequestAt = new Date(nowMs).toISOString();
 
     return {
       code: 0,
