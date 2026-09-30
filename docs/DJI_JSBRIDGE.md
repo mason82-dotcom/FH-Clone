@@ -231,6 +231,13 @@ Für die reale Abnahme existiert die dedizierte Route:
 /pilot-evidence
 ```
 
+Der Übergang von `/pilot-login` auf diese Route erfolgt innerhalb der
+bereits laufenden SPA und löst absichtlich **keinen vollständigen
+Dokument-/WebView-Reload** aus. Damit bleibt der von DJI Pilot 2 bereits
+verifizierte JSBridge-Kontext erhalten. Direkte Navigation auf
+`/pilot-evidence` bleibt weiterhin möglich, ist aber für Hardware-Captures
+nicht der bevorzugte Pfad.
+
 Sie verwendet ausschließlich den bereits verifizierten read-only
 `DjiPilotBridgeClient`. Der Browser sendet RC-/Aircraft-Identität nur an den
 lokalen Control-API-Endpunkt:
