@@ -102,15 +102,29 @@ mit FlightHub-2-OpenAPI-Waylines gleichzusetzen.
 
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
-| `DJI_PILOT_WAYLINE_ENABLED` | `false` | aktiviert den read-only Pilot-Wayline-Katalog |
-| `DJI_PILOT_BASE_URL` | leer | Basis-URL des Pilot-to-Cloud-HTTPS-Servers |
-| `DJI_PILOT_WORKSPACE_ID` | leer | stabile Workspace-UUID für Pilot-to-Cloud; serverseitig für Waypoints und beim Web-Build als nicht-geheime Pilot-2-Workspace-ID verwendet |
-| `DJI_PILOT_AUTH_TOKEN` | leer | serverseitiges `x-auth-token`; Secret |
-| `DJI_PILOT_TIMEOUT_MS` | `15000` | Request-Timeout |
+| `DJI_PILOT_WAYLINE_ENABLED` | `false` | aktiviert den ausgehenden read-only Pilot-Wayline-Katalog-Client |
+| `DJI_PILOT_BASE_URL` | leer | Basis-URL eines externen Pilot-to-Cloud-HTTPS-Servers für den Client |
+| `DJI_PILOT_WORKSPACE_ID` | leer | stabile Workspace-UUID für Pilot-to-Cloud; gemeinsam für Client, lokalen Server und Pilot-2-Web-Build |
+| `DJI_PILOT_AUTH_TOKEN` | leer | serverseitiges `x-auth-token` für den ausgehenden Client; Secret |
+| `DJI_PILOT_TIMEOUT_MS` | `15000` | Request-Timeout des ausgehenden Clients |
+| `DJI_PILOT_WAYLINE_SERVER_ENABLED` | `false` | aktiviert den eingehenden read-only DJI-Pilot-Wayline-Listenpfad |
+| `DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN` | leer | erwartetes `x-auth-token` für den eingehenden Pilot-2-Pfad; Secret |
 
-Der Token bleibt ausschließlich serverseitig. FH2 implementiert hier nur die
-Waypoint-Dateiliste per GET; STS, Upload, Download-Proxy, Collect und
-Missionsausführung bleiben außerhalb dieses read-only Vertrags.
+Die beiden Token sind getrennte Verträge und dürfen nicht implizit
+wiederverwendet werden. Der ausgehende Client hält `DJI_PILOT_AUTH_TOKEN`
+serverseitig. Für den eingehenden Pilot-2-Pfad wird
+`DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN` vom Operator einmalig in der
+Pilot-2-WebView eingegeben und anschließend aus dem React-State verworfen.
+
+Der lokale Server implementiert ausschließlich:
+
+```text
+GET /wayline/api/v1/workspaces/{workspace_id}/waylines
+```
+
+Er liefert zunächst einen gültigen, leeren read-only Katalog. STS, Upload,
+Download-URL, Collect, Favorite-Mutationen und Missionsausführung sind nicht
+implementiert und bleiben fail-closed.
 
 `DJI_PILOT_WORKSPACE_ID` ist **kein Secret**. Für den dedizierten
 Pilot-2-Cloud-Bootstrap wird derselbe Wert beim Web-Image-Build als
