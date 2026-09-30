@@ -1,0 +1,89 @@
+{
+  "schema": "fh2.dji-mqtt.v1",
+  "profile": "m3t",
+  "expectedPayloadIndex": "67-0-0",
+  "realHardware": true,
+  "synthetic": false,
+  "redacted": true,
+  "sourceSha256": "c66d762375cd4fc2e04f438fb27ba92f895a79efb6ae916d6470be85c88d131e",
+  "sourceSummary": {
+    "inputRows": 170,
+    "osdRows": 65,
+    "updateTopoObserved": true,
+    "statusReplyObserved": true,
+    "stateObserved": true,
+    "rtkFixedObserved": false,
+    "rtkNotFixedObserved": true
+  },
+  "topology": {
+    "topic": "sys/product/GATEWAY_REDACTED/status",
+    "method": "update_topo",
+    "data": {
+      "domain": 2,
+      "type": 144,
+      "sub_type": 0,
+      "thing_version": "1.2.0",
+      "sub_devices": [
+        {
+          "sn": "AIRCRAFT_REDACTED",
+          "type": 77,
+          "sub_type": 1,
+          "domain": 0,
+          "thing_version": "1.2.0",
+          "index": "A"
+        }
+      ]
+    }
+  },
+  "statusReply": {
+    "topic": "sys/product/GATEWAY_REDACTED/status_reply"
+  },
+  "osd": {
+    "topic": "thing/product/AIRCRAFT_REDACTED/osd",
+    "data": {
+      "attitude_head": 167.3,
+      "attitude_roll": -0.4,
+      "attitude_pitch": 3.5,
+      "height": 63.33357620239258,
+      "elevation": 0,
+      "horizontal_speed": 0,
+      "vertical_speed": 0,
+      "latitude": null,
+      "longitude": null,
+      "position_state": {
+        "is_fixed": 0,
+        "quality": 0,
+        "gps_number": 0,
+        "rtk_number": 0
+      },
+      "battery": {
+        "batteries": [
+          {
+            "present": true
+          }
+        ]
+      },
+      "cameras": [
+        {
+          "payload_index": "67-0-0"
+        }
+      ]
+    }
+  },
+  "state": {
+    "topic": "thing/product/AIRCRAFT_REDACTED/state",
+    "data": {
+      "observed": true
+    }
+  },
+  "rtk": {
+    "notFixed": {
+      "position_state": {
+        "is_fixed": 0,
+        "quality": 0,
+        "gps_number": 0,
+        "rtk_number": 0
+      }
+    }
+  }
+}
