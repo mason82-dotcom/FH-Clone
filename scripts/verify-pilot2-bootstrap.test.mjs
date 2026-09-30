@@ -23,8 +23,6 @@ test("Pilot 2 bootstrap uses only the reviewed cloud-connect JSBridge calls", ()
     ".wsConnect(",
     ".wsSend(",
     ".liveshareStartLive(",
-    ".platformSetWorkspaceId(",
-    ".platformSetInformation(",
     "localStorage",
     "sessionStorage",
     "VITE_DJI",
@@ -101,5 +99,24 @@ test("Pilot 2 bootstrap restores connected UI state when re-entering the WebView
   assert.match(
     source,
     /if \(thingConnected\)[\s\S]*?setStage\("connected"\)/
+  );
+});
+
+
+test("Pilot 2 bootstrap registers a non-secret workspace after MQTT connect", () => {
+  assert.equal(source.includes(".platformSetWorkspaceId("), true);
+  assert.equal(source.includes(".platformSetInformation("), true);
+  assert.equal(source.includes("VITE_DJI_PILOT_WORKSPACE_ID"), true);
+  assert.match(source, /UUID_PATTERN/);
+});
+
+test("Pilot 2 bootstrap no longer claims menu-exit persistence before hardware proof", () => {
+  assert.equal(
+    source.includes("Die Verbindung bleibt beim Verlassen dieses Menüs aktiv."),
+    false
+  );
+  assert.equal(
+    source.includes("Persistenz nach Wechsel in die"),
+    true
   );
 });
