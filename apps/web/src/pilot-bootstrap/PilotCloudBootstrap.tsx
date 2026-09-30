@@ -62,6 +62,10 @@ export function PilotCloudBootstrap() {
     const hostname = window.location.hostname || "192.168.178.63";
     return `tcp://${hostname}:1885`;
   }, []);
+  const defaultWaylineApiHost = useMemo(
+    () => window.location.origin,
+    []
+  );
 
   const [appId, setAppId] = useState("");
   const [appKey, setAppKey] = useState("");
@@ -69,6 +73,13 @@ export function PilotCloudBootstrap() {
   const [mqttHost, setMqttHost] = useState(defaultHost);
   const [mqttUsername, setMqttUsername] = useState("dji-gateway-rcpro1");
   const [mqttPassword, setMqttPassword] = useState("");
+  const [waylineApiHost, setWaylineApiHost] = useState(defaultWaylineApiHost);
+  const [waylineApiToken, setWaylineApiToken] = useState("");
+  const [waylineLoading, setWaylineLoading] = useState(false);
+  const [waylineReady, setWaylineReady] = useState(false);
+  const [waylineMessage, setWaylineMessage] = useState(
+    "Wayline-Bibliothek noch nicht geladen."
+  );
   const [stage, setStage] = useState<Stage>("idle");
   const [message, setMessage] = useState(
     "Bereit. Zugangsdaten werden nur an DJI Pilot 2 JSBridge übergeben und nicht im Browser gespeichert."
@@ -270,6 +281,87 @@ export function PilotCloudBootstrap() {
     }
   }
 
+  async function enableWaylineLibrary(event: FormEvent) {
+    event.preventDefault();
+    const bridge = window.djiBridge;
+    if (!bridge) {
+      setWaylineMessage(
+        "DJI Pilot 2 JSBridge ist in diesem Browser nicht verfügbar."
+      );
+      return;
+    }
+
+    const normalizedHost = waylineApiHost.trim().replace(/\/+$/, "");
+    if (!/^https?:\/\//i.test(normalizedHost)) {
+      setWaylineMessage(
+        "Der Wayline-API-Host muss mit http:// oder https:// beginnen."
+      );
+      return;
+    }
+    if (!waylineApiToken) {
+      setWaylineMessage("Der Wayline-API-Token fehlt.");
+      return;
+    }
+
+    setWaylineLoading(true);
+    setWaylineReady(false);
+    try {
+      if (!asBoolean(bridge.platformIsVerified())) {
+        throw new Error(
+          "Pilot 2 muss vor dem Laden der Wayline-Bibliothek verifiziert sein."
+        );
+      }
+
+      configurePilotWorkspace(bridge);
+
+      decodeEnvelope(
+        bridge.platformLoadComponent(
+          "api",
+          JSON.stringify({
+            host: normalizedHost,
+            token: waylineApiToken
+          })
+        ),
+        "platformLoadComponent(api)"
+      );
+
+      // The token is handed to DJI Pilot 2 only. Do not retain it in React
+      // state or browser storage after the API module received it.
+      setWaylineApiToken("");
+
+      decodeEnvelope(
+        bridge.platformLoadComponent("mission", JSON.stringify({})),
+        "platformLoadComponent(mission)"
+      );
+
+      await new Promise((resolve) => window.setTimeout(resolve, 750));
+      const apiLoaded = asBoolean(
+        bridge.platformIsComponentLoaded("api")
+      );
+      const missionLoaded = asBoolean(
+        bridge.platformIsComponentLoaded("mission")
+      );
+
+      if (!apiLoaded || !missionLoaded) {
+        throw new Error(
+          "Pilot 2 meldet API-/Mission-Modul noch nicht vollständig als geladen."
+        );
+      }
+
+      setWaylineReady(true);
+      setWaylineMessage(
+        "DJI Pilot 2 API- und Mission-Modul sind geladen. " +
+        "Der FH2-Server stellt ausschließlich die read-only Wayline-Liste bereit."
+      );
+    } catch (error) {
+      setWaylineMessage(
+        error instanceof Error ? error.message : String(error)
+      );
+    } finally {
+      setWaylineLoading(false);
+    }
+  }
+
   return (
     <main className="pilot-bootstrap">
       <section className="pilot-bootstrap__card">
@@ -360,6 +452,51 @@ export function PilotCloudBootstrap() {
             License verifizieren und MQTT verbinden
           </button>
         </form>
+
+        {bridgeAvailable && (
+          <form onSubmit={enableWaylineLibrary} autoComplete="off">
+            <fieldset>
+              <legend>DJI Pilot 2 Wayline-Bibliothek · read-only</legend>
+
+              <label>
+                API-Host
+                <input
+                  value={waylineApiHost}
+                  onChange={(event) => setWaylineApiHost(event.target.value)}
+                  inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                />
+              </label>
+
+              <label>
+                x-auth-token
+                <input
+                  type="password"
+                  value={waylineApiToken}
+                  onChange={(event) => setWaylineApiToken(event.target.value)}
+                  autoComplete="new-password"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={!bridgeAvailable || waylineLoading}
+              >
+                {waylineLoading
+                  ? "Wayline-Bibliothek wird geladen …"
+                  : "Read-only Wayline-Bibliothek laden"}
+              </button>
+            </fieldset>
+
+            <div
+              className="pilot-bootstrap__status"
+              data-stage={waylineReady ? "connected" : "idle"}
+            >
+              <strong>Wayline:</strong> {waylineMessage}
+            </div>
+          </form>
+        )}
 
         {bridgeAvailable && (
           <p>

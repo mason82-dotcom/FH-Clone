@@ -80,11 +80,20 @@ Der FH2-Client ist read-only und folgt keinen HTTP-Redirects.
 
 ### DJI Pilot Wayline-Katalog
 
+Ausgehender read-only Client:
+
 - `DJI_PILOT_WAYLINE_ENABLED`
 - `DJI_PILOT_BASE_URL`
 - `DJI_PILOT_WORKSPACE_ID`
 - `DJI_PILOT_AUTH_TOKEN`
 - `DJI_PILOT_TIMEOUT_MS`
+
+Eingehender read-only Pilot-2-Server:
+
+- `DJI_PILOT_WAYLINE_SERVER_ENABLED`
+- `DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN`
+
+Der lokale Server verwendet ebenfalls `DJI_PILOT_WORKSPACE_ID`.
 
 ### EMQX und Diagnose
 
@@ -174,14 +183,27 @@ liefern. Die Fusion ist read-only und erzeugt keine Control-Rechte.
 
 ### DJI Pilot Waypoint-Dateien – read-only
 
+Der bestehende ausgehende Client:
+
 ```http
 GET /api/dji/pilot/waylines/status
 GET /api/dji/pilot/waylines?page=1&page_size=10
 ```
 
-Der `x-auth-token` bleibt ausschließlich serverseitig. Der Pfad listet
-Waypoint-Dateien und führt keine Mission aus. Upload, Collect, Download-Proxy,
-STS und Execution gehören nicht zu diesem read-only Vertrag.
+Zusätzlich kann FH2 selbst den minimalen eingehenden DJI-Pilot-Pfad
+bereitstellen:
+
+```http
+GET /api/dji/pilot/wayline-server/status
+GET /wayline/api/v1/workspaces/{workspace_id}/waylines
+x-auth-token: <DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN>
+```
+
+Der eingehende Pfad ist standardmäßig deaktiviert, prüft Workspace-ID und
+Token fail-closed und liefert derzeit ausschließlich einen gültigen leeren
+Wayline-Katalog. Andere `/wayline/`-Operationen werden nicht implementiert.
+Upload, Collect, Download-URL, STS, Favoriten-Mutationen und Execution gehören
+nicht zu diesem Vertrag.
 
 ### FlightHub 2 OpenAPI – read-only
 
