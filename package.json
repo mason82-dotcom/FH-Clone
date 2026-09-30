@@ -29,7 +29,9 @@
     "verify:msdk-pairing-preflight": "node scripts/msdk-pairing-preflight.mjs",
     "test:pilot2-jsbridge": "node --test scripts/verify-pilot2-jsbridge.test.mjs",
     "test:pilot2-bootstrap": "node --test scripts/verify-pilot2-bootstrap.test.mjs",
-    "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs"
+    "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs",
+    "test:pilot2-evidence": "node --test scripts/export-pilot2-jsbridge-evidence.test.mjs",
+    "export:pilot2-evidence": "node scripts/export-pilot2-jsbridge-evidence.mjs"
   },
   "engines": {
     "node": ">=22.12.0",
