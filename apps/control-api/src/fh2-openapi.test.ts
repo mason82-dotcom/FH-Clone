@@ -11,6 +11,7 @@ import type {
   Fh2HmsAlert,
   Fh2ListResult,
   Fh2ManageDevice,
+  Fh2MediaFile,
   Fh2PaginatedList,
   Fh2WaylineItem
 } from "./fh2-openapi-types.js";
@@ -33,6 +34,74 @@ function page(page: number, pageSize: number, total = 0) {
     total
   };
 }
+
+test("lists media files read-only and preserves DJI list metadata", async () => {
+  let seenUrl: URL | undefined;
+  let seenMethod: string | undefined;
+  const fetchImpl: Fh2Fetch = async (input, init) => {
+    seenUrl = new URL(String(input));
+    seenMethod = init?.method;
+    return new Response(
+      JSON.stringify({
+        code: 0,
+        data: {
+          pagination: page(2, 25, 1),
+          list: [
+            {
+              id: 1042,
+              uuid: "u-1042",
+              name: "auto_record_001.mp4",
+              file_type: 3,
+              size: 524288000,
+              preview_url: "https://example.invalid/preview"
+            }
+          ],
+          target_file_id: null,
+          ancestors: [],
+          file_sub_types: []
+        }
+      }),
+      { status: 200 }
+    );
+  };
+
+  const result = await client(fetchImpl).listMediaFiles(2, 25);
+  const typed: Fh2PaginatedList<Fh2MediaFile> = result;
+
+  assert.equal(typed.list[0]?.id, 1042);
+  assert.equal(typed.list[0]?.name, "auto_record_001.mp4");
+  assert.equal(typed.pagination.page, 2);
+  assert.equal(typed.target_file_id, null);
+  assert.deepEqual(typed.ancestors, []);
+  assert.equal(
+    seenUrl?.pathname,
+    "/openapi/v2.0/media/api/v1/workspaces/project-1/files"
+  );
+  assert.equal(seenUrl?.searchParams.get("page"), "2");
+  assert.equal(seenUrl?.searchParams.get("size"), "25");
+  assert.equal(seenMethod, "GET");
+});
+
+test("rejects a media list item without a numeric id", async () => {
+  const fetchImpl: Fh2Fetch = async () =>
+    new Response(
+      JSON.stringify({
+        code: 0,
+        data: {
+          pagination: page(1, 100, 1),
+          list: [{ id: "1042", name: "bad.mp4" }]
+        }
+      }),
+      { status: 200 }
+    );
+
+  await assert.rejects(
+    () => client(fetchImpl).listMediaFiles(),
+    (error: unknown) =>
+      error instanceof Fh2OpenApiError &&
+      error.message === "FH2 OpenAPI Media Files returned invalid item at index 0"
+  );
+});
 
 test("lists Waylines read-only with a typed FH2 V2 result", async () => {
   let seenUrl: URL | undefined;

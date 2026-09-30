@@ -718,6 +718,19 @@ const publicServer = createServer(async (request, response) => {
       }
     }
 
+    if (request.method === "GET" && url.pathname === "/api/fh2/media") {
+      try {
+        const page = queryInt(url, "page", 1, 1, 10_000);
+        const size = queryInt(url, "size", 100, 1, 500);
+        return json(response, 200, await fh2.listMediaFiles(page, size));
+      } catch (error) {
+        if (error instanceof Fh2OpenApiNotConfigured) {
+          return json(response, 503, { error: "fh2_not_configured" });
+        }
+        throw error;
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/fh2/waylines") {
       try {
         const page = queryInt(url, "page", 1, 1, 10_000);

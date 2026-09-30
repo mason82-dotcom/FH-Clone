@@ -91,7 +91,7 @@ Auf `main` sind unter anderem vorhanden:
 - EMQX HTTP AuthN mit serverseitiger Credential-→-`gateway_sn`-Bindung
 - Root-Compose für Control API, EMQX, Web und TimescaleDB
 - lokale Runtime-Verify-Suite
-- FlightHub-2-OpenAPI-V2-Client für Devices, HMS, Waylines und Flight Tasks (read-only)
+- FlightHub-2-OpenAPI-V2-Client für Devices, HMS, Media, Waylines und Flight Tasks (read-only)
 - DJI-WPML/KMZ-Parser für `template.kml` und `waylines.wpml` (read-only)
 - DJI-Pilot-Waypoint-Dateikatalog (read-only)
 - Android-MSDK-V5-Bridge mit KeyManager-Runtimeinventar und read-only Hardware-Probes

@@ -110,6 +110,15 @@ if [ "$fh2_hms_invalid_range_code" != "400" ]; then
   exit 1
 fi
 
+fh2_media_invalid_size_code="$(
+  curl -sS -o /dev/null -w '%{http_code}' \
+    "http://127.0.0.1:$API_PORT/api/fh2/media?size=0"
+)"
+if [ "$fh2_media_invalid_size_code" != "400" ]; then
+  echo "FEHLER: FH2 Media Query-Validierung erwartet HTTP 400, erhielt $fh2_media_invalid_size_code."
+  exit 1
+fi
+
 echo "[5/13] Interne Control API im Container prüfen"
 internal_health="$(
   docker compose --env-file .env exec -T control-api \
