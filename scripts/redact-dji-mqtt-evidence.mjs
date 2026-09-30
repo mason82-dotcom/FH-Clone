@@ -27,6 +27,21 @@ function integer(value) {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
 }
 
+const PROFILES = {
+  m3e: {
+    gateway: { domain: 2, type: 144, subType: 0 },
+    aircraft: { domain: 0, type: 77, subType: 0 },
+    payloadIndex: "66-0-0",
+    defaultOutput: "docs/fixtures/m3e/mqtt-evidence.json"
+  },
+  m3t: {
+    gateway: { domain: 2, type: 144, subType: 0 },
+    aircraft: { domain: 0, type: 77, subType: 1 },
+    payloadIndex: "67-0-0",
+    defaultOutput: "docs/fixtures/m3t/mqtt-evidence.json"
+  }
+};
+
 function string(value) {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
