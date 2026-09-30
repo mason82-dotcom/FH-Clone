@@ -32,7 +32,8 @@
     "verify:pilot2-jsbridge": "node scripts/verify-pilot2-jsbridge.mjs",
     "test:pilot2-evidence": "node --test scripts/export-pilot2-jsbridge-evidence.test.mjs",
     "export:pilot2-evidence": "node scripts/export-pilot2-jsbridge-evidence.mjs",
-    "test:backup-restore": "sh scripts/test-timescale-backup-restore.sh"
+    "test:backup-restore": "sh scripts/test-timescale-backup-restore.sh",
+    "test:control-api-openapi": "node scripts/verify-control-api-openapi.mjs"
   },
   "engines": {
     "node": ">=22.12.0",

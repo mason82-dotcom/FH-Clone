@@ -1,5 +1,15 @@
 # API-Referenz
 
+Maschinenlesbarer Vertrag der **öffentlichen HTTP-API**:
+
+`docs/openapi/control-api.openapi.json`
+
+Der CI-Guard `npm run test:control-api-openapi` vergleicht die dort
+dokumentierten HTTP-Methoden/Pfade mit der tatsächlich implementierten
+öffentlichen Runtime. Interne Port-8081-Endpunkte und der MSDK-WebSocket
+bleiben getrennte Verträge; der WebSocket ist im OpenAPI-Dokument ausschließlich
+über eine sicherheitsbezogene `x-fh2-websocket-endpoints`-Erweiterung sichtbar.
+
 ## Status
 
 Diese Referenz beschreibt die aktuell auf `main` vorhandenen HTTP-Endpunkte
