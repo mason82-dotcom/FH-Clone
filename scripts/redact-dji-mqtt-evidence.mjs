@@ -27,6 +27,21 @@ function integer(value) {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
 }
 
+const PROFILES = {
+  m3e: {
+    gateway: { domain: 2, type: 144, subType: 0 },
+    aircraft: { domain: 0, type: 77, subType: 0 },
+    payloadIndex: "66-0-0",
+    defaultOutput: "docs/fixtures/m3e/mqtt-evidence.json"
+  },
+  m3t: {
+    gateway: { domain: 2, type: 144, subType: 0 },
+    aircraft: { domain: 0, type: 77, subType: 1 },
+    payloadIndex: "67-0-0",
+    defaultOutput: "docs/fixtures/m3t/mqtt-evidence.json"
+  }
+};
+
 function string(value) {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -95,37 +110,96 @@ function validateSingleTopologyCapture(rows) {
     fail(`capture contains ${gatewayIds.length} gateways; narrow the capture window to one target gateway`);
   }
 
-  const aircraftRows = rows.filter((row) => {
-    const topic = topicOf(row);
-    return Boolean(
-      topicIdentity(topic, "aircraftOsd") ||
-      topicIdentity(topic, "aircraftState")
-    );
-  });
-  const aircraftIds = unique(
-    aircraftRows.map(
-      (row) =>
-        topicIdentity(topicOf(row), "aircraftOsd") ??
-        topicIdentity(topicOf(row), "aircraftState")
-    )
+  const topologyData = dataOf(payloadOf(topologyRows[0]));
+  const subDeviceIds = unique(
+    array(topologyData?.sub_devices ?? topologyData?.subDevices)
+      .map((entry) => string(entry?.sn))
   );
-  if (aircraftIds.length !== 1) {
-    fail(`capture contains ${aircraftIds.length} aircraft; narrow the capture window to one target aircraft`);
+  if (subDeviceIds.length !== 1) {
+    fail(`capture topology contains ${subDeviceIds.length} sub-devices; expected exactly one target aircraft`);
   }
 
-  const topologyData = dataOf(payloadOf(topologyRows[0]));
-  const subDeviceIds = array(topologyData?.sub_devices ?? topologyData?.subDevices)
-    .map((entry) => string(entry?.sn))
-    .filter(Boolean);
-  if (!subDeviceIds.includes(aircraftIds[0])) {
-    fail("OSD/state aircraft is not a sub-device of the captured update_topo gateway");
+  // Pilot 2 can publish Thing OSD for both the RC gateway and its aircraft.
+  // Only non-gateway Thing identities are aircraft candidates here.
+  const observedAircraftIds = unique(
+    rows
+      .map(
+        (row) =>
+          topicIdentity(topicOf(row), "aircraftOsd") ??
+          topicIdentity(topicOf(row), "aircraftState")
+      )
+      .filter((id) => id && id !== gatewayIds[0])
+  );
+
+  const unexpected = observedAircraftIds.filter((id) => id !== subDeviceIds[0]);
+  if (unexpected.length) {
+    fail("capture contains telemetry for aircraft outside the captured update_topo pair; narrow the capture window");
+  }
+  if (!observedAircraftIds.includes(subDeviceIds[0])) {
+    fail("captured update_topo aircraft has no OSD/state telemetry in the input");
   }
 
   return {
     topologyRow: topologyRows[0],
     gatewayId: gatewayIds[0],
-    aircraftId: aircraftIds[0]
+    aircraftId: subDeviceIds[0]
   };
+}
+
+function productIdentity(value) {
+  return {
+    domain: integer(value?.domain),
+    type: integer(value?.type),
+    subType: integer(value?.sub_type ?? value?.subType) ?? 0
+  };
+}
+
+function sameProduct(actual, expected) {
+  return (
+    actual.domain === expected.domain &&
+    actual.type === expected.type &&
+    actual.subType === expected.subType
+  );
+}
+
+function validateProfile(capture, profileName, rows) {
+  const profile = PROFILES[profileName];
+  const data = dataOf(payloadOf(capture.topologyRow));
+  const gateway = productIdentity(data);
+  const subDevices = array(data?.sub_devices ?? data?.subDevices);
+  const aircraft = productIdentity(
+    subDevices.find((entry) => string(entry?.sn) === capture.aircraftId)
+  );
+
+  if (!sameProduct(gateway, profile.gateway)) {
+    fail(
+      `profile ${profileName} expects gateway ${profile.gateway.domain}/${profile.gateway.type}/${profile.gateway.subType}, ` +
+      `observed ${gateway.domain}/${gateway.type}/${gateway.subType}`
+    );
+  }
+  if (!sameProduct(aircraft, profile.aircraft)) {
+    fail(
+      `profile ${profileName} expects aircraft ${profile.aircraft.domain}/${profile.aircraft.type}/${profile.aircraft.subType}, ` +
+      `observed ${aircraft.domain}/${aircraft.type}/${aircraft.subType}`
+    );
+  }
+
+  const payloadIndexes = unique(
+    rows
+      .filter((row) => topicIdentity(topicOf(row), "aircraftOsd") === capture.aircraftId)
+      .flatMap((row) =>
+        array(dataOf(payloadOf(row))?.cameras)
+          .map((camera) => string(camera?.payload_index))
+          .filter(Boolean)
+      )
+  );
+  if (payloadIndexes.length && !payloadIndexes.includes(profile.payloadIndex)) {
+    fail(
+      `profile ${profileName} expects camera payload_index ${profile.payloadIndex}; observed ${payloadIndexes.join(", ")}`
+    );
+  }
+
+  return profile;
 }
 
 function sanitizeProduct(product, role) {
@@ -256,13 +330,23 @@ function main() {
   }
   args.splice(realIndex, 1);
 
+  const profileIndex = args.indexOf("--profile");
+  if (profileIndex < 0 || !args[profileIndex + 1]) {
+    fail("use --profile m3e or --profile m3t explicitly");
+  }
+  const profileName = args[profileIndex + 1].toLowerCase();
+  args.splice(profileIndex, 2);
+  if (!Object.hasOwn(PROFILES, profileName)) {
+    fail(`unsupported profile: ${profileName}; expected m3e or m3t`);
+  }
+
   if (args.length < 1 || args.length > 2) {
-    fail("usage: node scripts/redact-dji-mqtt-evidence.mjs --real-hardware <input.json> [output.json]");
+    fail("usage: node scripts/redact-dji-mqtt-evidence.mjs --real-hardware --profile <m3e|m3t> <input.json> [output.json]");
   }
 
   const inputPath = path.resolve(args[0]);
   const outputPath = path.resolve(
-    args[1] ?? "docs/fixtures/m3t/mqtt-evidence.json"
+    args[1] ?? PROFILES[profileName].defaultOutput
   );
 
   let rawBytes;
@@ -278,6 +362,7 @@ function main() {
   if (!rows.length) fail("input contains no rows/messages/events");
 
   const capture = validateSingleTopologyCapture(rows);
+  const profile = validateProfile(capture, profileName, rows);
   const topologyRow = capture.topologyRow;
   const statusReplyRow = findRow(
     rows,
@@ -307,6 +392,8 @@ function main() {
 
   const output = {
     schema: "fh2.dji-mqtt.v1",
+    profile: profileName,
+    expectedPayloadIndex: profile.payloadIndex,
     realHardware: true,
     synthetic: false,
     redacted: true,

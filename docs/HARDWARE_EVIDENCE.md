@@ -607,7 +607,7 @@ einem Export vermischt sind oder das OSD-/State-Aircraft nicht zur erfassten
 Der öffentliche Redaktionspfad ist:
 
 ```bash
-npm run redact:dji-mqtt-evidence -- --real-hardware \
+npm run redact:dji-mqtt-evidence -- --real-hardware --profile m3t \
   ~/fh2-evidence/m3t-mqtt-raw.json \
   docs/fixtures/m3t/mqtt-evidence.json
 ```
@@ -617,6 +617,42 @@ Gateway-/Aircraft-Seriennummern durch Platzhalter, entfernt GPS-Koordinaten
 bis auf die reine Feldpräsenz, übernimmt keine Batterie-/Kamera-Seriennummern
 und kopiert keine freien Credential-/Secret-Felder. Das öffentliche Manifest
 enthält den SHA-256 des lokalen Rohcaptures als Provenienznachweis.
+
+## 1a. RC Pro Enterprise + M3E — REQUIRED_HARDWARE
+
+Für das reale Profil **DJI RC Pro Enterprise + Mavic 3 Enterprise** wird ein
+eigenes MQTT-Fixture geführt. M3E darf nicht als M3T-Evidence abgelegt werden.
+
+Aktuell auf echter Hardware beobachtet:
+
+- Gateway: RC Pro Enterprise `2/144/0`
+- Aircraft: M3E `0/77/0`
+- Thing Version: `1.2.0`
+- M3E-Kamera `payload_index=66-0-0`
+- fortlaufendes Aircraft-`osd`
+- Aircraft-`state`
+- `position_state.is_fixed=2` real beobachtet
+- MQTT bleibt nach dem Wechsel vom FH2-WebView in die normale Pilot-2-
+  Flugansicht verbunden, wenn Workspace-/Plattforminformation vor dem
+  Thing-Modul registriert wird.
+
+Das öffentliche Fixture liegt unter:
+
+`docs/fixtures/m3e/mqtt-evidence.json`
+
+Der Redactor verlangt das Produktprofil ausdrücklich und verweigert eine
+M3E/M3T-Fehlzuordnung:
+
+```bash
+npm run redact:dji-mqtt-evidence -- --real-hardware --profile m3e \
+  ~/fh2-evidence/m3e-mqtt-raw.json \
+  docs/fixtures/m3e/mqtt-evidence.json
+```
+
+Für den M3E-Basic-Link werden Produktidentität, OSD-/State-Topics,
+Grundtelemetrie, `position_state`, Batteriepräsenz und der eingebaute
+Kamera-Payload `66-0-0` geprüft. Ein separater Nicht-Fixed-RTK-Zustand bleibt
+informativ, bis er real beobachtet wurde; er wird nicht synthetisch erzeugt.
 
 ## 1. RC Pro Enterprise + M3T — REQUIRED_HARDWARE
 

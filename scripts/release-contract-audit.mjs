@@ -86,6 +86,7 @@ expect(bridgeClient, "BuildConfig.DEBUG", "debug HTTP guard");
 expect(bridgeClient, "isPrivateHost(host)", "private-LAN HTTP guard");
 
 for (const heading of [
+  "## 1a. RC Pro Enterprise + M3E — REQUIRED_HARDWARE",
   "## 1. RC Pro Enterprise + M3T — REQUIRED_HARDWARE",
   "## 2. RC Plus 2 + M4T Cloud-Flight-Control — REQUIRED_HARDWARE",
   "## 3. Mavic 3M Multispektral — REQUIRED_HARDWARE"
@@ -93,7 +94,7 @@ for (const heading of [
   expect(hardwareDoc, heading, "hardware evidence documentation");
 }
 
-for (const gate of ["M3T_RC_PRO", "M4T_RC_PLUS2", "M4T_MEDIA", "M3M"]) {
+for (const gate of ["M3E_RC_PRO", "M3T_RC_PRO", "M4T_RC_PLUS2", "M4T_MEDIA", "M3M"]) {
   reject(
     hardwareAudit,
     `"${gate}", "REQUIRED_MAIN"`,
