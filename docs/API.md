@@ -378,6 +378,47 @@ Produktidentitäten und werden nicht in MQTT-`payload_index` umgedeutet.
 
 Details: [WPML und Pilot-Waypoints](WPML.md).
 
+### DJI Pilot Wayline Server – read-only
+
+Diagnose:
+
+```http
+GET /api/dji/pilot/wayline-server/status
+```
+
+DJI-Pilot-kompatibler Listenpfad:
+
+```http
+GET /wayline/api/v1/workspaces/{workspace_id}/waylines
+x-auth-token: <server secret>
+```
+
+Der Server ist standardmäßig deaktiviert. Er akzeptiert ausschließlich die
+konfigurierte Workspace-UUID und ein exakt passendes
+`DJI_PILOT_WAYLINE_SERVER_AUTH_TOKEN`. Der Tokenvergleich erfolgt
+längenkonstant.
+
+Der aktuelle Server liefert bewusst einen leeren Katalog im DJI-Envelope:
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "list": [],
+    "pagination": {
+      "page": 1,
+      "page_size": 10,
+      "total": 0
+    }
+  }
+}
+```
+
+Andere Wayline-Operationen sind nicht Bestandteil dieses Endpunkts. Damit
+entstehen insbesondere keine Upload-, STS-, Download-, Favorite- oder
+Execution-Rechte.
+
 ### GET /api/missions/active
 
 Liefert alle aktuell erkannten Missionssitzungen.
