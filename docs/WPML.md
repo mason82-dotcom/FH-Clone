@@ -459,6 +459,41 @@ Der Serverkatalog ist in diesem Schritt absichtlich leer. Das erlaubt den
 realen Pilot-2-HTTP-Vertragsnachweis, ohne Upload-, Storage- oder
 Execution-Semantik vorzutäuschen.
 
+Für den Hardware-Nachweis zählt FH2 normale Listenaufrufe und zusätzlich
+separat erfolgreiche Requests, deren User-Agent die in der realen
+DJI-Pilot-2-WebView beobachtete `dji-open-platform`-Signatur enthält.
+Gespeichert werden dabei **nicht** der vollständige User-Agent, die Remote-IP,
+Workspace-ID oder der Auth-Token, sondern nur Zähler und Zeitstempel:
+
+```json
+{
+  "listRequests": 3,
+  "pilotWebViewListRequests": 1,
+  "lastPilotWebViewListRequestAt": "2026-09-30T19:30:00.000Z"
+}
+```
+
+Damit können lokale `curl`-Smoke-Tests nicht versehentlich als reale
+Pilot-2-Hardware-Evidence gelten.
+
+Ein reales, von Pilot 2 erzeugtes KMZ wird anschließend **nicht** ins
+Repository kopiert. Der kanonische Exportpfad erzeugt nur ein redigiertes
+Manifest mit SHA-256 des Original-KMZ:
+
+```bash
+npm run export:wpml-evidence -- \
+  --real-hardware \
+  --kmz ~/fh2-evidence/wpml/pilot2-real.kmz \
+  --status-url http://127.0.0.1:8082/api/dji/pilot/wayline-server/status \
+  --out docs/fixtures/wpml/evidence.json
+```
+
+Der Exporter verwendet denselben FH2-WPML-Reader wie die Runtime und prüft
+MissionConfig, Produkt-/Payload-Enums, Höhenmodi, Template-/Wayline-IDs,
+lückenlose Waypoint-Indizes sowie vorhandene `res/`-Referenzen. XML-Inhalte,
+Projektkoordinaten und Secrets werden nicht in das öffentliche Fixture
+übernommen.
+
 ## Nicht implementiert / bewusst gesperrt
 
 Aktuell **nicht** freigegeben:
