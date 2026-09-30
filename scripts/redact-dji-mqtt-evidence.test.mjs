@@ -161,6 +161,78 @@ test("redactor requires explicit real-hardware acknowledgement", () => {
 });
 
 
+test("redactor tolerates disconnected update_topo snapshots around one connected pair", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-topology-transition-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+
+  const disconnected = {
+    channel: "sys/product/RC-PRO-SERIAL-SECRET/status",
+    payload: {
+      method: "update_topo",
+      data: {
+        domain: 2,
+        type: 144,
+        sub_type: 0,
+        sub_devices: []
+      }
+    }
+  };
+
+  fs.writeFileSync(
+    input,
+    JSON.stringify([disconnected, ...rows, disconnected])
+  );
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3t", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const value = JSON.parse(fs.readFileSync(output, "utf8"));
+  assert.equal(value.topology.data.sub_devices.length, 1);
+  assert.equal(value.topology.data.sub_devices[0].type, 77);
+  assert.equal(value.topology.data.sub_devices[0].sub_type, 1);
+});
+
+test("redactor rejects captures containing different connected topology aircraft", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-topology-mixed-"));
+  const input = path.join(dir, "raw.json");
+  const rows = fixture();
+  rows.push({
+    channel: "sys/product/RC-PRO-SERIAL-SECRET/status",
+    payload: {
+      method: "update_topo",
+      data: {
+        domain: 2,
+        type: 144,
+        sub_type: 0,
+        sub_devices: [
+          {
+            sn: "OTHER-AIRCRAFT",
+            domain: 0,
+            type: 77,
+            sub_type: 1
+          }
+        ]
+      }
+    }
+  });
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3t", input],
+    { encoding: "utf8" }
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /multiple topology aircraft|narrow/i);
+});
+
 test("redactor rejects a capture that mixes multiple aircraft", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-"));
   const input = path.join(dir, "raw.json");
