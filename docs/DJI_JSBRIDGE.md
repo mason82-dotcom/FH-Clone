@@ -169,8 +169,10 @@ JSBridge-Schritte aus:
 1. `platformVerifyLicense(appId, appKey, license)`
 2. `platformIsVerified()`
 3. `platformGetRemoteControllerSN()`
-4. `platformLoadComponent("thing", ...)`
-5. `thingGetConnectState()`
+4. `platformSetWorkspaceId(...)`
+5. `platformSetInformation(...)`
+6. `platformLoadComponent("thing", ...)`
+7. `thingGetConnectState()`
 
 Der Thing-Modul-Parameter enthält den MQTT-Broker im DJI-Format
 `tcp://host:port`, Username und Passwort. App Key, License und MQTT-Passwort
@@ -192,9 +194,11 @@ bei einer lediglich geladenen `thing`-Komponente den MQTT-Client beendet.
 Der Softwarepfad darf deshalb **keine** Persistenz allein aus
 `platformLoadComponent("thing", ...)` ableiten.
 
-DJI dokumentiert für den vollständigen Pilot-to-Cloud-Login nach erfolgreichem
-Cloud-/MQTT-Connect zusätzlich die Registrierung von Workspace-ID und
-Plattforminformation. FH2 setzt deshalb nach erfolgreichem Thing-Connect:
+Der reale Test nach #116 zeigte weiterhin einen Disconnect beim Verlassen des
+WebViews. Der Vergleich mit dem offiziellen DJI-Cloud-API-Demo zeigte den
+entscheidenden Reihenfolge-Unterschied: dort werden Workspace-ID und
+Plattforminformation **vor** dem Laden der Thing-Komponente gesetzt. FH2 setzt
+deshalb vor `platformLoadComponent("thing", ...)`:
 
 - `platformSetWorkspaceId(...)`
 - `platformSetInformation(...)`

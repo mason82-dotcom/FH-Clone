@@ -196,14 +196,17 @@ export function PilotCloudBootstrap() {
         throw new Error("Pilot 2 liefert keine RC-Seriennummer.");
       }
 
+      configurePilotWorkspace(bridge);
+
       setStage("loading");
-      setMessage("Thing-Modul wird mit dem FH2-MQTT-Broker verbunden …");
+      setMessage(
+        "FH2-Workspace registriert; Thing-Modul wird mit dem FH2-MQTT-Broker verbunden …"
+      );
 
       window.fh2ThingConnectCallback = (raw: unknown) => {
         try {
           const connected = asBoolean(raw);
           if (connected) {
-            configurePilotWorkspace(bridge);
             setStage("connected");
             setMessage(
               "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden und der " +
@@ -241,7 +244,6 @@ export function PilotCloudBootstrap() {
       await new Promise((resolve) => window.setTimeout(resolve, 750));
       const connected = asBoolean(bridge.thingGetConnectState());
       if (connected) {
-        configurePilotWorkspace(bridge);
         setStage("connected");
         setMessage(
           "DJI Pilot 2 ist mit dem FH2-MQTT-Broker verbunden und der " +
@@ -367,11 +369,10 @@ export function PilotCloudBootstrap() {
         </p>
 
         <p className="muted">
-          Nach erfolgreicher MQTT-Verbindung registriert FH2 den konfigurierten
-          DJI-Pilot-Workspace und die Plattforminformation. Der vorherige reale
-          Test ohne Workspace-Registrierung zeigte, dass der obere Zurück-Pfeil
-          den MQTT-Client beendet. Die Persistenz nach Wechsel in die
-          Pilot-2-Flugansicht wird deshalb separat als Hardware-Gate geprüft.
+          FH2 registriert Workspace-ID und Plattforminformation vor dem Laden
+          des DJI-Thing-Moduls. Diese Reihenfolge entspricht dem offiziellen
+          DJI-Cloud-API-Demo. Die Persistenz nach Wechsel in die
+          Pilot-2-Flugansicht bleibt trotzdem ein separates Hardware-Gate.
           <strong> Abmelden</strong> beendet die Cloud-Plattform ausdrücklich.
         </p>
       </section>

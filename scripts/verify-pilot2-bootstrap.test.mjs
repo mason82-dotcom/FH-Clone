@@ -105,7 +105,7 @@ test("Pilot 2 bootstrap restores connected UI state when re-entering the WebView
 });
 
 
-test("Pilot 2 bootstrap registers a non-secret workspace after MQTT connect", () => {
+test("Pilot 2 bootstrap registers a non-secret workspace for the cloud session", () => {
   assert.equal(source.includes(".platformSetWorkspaceId("), true);
   assert.equal(source.includes(".platformSetInformation("), true);
   assert.equal(source.includes("VITE_DJI_PILOT_WORKSPACE_ID"), true);
@@ -120,5 +120,17 @@ test("Pilot 2 bootstrap no longer claims menu-exit persistence before hardware p
   assert.equal(
     source.includes("Persistenz nach Wechsel in die"),
     true
+  );
+});
+
+
+test("Pilot 2 bootstrap configures workspace before loading the Thing module", () => {
+  const workspaceIndex = source.indexOf("configurePilotWorkspace(bridge);", source.indexOf("async function connect"));
+  const thingLoadIndex = source.indexOf('bridge.platformLoadComponent(', source.indexOf("async function connect"));
+  assert.notEqual(workspaceIndex, -1, "workspace configuration call missing");
+  assert.notEqual(thingLoadIndex, -1, "Thing load call missing");
+  assert.ok(
+    workspaceIndex < thingLoadIndex,
+    "DJI workspace/platform info must be configured before platformLoadComponent(thing)"
   );
 });
