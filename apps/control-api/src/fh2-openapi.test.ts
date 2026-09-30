@@ -80,13 +80,26 @@ test("rejects non-zero FH2 business codes", async () => {
   );
 });
 
-test("airport device listing sends both DJI model classes", async () => {
+test("lists devices read-only and expands airport to both DJI model classes", async () => {
   let seenUrl: URL | undefined;
-  const fetchImpl: Fh2Fetch = async (input) => {
+  let seenMethod: string | undefined;
+  const fetchImpl: Fh2Fetch = async (input, init) => {
     seenUrl = new URL(String(input));
+    seenMethod = init?.method;
     return new Response(JSON.stringify({ code: 0, data: { list: [] } }), { status: 200 });
   };
 
-  await client(fetchImpl).listDevices("airport", 1, 100);
-  assert.deepEqual(seenUrl?.searchParams.getAll("device_model_class"), ["airport", "base_station"]);
+  const result = await client(fetchImpl).listDevices("airport", 2, 25);
+  assert.deepEqual(result, { list: [] });
+  assert.equal(
+    seenUrl?.pathname,
+    "/openapi/v2.0/manage/api/v1/organizations/org-1/manage-devices"
+  );
+  assert.deepEqual(
+    seenUrl?.searchParams.getAll("device_model_class"),
+    ["airport", "base_station"]
+  );
+  assert.equal(seenUrl?.searchParams.get("page"), "2");
+  assert.equal(seenUrl?.searchParams.get("page_size"), "25");
+  assert.equal(seenMethod, "GET");
 });
