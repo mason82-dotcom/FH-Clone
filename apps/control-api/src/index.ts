@@ -549,6 +549,28 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, fh2.status());
     }
 
+    if (request.method === "GET" && url.pathname === "/api/fh2/devices") {
+      const deviceClass = url.searchParams.get("device_class") ?? "drone";
+      if (!["drone", "airport", "base_station"].includes(deviceClass)) {
+        throw new Error("invalid_query_device_class");
+      }
+
+      try {
+        const page = queryInt(url, "page", 1, 1, 10_000);
+        const pageSize = queryInt(url, "page_size", 100, 1, 500);
+        return json(
+          response,
+          200,
+          await fh2.listDevices(deviceClass, page, pageSize)
+        );
+      } catch (error) {
+        if (error instanceof Fh2OpenApiNotConfigured) {
+          return json(response, 503, { error: "fh2_not_configured" });
+        }
+        throw error;
+      }
+    }
+
     if (
       request.method === "GET" &&
       url.pathname === "/api/dji/pilot/wayline-server/status"

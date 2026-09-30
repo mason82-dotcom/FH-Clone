@@ -84,6 +84,14 @@ if printf '%s' "$fh2_status" | grep -Eiq '"(userToken|token|password|secret)"'; 
   exit 1
 fi
 
+fh2_devices_invalid_code="$(
+  curl -sS -o /dev/null -w '%{http_code}'     "http://127.0.0.1:$API_PORT/api/fh2/devices?device_class=invalid"
+)"
+if [ "$fh2_devices_invalid_code" != "400" ]; then
+  echo "FEHLER: FH2 Devices Query-Validierung erwartet HTTP 400, erhielt $fh2_devices_invalid_code."
+  exit 1
+fi
+
 echo "[5/13] Interne Control API im Container prüfen"
 internal_health="$(
   docker compose --env-file .env exec -T control-api \

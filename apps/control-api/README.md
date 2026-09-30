@@ -209,13 +209,18 @@ nicht zu diesem Vertrag.
 
 ```http
 GET /api/fh2/status
+GET /api/fh2/devices?device_class=drone&page=1&page_size=100
 GET /api/fh2/waylines?page=1&size=100
 GET /api/fh2/flight-tasks?page=1&page_size=50
 ```
 
-Der FH2-Pfad verwendet ausschließlich GET. Fehlende Konfiguration liefert
-`503 fh2_not_configured`; Upstreamfehler werden als `502 fh2_upstream_error`
-abgebildet.
+Der FH2-Pfad verwendet ausschließlich GET. Für `/api/fh2/devices` sind
+`device_class=drone|airport|base_station`, `page` und `page_size` zulässig;
+`airport` fragt upstream beide DJI-Klassen `airport` und `base_station` ab.
+Eine ungültige Geräteklasse liefert `400 invalid_query_device_class`.
+
+Fehlende Konfiguration liefert `503 fh2_not_configured`; Upstreamfehler werden
+als `502 fh2_upstream_error` abgebildet.
 
 Die Wayline-/Flight-Task-IDs aus diesem Pfad können später über den
 `MissionExternalReference`-Vertrag mit lokalen Flugsitzungen korreliert
