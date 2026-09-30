@@ -156,7 +156,7 @@ function productIdentity(value) {
 
 function sameProduct(actual, expected) {
   return (
-    actual.domain === expected.domain &&
+    (actual.domain === null || actual.domain === expected.domain) &&
     actual.type === expected.type &&
     actual.subType === expected.subType
   );
@@ -174,13 +174,13 @@ function validateProfile(capture, profileName, rows) {
   if (!sameProduct(gateway, profile.gateway)) {
     fail(
       `profile ${profileName} expects gateway ${profile.gateway.domain}/${profile.gateway.type}/${profile.gateway.subType}, ` +
-      `observed ${gateway.domain}/${gateway.type}/${gateway.subType}`
+      `observed ${gateway.domain ?? "missing"}/${gateway.type}/${gateway.subType}`
     );
   }
   if (!sameProduct(aircraft, profile.aircraft)) {
     fail(
       `profile ${profileName} expects aircraft ${profile.aircraft.domain}/${profile.aircraft.type}/${profile.aircraft.subType}, ` +
-      `observed ${aircraft.domain}/${aircraft.type}/${aircraft.subType}`
+      `observed ${aircraft.domain ?? "missing"}/${aircraft.type}/${aircraft.subType}`
     );
   }
 

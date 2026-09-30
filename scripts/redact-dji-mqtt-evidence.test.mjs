@@ -260,3 +260,52 @@ test("gateway Thing OSD does not count as a second aircraft", () => {
 
   assert.equal(run.status, 0, run.stderr);
 });
+
+
+test("redactor accepts real update_topo rows that omit domain while keeping type/sub_type strict", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-domain-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+
+  delete rows[0].payload.data.domain;
+  delete rows[0].payload.data.sub_devices[0].domain;
+  rows[0].payload.data.sub_devices[0].sub_type = 0;
+  rows[2].payload.data.cameras[0].payload_index = "66-0-0";
+
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3e", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const value = JSON.parse(fs.readFileSync(output, "utf8"));
+  assert.equal(value.profile, "m3e");
+  assert.equal(value.topology.data.type, 144);
+  assert.equal(value.topology.data.sub_devices[0].type, 77);
+  assert.equal(value.topology.data.sub_devices[0].sub_type, 0);
+  assert.equal(Object.hasOwn(value.topology.data, "domain"), false);
+});
+
+test("redactor still rejects a conflicting observed domain", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-domain-"));
+  const input = path.join(dir, "raw.json");
+  const rows = fixture();
+
+  rows[0].payload.data.domain = 99;
+  rows[0].payload.data.sub_devices[0].sub_type = 0;
+  rows[2].payload.data.cameras[0].payload_index = "66-0-0";
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3e", input],
+    { encoding: "utf8" }
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /expects gateway/i);
+});
