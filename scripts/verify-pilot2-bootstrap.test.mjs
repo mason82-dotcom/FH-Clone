@@ -6,6 +6,14 @@ const source = fs.readFileSync(
   "apps/web/src/pilot-bootstrap/PilotCloudBootstrap.tsx",
   "utf8"
 );
+const appSource = fs.readFileSync(
+  "apps/web/src/App.tsx",
+  "utf8"
+);
+const evidenceSource = fs.readFileSync(
+  "apps/web/src/pilot-evidence/PilotJsbridgeEvidence.tsx",
+  "utf8"
+);
 
 test("Pilot 2 bootstrap uses only the reviewed cloud-connect JSBridge calls", () => {
   for (const required of [
@@ -174,4 +182,21 @@ test("Pilot 2 Wayline token is never embedded or persisted", () => {
 test("Pilot 2 Wayline API defaults to the current same origin", () => {
   assert.equal(source.includes("window.location.origin"), true);
   assert.equal(source.includes("/^https?:\\/\\//i"), true);
+});
+
+
+test("Pilot evidence navigation preserves the current DJI WebView document", () => {
+  assert.equal(source.includes("event.preventDefault()"), true);
+  assert.equal(source.includes("onOpenEvidence();"), true);
+  assert.equal(appSource.includes('window.history.pushState({}, "", path)'), true);
+  assert.equal(appSource.includes('window.addEventListener("popstate"'), true);
+  assert.equal(
+    appSource.includes('onOpenEvidence={() => navigate("/pilot-evidence")}'),
+    true
+  );
+});
+
+test("Pilot evidence page surfaces the concrete JSBridge diagnostic", () => {
+  assert.equal(evidenceSource.includes("<strong>JSBridge-Fehler:</strong>"), true);
+  assert.equal(evidenceSource.includes("{pilot.error}"), true);
 });
