@@ -173,6 +173,34 @@ gateway_sn
 
 Die Daten stammen aus `update_topo`.
 
+### POST /api/dji/pilot2/evidence
+
+Nimmt einen read-only Snapshot der bereits verifizierten Pilot-2-JSBridge an
+und erzeugt daraus ausschließlich redigierte Hardware-Evidence.
+
+Die Control API:
+
+- verlangt `bridgePresent=true` und `platformIsVerified=true`,
+- verlangt Pilot-Version, vollständiges Modul-Inventar sowie RC-/Aircraft-
+  Identität,
+- vergleicht das Identitätspaar exakt mit der aktuellen DJI-Runtime-Topologie,
+- hasht RC- und Aircraft-Identität sofort per SHA-256,
+- gibt keine Roh-Seriennummern zurück,
+- speichert nur den letzten redigierten Capture im Prozessspeicher.
+
+Bei fehlendem exakten Runtime-Pair-Match wird mit
+`409 pilot2_topology_pair_mismatch` abgebrochen.
+
+### GET /api/dji/pilot2/evidence/latest
+
+Liefert den letzten **redigierten** Pilot-2-JSBridge-Capture aus dem
+Arbeitsspeicher. Vor dem ersten Capture liefert der Endpunkt
+`404 pilot2_evidence_not_captured`.
+
+Der Endpunkt enthält keine MQTT-, API-, WS-, DRC- oder sonstigen Credentials.
+Für das commit-fähige Hardware-Fixture ergänzt der lokale Exporter zusätzlich
+den aktuellen Browser-Safety-/Secret-Scan.
+
 ### GET /api/dji/topology/persisted
 
 Liefert das persistierte Gateway-/Sub-Device-Inventar.
