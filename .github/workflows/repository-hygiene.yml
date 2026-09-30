@@ -38,4 +38,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           FH2_DEFAULT_BRANCH: main
           FH2_BRANCH_CLEANUP_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
-        run: scripts/prune-merged-branches.sh
+        run: bash scripts/prune-merged-branches.sh
