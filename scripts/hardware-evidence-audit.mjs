@@ -401,6 +401,7 @@ const wpml = readJson(wpmlPath);
 add("WPML_PILOT", "REQUIRED_HARDWARE", "reales Pilot-2-WPML-Evidence", realEvidence(wpml), wpmlPath);
 if (realEvidence(wpml)) {
   add("WPML_PILOT", "REQUIRED_HARDWARE", "Quelle ist DJI Pilot 2", wpml.generatedBy === "DJI Pilot 2");
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "keine Secrets im öffentlichen WPML-Fixture", !sensitiveValueLeaked(wpml));
   add("WPML_PILOT", "REQUIRED_HARDWARE", "authoritative KMZ SHA-256", sha256(wpml.sourceSha256));
   const archiveEntries = arr(wpml.archiveEntries).map((v) => String(v).replace(/^\/+/, ""));
   add("WPML_PILOT", "REQUIRED_HARDWARE", "template.kml im realen KMZ",
@@ -428,6 +429,11 @@ if (realEvidence(wpml)) {
     wpml.pilotCatalog?.realWorkspace === true &&
     wpml.pilotCatalog?.responseValidated === true &&
     wpml.pilotCatalog?.tokenPresentInFixture !== true);
+  add("WPML_PILOT", "REQUIRED_HARDWARE", "DJI-Pilot-WebView-Listenabruf real beobachtet",
+    Number.isSafeInteger(wpml.pilotCatalog?.pilotWebViewListRequests) &&
+    wpml.pilotCatalog.pilotWebViewListRequests >= 1 &&
+    typeof wpml.pilotCatalog?.lastPilotWebViewListRequestAt === "string" &&
+    Number.isFinite(Date.parse(wpml.pilotCatalog.lastPilotWebViewListRequestAt)));
 }
 
 // ---------------------------------------------------------------------------

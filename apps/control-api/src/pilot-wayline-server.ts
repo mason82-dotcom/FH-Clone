@@ -18,6 +18,8 @@ export interface PilotWaylineServerStatus {
   authConfigured: boolean;
   listRequests: number;
   lastListRequestAt?: string;
+  pilotWebViewListRequests?: number;
+  lastPilotWebViewListRequestAt?: string;
 }
 
 export class PilotWaylineServer {
@@ -25,6 +27,8 @@ export class PilotWaylineServer {
   private readonly authToken: string;
   private listRequests = 0;
   private lastListRequestAt: string | undefined;
+  private pilotWebViewListRequests = 0;
+  private lastPilotWebViewListRequestAt: string | undefined;
 
   constructor(private readonly options: PilotWaylineServerOptions) {
     this.workspaceId = options.workspaceId?.trim() ?? "";
@@ -49,6 +53,12 @@ export class PilotWaylineServer {
       listRequests: this.listRequests,
       ...(this.lastListRequestAt
         ? { lastListRequestAt: this.lastListRequestAt }
+        : {}),
+      ...(this.pilotWebViewListRequests > 0
+        ? { pilotWebViewListRequests: this.pilotWebViewListRequests }
+        : {}),
+      ...(this.lastPilotWebViewListRequestAt
+        ? { lastPilotWebViewListRequestAt: this.lastPilotWebViewListRequestAt }
         : {})
     };
   }
@@ -85,7 +95,11 @@ export class PilotWaylineServer {
     );
   }
 
-  list(url: URL, nowMs = Date.now()) {
+  list(
+    url: URL,
+    nowMs = Date.now(),
+    headers?: Pick<IncomingHttpHeaders, "user-agent">
+  ) {
     if (!this.configured) {
       throw new Error("pilot_wayline_server_not_configured");
     }
@@ -101,6 +115,16 @@ export class PilotWaylineServer {
 
     this.listRequests += 1;
     this.lastListRequestAt = new Date(nowMs).toISOString();
+
+    const userAgent = headers?.["user-agent"];
+    const observedUserAgent = Array.isArray(userAgent) ? userAgent[0] : userAgent;
+    if (
+      typeof observedUserAgent === "string" &&
+      /dji-open-platform/i.test(observedUserAgent)
+    ) {
+      this.pilotWebViewListRequests += 1;
+      this.lastPilotWebViewListRequestAt = this.lastListRequestAt;
+    }
 
     return {
       code: 0,

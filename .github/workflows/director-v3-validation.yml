@@ -108,6 +108,9 @@ jobs:
       - name: DJI MQTT Evidence Redaction
         run: npm run test:dji-mqtt-evidence
 
+      - name: WPML Pilot Evidence Exporter
+        run: npm run test:wpml-evidence
+
       - name: Frontend Runtime Hardening
         run: npm run test:frontend-runtime-hardening
 
@@ -232,6 +235,9 @@ jobs:
 
       - name: DJI MQTT Evidence Redaction
         run: npm run test:dji-mqtt-evidence
+
+      - name: WPML Pilot Evidence Exporter
+        run: npm run test:wpml-evidence
 
       - name: Frontend Runtime Hardening
         run: npm run test:frontend-runtime-hardening

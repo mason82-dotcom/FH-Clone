@@ -671,7 +671,11 @@ const publicServer = createServer(async (request, response) => {
       }
 
       try {
-        return json(response, 200, pilotWaylineServer.list(url));
+        return json(
+          response,
+          200,
+          pilotWaylineServer.list(url, Date.now(), request.headers)
+        );
       } catch (error) {
         if (
           error instanceof Error &&
