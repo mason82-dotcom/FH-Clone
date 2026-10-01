@@ -86,7 +86,7 @@ test("product description requires the full DJI identity", () => {
   );
   assert.equal(
     describeDjiProduct({ domain: 0, type: 77, subType: 2 }),
-    "DJI product 0/77/2"
+    "DJI Mavic 3M"
   );
   assert.equal(
     describeDjiProduct({ type: 99, subType: 0 }),

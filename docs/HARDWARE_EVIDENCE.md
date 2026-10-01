@@ -255,7 +255,22 @@ DRC-Verbindung.
 
 ## 3. Mavic 3M Multispektral — REQUIRED_HARDWARE
 
-Erforderlich ist mindestens ein realer Narrow-Band-Capture-Satz mit:
+Bereits auf realer RC-Pro-Enterprise-/Pilot-2-Hardware beobachtet:
+
+- Cloud-`update_topo`: M3M = `domain=0/type=77/sub_type=2`
+- eingebautes M3M-Payload: `payload_index=68-0-0`
+- M3M-`position_state.is_fixed=2` bei `quality=5`, `gps_number=22`,
+  `rtk_number=33`
+
+Der öffentliche, sanitiserte MQTT-Hardwarebeleg liegt jetzt unter
+`docs/fixtures/m3m/mqtt-evidence.json`. Er enthält die reale Cloud-Topologie,
+OSD/State, `status_reply`, `payload_index=68-0-0` sowie getrennte Fixed- und
+Nicht-Fixed-RTK-Snapshots. Das Fixture stammt aus einem lokalen Rohcapture mit
+874 Zeilen; rohe Geräte-SNs, Secrets und private Koordinaten bleiben außerhalb
+des Repositories.
+
+Dieser MQTT-Nachweis schließt **nicht** das Multispektral-Mediengate. Dafür ist
+weiterhin mindestens ein realer Narrow-Band-Capture-Satz erforderlich mit:
 
 - Green
 - Red

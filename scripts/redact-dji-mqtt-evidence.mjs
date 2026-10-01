@@ -48,6 +48,12 @@ const PROFILES = {
     aircraft: { domain: 0, type: 77, subType: 1 },
     payloadIndex: "67-0-0",
     defaultOutput: "docs/fixtures/m3t/mqtt-evidence.json"
+  },
+  m3m: {
+    gateway: { domain: 2, type: 144, subType: 0 },
+    aircraft: { domain: 0, type: 77, subType: 2 },
+    payloadIndex: "68-0-0",
+    defaultOutput: "docs/fixtures/m3m/mqtt-evidence.json"
   }
 };
 
@@ -422,16 +428,16 @@ function main() {
 
   const profileIndex = args.indexOf("--profile");
   if (profileIndex < 0 || !args[profileIndex + 1]) {
-    fail("use --profile m3e or --profile m3t explicitly");
+    fail("use --profile m3e, --profile m3t or --profile m3m explicitly");
   }
   const profileName = args[profileIndex + 1].toLowerCase();
   args.splice(profileIndex, 2);
   if (!Object.hasOwn(PROFILES, profileName)) {
-    fail(`unsupported profile: ${profileName}; expected m3e or m3t`);
+    fail(`unsupported profile: ${profileName}; expected m3e, m3t or m3m`);
   }
 
   if (args.length < 1 || args.length > 2) {
-    fail("usage: node scripts/redact-dji-mqtt-evidence.mjs --real-hardware --profile <m3e|m3t> <input.json> [output.json]");
+    fail("usage: node scripts/redact-dji-mqtt-evidence.mjs --real-hardware --profile <m3e|m3t|m3m> <input.json> [output.json]");
   }
 
   const inputPath = path.resolve(args[0]);

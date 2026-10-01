@@ -350,6 +350,108 @@ if (realEvidence(m4tMedia)) {
 }
 
 // ---------------------------------------------------------------------------
+// M3M + RC Pro Enterprise Cloud/MQTT
+// ---------------------------------------------------------------------------
+const m3mMqttPath = "docs/fixtures/m3m/mqtt-evidence.json";
+const m3mMqtt = readJson(m3mMqttPath);
+add(
+  "M3M_MQTT",
+  "REQUIRED_HARDWARE",
+  "reales redigiertes M3M MQTT-Evidence-Manifest",
+  realEvidence(m3mMqtt) && m3mMqtt?.profile === "m3m",
+  m3mMqttPath
+);
+if (realEvidence(m3mMqtt) && m3mMqtt?.profile === "m3m") {
+  add("M3M_MQTT", "REQUIRED_HARDWARE", "keine Secrets im öffentlichen M3M-MQTT-Fixture", !sensitiveValueLeaked(m3mMqtt));
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "RC Pro update_topo auf dokumentiertem Statuspfad",
+    hasMethod(m3mMqtt, "update_topo") &&
+      hasTopic(m3mMqtt, /^sys\/product\/[^/]+\/status$/)
+  );
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "update_topo Reply auf sys/product/.../status_reply",
+    hasTopic(m3mMqtt, /^sys\/product\/[^/]+\/status_reply$/)
+  );
+
+  const gateway = findRecord(
+    m3mMqtt,
+    (v) => Number(v.type) === 144 && Number(v.sub_type ?? v.subType) === 0
+  );
+  const aircraft = findRecord(
+    m3mMqtt,
+    (v) => Number(v.type) === 77 && Number(v.sub_type ?? v.subType) === 2
+  );
+  add("M3M_MQTT", "REQUIRED_HARDWARE", "Produktidentität RC Pro Enterprise 144/0", Boolean(gateway));
+  add("M3M_MQTT", "REQUIRED_HARDWARE", "Produktidentität M3M 77/2", Boolean(aircraft));
+
+  const osd = m3mMqtt.osd;
+  const state = m3mMqtt.state;
+  const osdData = record(osd?.data) ? osd.data : osd;
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "M3M OSD Topic",
+    typeof osd?.topic === "string" && /^thing\/product\/[^/]+\/osd$/.test(osd.topic)
+  );
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "M3M State Topic",
+    typeof state?.topic === "string" && /^thing\/product\/[^/]+\/state$/.test(state.topic)
+  );
+  for (const key of [
+    "attitude_head",
+    "attitude_roll",
+    "attitude_pitch",
+    "latitude",
+    "longitude",
+    "height",
+    "elevation",
+    "horizontal_speed",
+    "vertical_speed"
+  ]) {
+    add("M3M_MQTT", "REQUIRED_HARDWARE", `OSD Feld ${key}`, get(osdData, key) !== undefined);
+  }
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "OSD position_state.is_fixed",
+    get(osdData, "position_state.is_fixed") !== undefined
+  );
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "OSD battery.batteries[]",
+    arr(get(osdData, "battery.batteries")).length > 0
+  );
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "OSD cameras[] mit M3M-Payload 68-0-0",
+    arr(get(osdData, "cameras")).some((camera) => camera?.payload_index === "68-0-0")
+  );
+
+  const fixed = m3mMqtt.rtk?.fixed;
+  const notFixed = m3mMqtt.rtk?.notFixed;
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "MQTT RTK Fixed via is_fixed=2",
+    Number(get(fixed, "position_state.is_fixed")) === 2
+  );
+  add(
+    "M3M_MQTT",
+    "REQUIRED_HARDWARE",
+    "MQTT RTK Nicht-Fixed separat",
+    [0, 1, 3].includes(Number(get(notFixed, "position_state.is_fixed")))
+  );
+}
+
+// ---------------------------------------------------------------------------
 // M3M multispectral capture
 // ---------------------------------------------------------------------------
 const m3mPath = "docs/fixtures/m3m/capture-set.json";

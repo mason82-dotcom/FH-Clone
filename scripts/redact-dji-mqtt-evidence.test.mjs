@@ -342,6 +342,32 @@ test("redactor emits M3E profile evidence only for 77/0 with payload 66-0-0", ()
   assert.equal(value.osd.data.cameras[0].payload_index, "66-0-0");
 });
 
+test("redactor emits M3M profile evidence only for real 77/2 with payload 68-0-0", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-m3m-"));
+  const input = path.join(dir, "raw.json");
+  const output = path.join(dir, "redacted.json");
+  const rows = fixture();
+
+  rows[0].payload.data.sub_devices[0].sub_type = 2;
+  rows[2].payload.data.cameras[0].payload_index = "68-0-0";
+
+  fs.writeFileSync(input, JSON.stringify(rows));
+
+  const run = spawnSync(
+    process.execPath,
+    [script, "--real-hardware", "--profile", "m3m", input, output],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const value = JSON.parse(fs.readFileSync(output, "utf8"));
+  assert.equal(value.profile, "m3m");
+  assert.equal(value.expectedPayloadIndex, "68-0-0");
+  assert.equal(value.topology.data.sub_devices[0].sub_type, 2);
+  assert.equal(value.osd.data.cameras[0].payload_index, "68-0-0");
+  assert.equal(value.rtk.fixed.position_state.is_fixed, 2);
+});
+
 test("redactor rejects product/profile mismatches", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fh2-mqtt-redact-profile-"));
   const input = path.join(dir, "raw.json");
