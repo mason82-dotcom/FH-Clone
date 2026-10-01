@@ -172,7 +172,7 @@ Die Antwort basiert auf der In-Memory-`DeviceRegistry`.
 
 ### GET /api/dji/topology
 
-Liefert die vom DJI-Adapter bekannte Gateway-/Sub-Device-Topologie.
+Liefert die aktuelle read-only Gateway-/Sub-Device-Sicht für die DJI-Laufzeit.
 
 Typische Beziehung:
 
@@ -181,7 +181,17 @@ gateway_sn
   -> device_sn
 ```
 
-Die Daten stammen aus `update_topo`.
+Primär stammen die Daten aus dem echten Cloud-API-`update_topo`. Zusätzlich
+ergänzt FH2 für M3E/M3T/M3TA/M3M auf der RC Pro Enterprise eine
+MSDK-V5-abgeleitete Subdevice-Beziehung, sofern der authentifizierte RC-Bridge-
+Agent dieselbe reale Gateway-SN und Flight-Controller-SN meldet.
+
+Die MSDK-Ergänzung ist ausschließlich eine Inventar-/UI-Sicht. Sie wird weder
+in die DJI-MQTT-Runtime-Topologie geschrieben noch für AuthZ, Pilot2-
+Hardware-Evidence oder Cloud-Control-Freigaben verwendet. Bei M3M wird dabei
+absichtlich keine nicht dokumentierte Cloud-`domain/type/sub_type`-Identität
+erfunden; das Produkt wird mit `displayName=DJI Mavic 3M`,
+`identitySource=msdk-v5` und `cloudEnumerated=false` ausgewiesen.
 
 ### POST /api/dji/pilot2/evidence
 

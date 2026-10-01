@@ -66,6 +66,7 @@ import { markAllDrcTransportsLost } from "./drc-runtime.js";
 import { Pilot2EvidenceStore, parsePilot2EvidenceCapture } from "./pilot2-evidence.js";
 import { createPilotWaylineServerFromEnv } from "./pilot-wayline-server.js";
 import { ControlApiMetrics } from "./metrics.js";
+import { buildDjiTopologyView } from "./topology-view.js";
 
 const devices = new DeviceRegistry();
 const parameters = new ParameterRegistry();
@@ -452,7 +453,14 @@ const publicServer = createServer(async (request, response) => {
     }
 
     if (request.method === "GET" && url.pathname === "/api/dji/topology") {
-      return json(response, 200, dji?.topology.listGateways() ?? []);
+      return json(
+        response,
+        200,
+        buildDjiTopologyView(
+          dji?.topology.listGateways() ?? [],
+          msdkBridge.listAgents()
+        )
+      );
     }
 
     if (

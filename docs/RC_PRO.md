@@ -21,14 +21,22 @@ Sub-Device geführt.
 DJI RC Pro Enterprise
 gateway_sn
    |
-   +-- M3E / M3T / M3TA im aktuellen Pilot-to-Cloud-Produktprofil
+   +-- M3E / M3T / M3TA aus Cloud-Topologie oder MSDK-Bridge
+   |
+   +-- M3M aus der MSDK-Bridge
        device_sn
-
-M3M wird separat als MSDK/WPML-/Media-Fall behandelt und erhält ohne
-eindeutige Cloud-Enumeration kein automatisches Live-Control-Profil.
 ```
 
-Die Zuordnung wird über `update_topo` gelernt.
+M3M wird damit im FH2-Gerätebaum wie die übrigen M3-Aircraft als Subdevice
+der realen RC-Pro-SN geführt. Die Beziehung stammt bei M3M aus MSDK V5 und
+ist ausdrücklich **keine** synthetische DJI-Cloud-`update_topo`-Meldung.
+
+Ohne eindeutige Cloud-Enumeration erhält M3M weiterhin kein automatisches
+Pilot-to-Cloud-Live-Control-Profil.
+
+Die Cloud-Zuordnung wird über `update_topo` gelernt. Die zusätzliche
+MSDK-Subdevice-Beziehung wird ausschließlich aus dem authentifizierten
+RC-Bridge-Snapshot abgeleitet.
 
 Typischer Topic-Pfad:
 
@@ -65,7 +73,14 @@ FH2 leitet daraus **keinen** nicht explizit dokumentierten M3M-`sub_type`
 ab. Für den Cloud-Runtime-Pfad gilt die reale `update_topo`-Meldung
 beziehungsweise eine eindeutige DJI-Enumeration als authoritative Quelle.
 
-Damit bleibt M3M fachlich für Media/WPML unterstützt, ohne eine unbestätigte
+Für die read-only Geräte-/UI-Topologie darf die authentifizierte MSDK-V5-
+Bridge die M3M dagegen über reale RC- und Flight-Controller-SNs als
+Subdevice der RC Pro Enterprise ergänzen. Diese MSDK-Beziehung wird mit
+Provenienz markiert und bleibt von Cloud-AuthZ, Cloud-Control-Profil,
+persistierter MQTT-Topologie und Hardware-Evidence getrennt.
+
+Damit bleibt M3M fachlich für Media/WPML/MSDK unterstützt und ist im
+FH2-Gerätebaum korrekt der RC Pro zugeordnet, ohne eine unbestätigte
 Cloud-Geräte-ID in den Core oder das Capability-Profil einzubauen.
 
 ## Gateway- und Aircraft-Topics

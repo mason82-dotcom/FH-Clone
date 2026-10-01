@@ -46,14 +46,20 @@ function pilotBridgeLabel(
   }
 }
 
-function productName(type: number, subType: number): string {
+function productName(
+  product: Fh2OverlayTopology["product"]
+): string {
+  if (product.displayName) return product.displayName;
+  const { type, subType } = product;
   if (type === 144 && subType === 0) return "RC Pro Enterprise";
   if (type === 174 && subType === 0) return "RC Plus 2";
   if (type === 77 && subType === 0) return "Mavic 3E";
   if (type === 77 && subType === 1) return "Mavic 3T";
   if (type === 99 && subType === 0) return "Matrice 4E";
   if (type === 99 && subType === 1) return "Matrice 4T";
-  return `DJI ${type}/${subType}`;
+  return type !== undefined && subType !== undefined
+    ? `DJI ${type}/${subType}`
+    : "DJI Aircraft";
 }
 
 export function Fh2Workspace() {
@@ -121,7 +127,7 @@ export function Fh2Workspace() {
       gateway.subDevices.map((device) => ({
         gatewaySn: gateway.gatewaySn,
         droneSn: device.sn,
-        label: `${productName(device.product.type, device.product.subType)} · ${device.sn} via ${productName(gateway.product.type, gateway.product.subType)}`
+        label: `${productName(device.product)} · ${device.sn} via ${productName(gateway.product)}`
       }))
     );
   }, [topology]);

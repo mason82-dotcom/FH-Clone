@@ -203,6 +203,13 @@ automatische Pilot-Cloud-Live-Control-Capability
 Ohne eindeutige offizielle Cloud-Enumeration beziehungsweise real verifizierte
 `update_topo`-Identität erhält M3M **kein** M3E/M3T-Live-Control-Profil.
 
+Davon getrennt darf FH2 eine authentifizierte MSDK-V5-Verbindung für die
+read-only Geräteansicht verwenden: reale RC-Pro-SN + reale
+Flight-Controller-SN + MSDK-Produkt-/Sensoridentität erzeugen eine
+M3M-Subdevice-Beziehung. Diese Relation ist Inventarprovenienz und keine
+Cloud-API-Produktfreigabe; insbesondere erzeugt sie weder Cloud-Control noch
+eine angenommene M3M-`sub_type`-Nummer.
+
 ## Produktsupport versus routbare Capability
 
 FH2 unterscheidet verbindlich:

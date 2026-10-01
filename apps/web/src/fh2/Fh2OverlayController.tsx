@@ -17,15 +17,22 @@ import { useFh2CesiumViewer } from "./useFh2CesiumViewer.js";
 export interface Fh2OverlayTopology {
   gatewaySn: string;
   product: {
-    type: number;
-    subType: number;
+    type?: number;
+    subType?: number;
+    displayName?: string;
+    identitySource?: "dji-cloud" | "msdk-v5";
+    cloudEnumerated?: boolean;
   };
   subDevices: Array<{
     sn: string;
     product: {
-      type: number;
-      subType: number;
+      type?: number;
+      subType?: number;
+      displayName?: string;
+      identitySource?: "dji-cloud" | "msdk-v5";
+      cloudEnumerated?: boolean;
     };
+    relationSource?: "dji-cloud" | "msdk-v5";
   }>;
 }
 
