@@ -94,7 +94,7 @@ for (const heading of [
   expect(hardwareDoc, heading, "hardware evidence documentation");
 }
 
-for (const gate of ["M3E_RC_PRO", "M3T_RC_PRO", "M4T_RC_PLUS2", "M4T_MEDIA", "M3M"]) {
+for (const gate of ["M3E_RC_PRO", "M3T_RC_PRO", "M4T_RC_PLUS2", "M4T_MEDIA", "M3M_MQTT", "M3M"]) {
   reject(
     hardwareAudit,
     `"${gate}", "REQUIRED_MAIN"`,
