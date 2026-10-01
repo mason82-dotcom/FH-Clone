@@ -304,6 +304,32 @@ RGB-Datei. Insbesondere wird nicht vorausgesetzt, dass RGB und alle vier
 Narrow-Band-Dateien dieselbe UUID besitzen, solange dies nicht durch reale
 Daten bestätigt ist.
 
+Der kanonische lokale Exportpfad für genau **einen** realen
+Narrow-Band-Capture-Satz ist:
+
+```bash
+mkdir -p ~/fh2-evidence/m3m/capture-one
+
+# Die vier originalen M3M-TIFFs Green/Red/RedEdge/NIR in capture-one ablegen.
+# Das rohe ExifTool-JSON bleibt lokal und darf nicht committed werden.
+exiftool -json -G1 -n ~/fh2-evidence/m3m/capture-one/*.TIF \
+  > ~/fh2-evidence/m3m/exiftool-raw.json
+
+npm run export:m3m-capture-evidence -- \
+  --real-hardware \
+  --metadata-json ~/fh2-evidence/m3m/exiftool-raw.json \
+  --root ~/fh2-evidence/m3m/capture-one \
+  --out docs/fixtures/m3m/capture-set.json
+```
+
+Der Exporter verwendet den produktiven FH2-M3M-Normalizer. Im öffentlichen
+Fixture werden die Quelldateien nur per SHA-256 referenziert und
+`CaptureUUID` wird deterministisch gehasht. Aircraft-/Kamera-SNs,
+Originalpfade und GPS-Koordinaten werden nicht veröffentlicht; die
+GPS-Feldpräsenz bleibt als Evidence erhalten. RTK-Flag, Pose,
+Sonnenlichtsensor-/Gain-/Exposure-Werte und die tatsächlich beobachteten
+Kalibrierfelder bleiben prüfbar.
+
 Für NDVI reicht ein bloßes Vorhandensein von Red/NIR nicht als
 Kalibrierungsnachweis. DJI beschreibt zusätzlich Sonnenlichtsensor-,
 Empfindlichkeits-/Gain- und geometrische Korrekturen.

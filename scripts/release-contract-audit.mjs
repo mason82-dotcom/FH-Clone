@@ -115,6 +115,11 @@ expect(
   "node scripts/release-contract-audit.mjs",
   "director documentation gate"
 );
+expect(
+  workflow,
+  "npm run test:m3m-capture-evidence",
+  "M3M capture evidence CI gate"
+);
 expect(androidWorkflow, "FH2_APK_USAGE=hardware-pairing", "keyed APK classification");
 expect(androidWorkflow, "FH2_APK_USAGE=compile-ui-only", "unkeyed APK classification");
 expect(androidReadme, "usage=hardware-pairing", "pairing APK documentation");

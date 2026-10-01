@@ -477,15 +477,44 @@ if (realEvidence(m3m)) {
     for (const key of ["Irradiance", "SensorGain", "SensorGainAdjustment", "ExposureTime", "RawData"]) {
       add("M3M", "REQUIRED_HARDWARE", `${band}: ${key}`, sample[key] !== undefined);
     }
+    add("M3M", "REQUIRED_HARDWARE", `${band}: Quelldatei SHA-256`, sha256(sample.sourceSha256));
+    add(
+      "M3M",
+      "REQUIRED_HARDWARE",
+      `${band}: CaptureUUID nur gehasht veröffentlicht`,
+      typeof sample.CaptureUUID === "string" && /^sha256:[a-f0-9]{64}$/i.test(sample.CaptureUUID)
+    );
+    add("M3M", "REQUIRED_HARDWARE", `${band}: GPS-Latitude im Quellmedium vorhanden`, sample.GpsLatitudePresent === true);
+    add("M3M", "REQUIRED_HARDWARE", `${band}: GPS-Longitude im Quellmedium vorhanden`, sample.GpsLongitudePresent === true);
+    add("M3M", "REQUIRED_HARDWARE", `${band}: RTK-Flag im Quellmedium vorhanden`, Number.isFinite(Number(sample.RtkFlag)));
+    for (const poseKey of [
+      "FlightRollDegree",
+      "FlightPitchDegree",
+      "FlightYawDegree",
+      "GimbalRollDegree",
+      "GimbalPitchDegree",
+      "GimbalYawDegree"
+    ]) {
+      add("M3M", "REQUIRED_HARDWARE", `${band}: ${poseKey}`, Number.isFinite(Number(sample[poseKey])));
+    }
+    add(
+      "M3M",
+      "REQUIRED_HARDWARE",
+      `${band}: geometrisches/radiometrisches Kalibrierfeld`,
+      ["VignettingData", "DewarpData", "DewarpHMatrix", "CalibratedHMatrix"].some(
+        (key) => sample[key] !== undefined
+      )
+    );
   }
+  add("M3M", "REQUIRED_HARDWARE", "Capture-Set Quelldatei-Hash", sha256(m3m.sourceSetSha256));
   const uuids = bands.map((b) => b?.CaptureUUID).filter((v) => typeof v === "string" && v);
-  add("M3M", "INFORMATIONAL", "beobachtete CaptureUUID-Gruppierung",
-    uuids.length === 4,
-    uuids.length ? `unique=${new Set(uuids).size}` : "keine UUIDs");
-  const calibrationObserved = bands.some((b) =>
-    ["VignettingData", "DewarpData", "DewarpHMatrix", "CalibratedHMatrix"].some((k) => b?.[k] !== undefined)
+  add(
+    "M3M",
+    "REQUIRED_HARDWARE",
+    "alle vier Narrow-Bands gehören zur selben CaptureUUID",
+    uuids.length === 4 && new Set(uuids).size === 1,
+    uuids.length ? `unique=${new Set(uuids).size}` : "keine UUIDs"
   );
-  add("M3M", "REQUIRED_HARDWARE", "mindestens ein geometrisches/radiometrisches Kalibrierfeld beobachtet", calibrationObserved);
 }
 
 // ---------------------------------------------------------------------------
