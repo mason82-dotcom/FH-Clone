@@ -1,0 +1,97 @@
+{
+  "schema": "fh2.dji-mqtt.v1",
+  "profile": "m3m",
+  "expectedPayloadIndex": "68-0-0",
+  "realHardware": true,
+  "synthetic": false,
+  "redacted": true,
+  "sourceSha256": "2c30e5d388ba8ae991f42acd051f4476f8ecb3f6dec75a16dfb6281654ea17f5",
+  "sourceSummary": {
+    "inputRows": 874,
+    "osdRows": 228,
+    "updateTopoObserved": true,
+    "statusReplyObserved": true,
+    "stateObserved": true,
+    "rtkFixedObserved": true,
+    "rtkNotFixedObserved": true
+  },
+  "topology": {
+    "topic": "sys/product/GATEWAY_REDACTED/status",
+    "method": "update_topo",
+    "data": {
+      "domain": 2,
+      "type": 144,
+      "sub_type": 0,
+      "thing_version": "1.2.0",
+      "sub_devices": [
+        {
+          "sn": "AIRCRAFT_REDACTED",
+          "type": 77,
+          "sub_type": 2,
+          "domain": 0,
+          "thing_version": "1.2.0",
+          "index": "A"
+        }
+      ]
+    }
+  },
+  "statusReply": {
+    "topic": "sys/product/GATEWAY_REDACTED/status_reply"
+  },
+  "osd": {
+    "topic": "thing/product/AIRCRAFT_REDACTED/osd",
+    "data": {
+      "attitude_head": -116.1,
+      "attitude_roll": 0.6,
+      "attitude_pitch": 4.2,
+      "height": 33.70395278930664,
+      "elevation": 0,
+      "horizontal_speed": 0,
+      "vertical_speed": 0,
+      "latitude": null,
+      "longitude": null,
+      "position_state": {
+        "is_fixed": 0,
+        "quality": 0,
+        "gps_number": 4,
+        "rtk_number": 12
+      },
+      "battery": {
+        "batteries": [
+          {
+            "present": true
+          }
+        ]
+      },
+      "cameras": [
+        {
+          "payload_index": "68-0-0"
+        }
+      ]
+    }
+  },
+  "state": {
+    "topic": "thing/product/AIRCRAFT_REDACTED/state",
+    "data": {
+      "observed": true
+    }
+  },
+  "rtk": {
+    "fixed": {
+      "position_state": {
+        "is_fixed": 2,
+        "quality": 5,
+        "gps_number": 20,
+        "rtk_number": 24
+      }
+    },
+    "notFixed": {
+      "position_state": {
+        "is_fixed": 0,
+        "quality": 0,
+        "gps_number": 4,
+        "rtk_number": 12
+      }
+    }
+  }
+}
