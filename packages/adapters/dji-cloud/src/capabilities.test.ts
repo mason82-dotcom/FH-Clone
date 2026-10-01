@@ -25,6 +25,23 @@ test("M3E/M3T/M3TA behind RC Pro expose payload-only cloud control", () => {
   }
 });
 
+test("M3M cloud identity remains control fail-closed until separately qualified", () => {
+  const profile = getDjiCloudControlProfile(
+    { domain: 0, type: 77, subType: 2 },
+    rcPro
+  );
+
+  assert.equal(profile.cloudControl, false);
+  assert.equal(profile.flightControl, false);
+  assert.equal(profile.stickControl, false);
+  assert.equal(profile.droneControl, false);
+  assert.equal(profile.flyTo, false);
+  assert.equal(profile.payloadControl, false);
+  assert.equal(profile.requiresCloudControlAuthority, false);
+  assert.equal(profile.drcProfile, "none");
+  assert.deepEqual(profile.capabilities, []);
+});
+
 test("Matrice 4E/4T behind RC Plus 2 expose stick and drone control", () => {
   for (const subType of [0, 1]) {
     const profile = getDjiCloudControlProfile(
