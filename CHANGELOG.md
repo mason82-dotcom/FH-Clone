@@ -18,6 +18,7 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - Interner Prometheus-kompatibler `/metrics`-Endpunkt auf Port 8081 ergänzt; keine Geräteidentitäten als Metriklabels und weiterhin keine Host-Port-Exposition.
 - RC-Pro-Geräteansicht um MSDK-V5-abgeleitete M3-Subdevice-Beziehungen ergänzt; M3M kann dadurch bereits vor einer Cloud-Topologie read-only als Subdevice erscheinen.
 - Reale RC-Pro-Enterprise-/Pilot-2-`update_topo`-Evidence bestätigt M3M als `domain=0/type=77/sub_type=2`; FH2 benennt diese Cloud-Identität korrekt, ohne daraus automatisch Cloud-Control oder Payload-Control freizugeben.
+- Reale M3M-OSD-Telemetrie bestätigt zusätzlich `payload_index=68-0-0` sowie den M3-Fixed-Vertrag `position_state.is_fixed=2` bei `quality=5`; der DJI-MQTT-Redactor unterstützt dafür nun ein eigenes `m3m`-Profil.
 
 ## 3.0.0 – 2026-09-29
 
