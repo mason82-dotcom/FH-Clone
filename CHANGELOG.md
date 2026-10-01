@@ -16,7 +16,8 @@ Alle wesentlichen Änderungen an FH-Clone werden hier geführt.
 - TimescaleDB-Backup/Restore als reproduzierbares CI-Betriebsgate ergänzt; Restore bleibt standardmäßig von der aktiven Quelldatenbank getrennt.
 - Passive, sanitierte MQTT-Outbound-Evidence für erfolgreiche Basic-Link-Publishes sowie ausgewählte DRC-Qualifikationsframes ergänzt; keine Command-Replay- oder AuthZ-Quelle.
 - Interner Prometheus-kompatibler `/metrics`-Endpunkt auf Port 8081 ergänzt; keine Geräteidentitäten als Metriklabels und weiterhin keine Host-Port-Exposition.
-- RC-Pro-Geräteansicht um MSDK-V5-abgeleitete M3-Subdevice-Beziehungen ergänzt; insbesondere wird M3M über reale RC-/Flight-Controller-SNs als Subdevice geführt, ohne eine nicht dokumentierte Cloud-`sub_type`-Identität oder Cloud-Control-Freigabe zu erfinden.
+- RC-Pro-Geräteansicht um MSDK-V5-abgeleitete M3-Subdevice-Beziehungen ergänzt; M3M kann dadurch bereits vor einer Cloud-Topologie read-only als Subdevice erscheinen.
+- Reale RC-Pro-Enterprise-/Pilot-2-`update_topo`-Evidence bestätigt M3M als `domain=0/type=77/sub_type=2`; FH2 benennt diese Cloud-Identität korrekt, ohne daraus automatisch Cloud-Control oder Payload-Control freizugeben.
 
 ## 3.0.0 – 2026-09-29
 
