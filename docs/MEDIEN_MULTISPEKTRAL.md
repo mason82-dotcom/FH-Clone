@@ -6,8 +6,10 @@ Dieses Dokument beschreibt den verbindlichen V3-Fachrahmen.
 
 Die physikalische Banddefinition, die DJI-M3M-EXIF/XMP-Feldnamen und die
 fachliche Media-/NDVI-Zuordnung sind inzwischen herstellerseitig dokumentiert.
-Offen bleibt die Verifikation an realen M3M-Dateien sowie die konkrete
-Cloud-API-Payload-Zuordnung, falls sie für den Runtime-Pfad benötigt wird.
+Die reale RC-Pro-Enterprise-/Pilot-2-Hardwareevidence bestätigt außerdem
+M3M als Cloud-Produkt `0/77/2` mit `payload_index=68-0-0`.
+Offen bleibt die Verifikation des Datei-/Radiometrievertrags an realen
+M3M-TIFFs.
 
 ## Ziel
 
@@ -219,12 +221,14 @@ Geräte liefert die Cloud API im `cameras`-Array unter anderem:
 Diese Kameraeigenschaften sind **kein Nachweis**, dass M3M am aktuellen
 Pilot-to-Cloud-Live-Runtime-Pfad teilnimmt.
 
-Für V3 wird **kein exakter M3M-`payload_index` in den statischen
-FH2-Payload-Registry-Code aufgenommen**, solange dieser Wert nicht aus einer
-eindeutigen offiziellen Produkt-Support-Enumeration oder realer Hardware
-bestätigt ist.
+Reale RC-Pro-Enterprise-/Pilot-2-Hardware hat für M3M den
+`payload_index=68-0-0` geliefert. FH2 führt diesen Wert deshalb als
+produktspezifisch bestätigte Cloud-Payload-Identität.
 
-Insbesondere wird aus einer WPML-Payload-Type-Enumeration kein
+Der `payload_index` identifiziert dabei das eingebaute M3M-Kamerasystem,
+**nicht** eines der vier Narrow-Bands. Green/Red/RedEdge/NIR werden weiterhin
+ausschließlich aus ihren authoritative Datei-Metadaten bestimmt. Aus einer
+WPML-Payload-Type-Enumeration wird weiterhin kein
 `type-subtype-gimbalindex` geraten.
 
 ### Offizieller M3M-EXIF/XMP-Vertrag
@@ -519,7 +523,8 @@ Erwartete Statusbeispiele:
 - parserseitige Verifikation der konkreten Namespace-/Tag-Darstellung
 - Plausibilisierung der vorhandenen kanonischen Normalisierung gegen einen
   vollständigen realen Capture-Satz
-- exakter M3M-Cloud-`payload_index`, sofern er im Runtime-Pfad benötigt wird
+- der M3M-Cloud-`payload_index=68-0-0` ist real bestätigt; offen bleibt nur
+  die dateiseitige Band-/Sensor-Korrelation
 
 Die **physikalische M3M-Banddefinition und NDVI-Entscheidungsregeln sind
 damit fachlich festgelegt**. Offen bleibt die konkrete Datei-/API-Zuordnung,
