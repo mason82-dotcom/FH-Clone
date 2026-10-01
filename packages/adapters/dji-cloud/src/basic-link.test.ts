@@ -131,3 +131,45 @@ test("topology status reply is passively observed only after successful publish"
     "update_topo"
   );
 });
+
+test("async topology inventory failures are contained by the adapter", async (t) => {
+  const errors: unknown[][] = [];
+  t.mock.method(console, "error", (...args: unknown[]) => {
+    errors.push(args);
+  });
+
+  const adapter = new DjiCloudAdapter({
+    brokerUrl: "mqtt://unused.invalid",
+    onTopologyChange: async () => {
+      throw new Error("inventory_down");
+    }
+  });
+
+  const internal = adapter as unknown as {
+    applyTopology(
+      topology: {
+        gatewaySn: string;
+        product: { domain: number; type: number; subType: number };
+        subDevices: [];
+        updatedAt: number;
+      },
+      payload: unknown
+    ): Promise<void>;
+  };
+
+  await internal.applyTopology(
+    {
+      gatewaySn: "RC-PRO-ASYNC",
+      product: { domain: 2, type: 144, subType: 0 },
+      subDevices: [],
+      updatedAt: 1234
+    },
+    {}
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.[0], "DJI topology inventory hook failed");
+  assert.equal(errors[0]?.[1], "inventory_down");
+});
+
