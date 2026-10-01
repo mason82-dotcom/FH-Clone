@@ -146,6 +146,7 @@ export function describeDjiProduct(product: DjiProductRef): string {
   if (domain === "0" && product.type === 77) {
     if (product.subType === 0) return "DJI Mavic 3 Enterprise";
     if (product.subType === 1) return "DJI Mavic 3 Thermal";
+    if (product.subType === 2) return "DJI Mavic 3M";
     if (product.subType === 3) return "DJI Mavic 3TA";
   }
 
