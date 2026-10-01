@@ -71,6 +71,60 @@ test("topology parser keeps gateway and sub-device identity", () => {
 });
 
 
+test("topology parser rejects a gateway identity without a finite sub_type", () => {
+  for (const subType of [undefined, null, "0", Number.NaN]) {
+    const parsed = parseDjiTopologyUpdate("RC-PRO-001", {
+      method: "update_topo",
+      data: {
+        domain: 2,
+        type: 144,
+        ...(subType !== undefined ? { sub_type: subType } : {}),
+        sub_devices: []
+      }
+    });
+
+    assert.equal(parsed, undefined);
+  }
+});
+
+test("topology parser skips sub-devices without a finite sub_type", () => {
+  const parsed = parseDjiTopologyUpdate("RC-PRO-001", {
+    method: "update_topo",
+    data: {
+      domain: 2,
+      type: 144,
+      sub_type: 0,
+      sub_devices: [
+        {
+          sn: "M3E-MISSING-SUBTYPE",
+          domain: 0,
+          type: 77
+        },
+        {
+          sn: "M3E-STRING-SUBTYPE",
+          domain: 0,
+          type: 77,
+          sub_type: "0"
+        },
+        {
+          sn: "M3T-VALID",
+          domain: 0,
+          type: 77,
+          sub_type: 1
+        }
+      ]
+    }
+  });
+
+  assert.ok(parsed);
+  assert.deepEqual(
+    parsed.subDevices.map((device) => device.sn),
+    ["M3T-VALID"]
+  );
+  assert.equal(parsed.subDevices[0]?.product.subType, 1);
+});
+
+
 test("product description requires the full DJI identity", () => {
   assert.equal(
     describeDjiProduct({ domain: 0, type: 77, subType: 0 }),

@@ -27,8 +27,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function numberOrZero(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 export function parseDjiTopologyUpdate(
@@ -41,13 +41,22 @@ export function parseDjiTopologyUpdate(
   }
 
   const data = payload.data;
-  if (typeof data.type !== "number" || !Array.isArray(data.sub_devices)) {
+  if (
+    !isFiniteNumber(data.type) ||
+    !isFiniteNumber(data.sub_type) ||
+    !Array.isArray(data.sub_devices)
+  ) {
     return undefined;
   }
 
   const subDevices: DjiSubDevice[] = [];
   for (const item of data.sub_devices) {
-    if (!isRecord(item) || typeof item.sn !== "string" || typeof item.type !== "number") {
+    if (
+      !isRecord(item) ||
+      typeof item.sn !== "string" ||
+      !isFiniteNumber(item.type) ||
+      !isFiniteNumber(item.sub_type)
+    ) {
       continue;
     }
 
@@ -59,7 +68,7 @@ export function parseDjiTopologyUpdate(
           ? { domain: item.domain }
           : {}),
         type: item.type,
-        subType: numberOrZero(item.sub_type),
+        subType: item.sub_type,
         ...(typeof item.thing_version === "string"
           ? { thingVersion: item.thing_version }
           : typeof item.version === "string"
@@ -76,7 +85,7 @@ export function parseDjiTopologyUpdate(
         ? { domain: data.domain }
         : {}),
       type: data.type,
-      subType: numberOrZero(data.sub_type),
+      subType: data.sub_type,
       ...(typeof data.thing_version === "string"
         ? { thingVersion: data.thing_version }
         : typeof data.version === "string"
