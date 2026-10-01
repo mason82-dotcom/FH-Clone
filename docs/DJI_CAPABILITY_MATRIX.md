@@ -238,19 +238,22 @@ behandelt.
 | `gimbal_pitch/roll/yaw` | `telemetry.gimbal` | aus tatsächlich beobachteten Gimbal-Properties |
 | `gps_number` | `telemetry.flight` | GPS/GNSS; allein **kein** RTK-Nachweis |
 | `rtk_number` | `telemetry.rtk` | RTK-spezifische Telemetrie |
-| `quality == 10` | `telemetry.rtk` + RTK fixed | DJI kennzeichnet explizit RTK fixed |
+| M3-Serie: `position_state.is_fixed == 2` | `telemetry.rtk` + RTK fixed | real für M3E/M3M beobachteter M3-Vertrag; `quality` wird nicht familienübergreifend gleichgesetzt |
 | `mode_code == 18` | `telemetry.rtk` | Airborne RTK fixing; kein Fix-Nachweis |
 | `live_capacity` | **kein** `livestream.read` | FlightHub-2-/SIKONG-CE-Bezahlstreaming ist für V3 ausdrücklich deaktiviert; Herstellerfähigkeit allein schaltet nichts frei |
 | Pilot Media Management | derzeit **kein** `media.read` | DJI-Funktion läuft über Pilot-2/JSBridge/Object-Storage; FH2-Media-Integration bleibt separates Gate |
 
 ### GNSS/RTK
 
-DJI trennt GPS- und RTK-Satelliten ausdrücklich. Außerdem beschreibt
-`position_state.is_fixed` den allgemeinen Satelliten-Fixvorgang, während
-`position_state.quality=10` ausdrücklich **RTK fixed** bedeutet.
+DJI trennt GPS- und RTK-Satelliten ausdrücklich. Die konkrete Bedeutung der
+Statusfelder ist produktfamilienabhängig und darf nicht aus einer anderen
+DJI-Produktfamilie übertragen werden.
 
-FH2 darf deshalb weder aus `gps_number` noch aus `is_fixed==2` allein
-eine positive RTK-Capability beziehungsweise einen RTK-Fix ableiten.
+Für die M3-Serie verwendet FH2 den real verifizierten Vertrag
+`position_state.is_fixed == 2` als Fixed-Zustand. Sowohl der vorhandene
+M3E-Capture als auch die reale M3M-Telemetrie zeigen dabei `quality=5`;
+FH2 verlangt deshalb für M3 ausdrücklich **nicht** `quality == 10`.
+`gps_number` allein bleibt kein RTK-Nachweis.
 
 ### Kamera und Gimbal
 
@@ -344,6 +347,7 @@ aktuellen DJI-Produktübersicht überein:
 | --- | --- |
 | Mavic 3E | `66-0-0` |
 | Mavic 3T | `67-0-0` |
+| Mavic 3M | `68-0-0` |
 | Mavic 3TA | `129-0-0` |
 | Matrice 4E | `88-0-0` |
 | Matrice 4T | `89-0-0` |
