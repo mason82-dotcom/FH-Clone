@@ -49,6 +49,7 @@ FH2 darf daher nicht nur anhand von `type` entscheiden.
 | --- | ---: | ---: | ---: |
 | Mavic 3 Enterprise | 0 | 77 | 0 |
 | Mavic 3 Thermal | 0 | 77 | 1 |
+| Mavic 3 Multispectral | 0 | 77 | 2 |
 | Mavic 3TA | 0 | 77 | 3 |
 | Matrice 4E | 0 | 99 | 0 |
 | Matrice 4T | 0 | 99 | 1 |
@@ -175,40 +176,32 @@ bleibt zusätzlich FC3/Lease/DJI-Authority/Session/Dead-Man-gated.
 
 M3M muss getrennt betrachtet werden.
 
-Die aktuelle DJI-Cloud-API-Produktübersicht für den Pilot-to-Cloud-Pfad
-enumeriert bei `type=77`:
+Für die konkrete FH2-Hardwarekombination wurde M3M auf realer
+RC-Pro-Enterprise-/Pilot-2-Hardware im Cloud-`update_topo` wie folgt
+beobachtet:
 
 ```text
-sub_type 0 = M3E
-sub_type 1 = M3T
-sub_type 3 = M3TA
+domain   = 0
+type     = 77
+sub_type = 2
 ```
 
-M3M wird dort nicht als eigener Cloud-Runtime-Produkttyp enumeriert.
+Damit ist `0/77/2` für FH2 als reale M3M-Cloud-Produktidentität bestätigt.
 
-Gleichzeitig führt DJI M3M in anderen Verträgen, insbesondere:
-
-- Mobile SDK V5
-- WPML / Wayline
-- Mapping-/Media-Kontext
-
-Deshalb gilt in FH2:
+DJI führt M3M außerdem in Mobile SDK V5, WPML/Wayline und
+Mapping-/Media-Kontexten. Die bestätigte Cloud-Produktidentität bedeutet
+jedoch nicht automatisch, dass FH2 das M3E/M3T-Control-Profil übernehmen darf.
 
 ```text
-M3M WPML/Media/MSDK-Support
+M3M Cloud-Identität 0/77/2
     !=
 automatische Pilot-Cloud-Live-Control-Capability
 ```
 
-Ohne eindeutige offizielle Cloud-Enumeration beziehungsweise real verifizierte
-`update_topo`-Identität erhält M3M **kein** M3E/M3T-Live-Control-Profil.
-
-Davon getrennt darf FH2 eine authentifizierte MSDK-V5-Verbindung für die
-read-only Geräteansicht verwenden: reale RC-Pro-SN + reale
-Flight-Controller-SN + MSDK-Produkt-/Sensoridentität erzeugen eine
-M3M-Subdevice-Beziehung. Diese Relation ist Inventarprovenienz und keine
-Cloud-API-Produktfreigabe; insbesondere erzeugt sie weder Cloud-Control noch
-eine angenommene M3M-`sub_type`-Nummer.
+M3M bleibt für Cloud-Control und Payload-Control fail-closed, bis der konkrete
+Payload-/Authority-/Reply-Vertrag auf realer Hardware separat qualifiziert
+wurde. Die MSDK-V5-Relation darf weiterhin ergänzend für die read-only
+Geräteansicht verwendet werden; sie erzeugt keine Control-Freigabe.
 
 ## Produktsupport versus routbare Capability
 
