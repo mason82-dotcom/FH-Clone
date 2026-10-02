@@ -184,8 +184,20 @@ export class MappingObjectStore {
         method: "GET",
         redirect: "manual"
       });
-      return response.ok;
-    } catch {
+      if (response.ok) return true;
+
+      const body = await response.text().catch(() => "");
+      const s3Code =
+        body.match(/<Code>([^<]{1,80})<\/Code>/)?.[1] ?? "unknown";
+      console.warn(
+        `[Mapping] object-store readiness failed: HTTP ${response.status}, S3 code ${s3Code}`
+      );
+      return false;
+    } catch (error) {
+      console.warn(
+        "[Mapping] object-store readiness request failed:",
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }
