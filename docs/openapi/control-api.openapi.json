@@ -1827,6 +1827,104 @@
         },
         "x-fh2-safety-level": "FC0"
       }
+    },
+    "/api/msdk/media/upload-url": {
+      "post": {
+        "operationId": "createMsdkMediaUploadUrl",
+        "tags": [
+          "MSDK",
+          "Media"
+        ],
+        "summary": "Kurzlebige Upload-URL für manuell ausgewählte RC-Mediendatei erzeugen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "assetId",
+                  "fileName"
+                ],
+                "properties": {
+                  "assetId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/JsonAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/media/assets/verified": {
+      "post": {
+        "operationId": "registerVerifiedMsdkMediaAssets",
+        "tags": [
+          "MSDK",
+          "Media"
+        ],
+        "summary": "Bereits hochgeladene MSDK-MediaAssets nach Object-Store-Prüfung registrieren",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "403": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "422": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
     }
   },
   "components": {
