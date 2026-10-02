@@ -51,6 +51,7 @@ bestehende `media_assets.asset_id`-Werte. Jedes Quell-Asset muss einen
 - automatisches Requeue abgelaufener Leases,
 - begrenzte Lease-Wiederholungen,
 - persistierte Ergebnisse und Kartenlayer.
+- Admission-Check gegen den Media-Bucket vor dem Queueing, sobald S3/MinIO konfiguriert ist.
 
 ## Operator-API
 
@@ -221,8 +222,8 @@ Der Compute-Agent kennt weder DJI- noch MQTT-Credentials.
 
 ## Noch offen
 
-- direkte Verdrahtung des verifizierten Media-Uploadvertrags mit den realen DJI-MSDK-/Cloud-Media-Downloadpfaden,
-- Operator-Weboberfläche für Jobanlage/Fortschritt,
+- automatische DJI-Cloud-Media-Übernahme in den lokalen Media-Bucket; der MSDK-Pfad ist bereits manuell verdrahtet,
+- Operator-Weboberfläche für Jobanlage/Fortschritt erst nach einem browsergeeigneten Operator-Auth-Modell,
 - End-to-End-Abnahme mit echtem NodeODM-Datensatz und realem S3/MinIO,
 - optional Wake-on-LAN und Ressourcen-Scheduling.
 
