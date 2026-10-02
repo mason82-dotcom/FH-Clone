@@ -17,6 +17,7 @@ services:
       - ./sql/006_media_assets.sql:/docker-entrypoint-initdb.d/007_media_assets.sql:ro
       - ./sql/007_telemetry_history.sql:/docker-entrypoint-initdb.d/008_telemetry_history.sql:ro
       - ./sql/008_mqtt_outbound_evidence.sql:/docker-entrypoint-initdb.d/009_mqtt_outbound_evidence.sql:ro
+      - ./sql/009_mapping_jobs.sql:/docker-entrypoint-initdb.d/010_mapping_jobs.sql:ro
     expose:
       - "5432"
     healthcheck:
@@ -41,6 +42,7 @@ services:
       - ./sql/006_media_assets.sql:/migrations/006_media_assets.sql:ro
       - ./sql/007_telemetry_history.sql:/migrations/007_telemetry_history.sql:ro
       - ./sql/008_mqtt_outbound_evidence.sql:/migrations/008_mqtt_outbound_evidence.sql:ro
+      - ./sql/009_mapping_jobs.sql:/migrations/009_mapping_jobs.sql:ro
     command:
       [
         "psql",
@@ -57,7 +59,9 @@ services:
         "-f",
         "/migrations/007_telemetry_history.sql",
         "-f",
-        "/migrations/008_mqtt_outbound_evidence.sql"
+        "/migrations/008_mqtt_outbound_evidence.sql",
+        "-f",
+        "/migrations/009_mapping_jobs.sql"
       ]
     restart: "no"
 
