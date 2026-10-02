@@ -121,6 +121,32 @@ MAPPING_PRESIGN_TTL_SECONDS=3600
 Adresse. `MAPPING_S3_PUBLIC_ENDPOINT` muss vom externen Compute-Knoten
 erreichbar sein.
 
+## Media-Bucket-Ingest
+
+Der FH2-Media-Ingest kann große Dateien ohne Proxying durch die Control API
+direkt in den konfigurierten Media-Bucket schreiben:
+
+```text
+POST /internal/media/upload-url
+       |
+       +--> gehashter ingest/<prefix>/<sha256>.<ext>-Key
+       +--> kurzlebige Presigned PUT URL
+       |
+       v
+S3/MinIO Media Bucket
+       |
+       v
+POST /internal/media/assets/verified
+       |
+       +--> HEAD-Prüfung
+       +--> Object-Key/Asset-Bindung
+       +--> media_assets
+```
+
+Beide Endpunkte liegen ausschließlich auf der internen API und verlangen
+`MEDIA_INGEST_TOKEN`. Originaldateiname und Asset-ID werden nicht in den
+generierten Object-Key übernommen.
+
 ### Optionales lokales MinIO
 
 ```bash
@@ -195,7 +221,7 @@ Der Compute-Agent kennt weder DJI- noch MQTT-Credentials.
 
 ## Noch offen
 
-- produktiver Ingest echter DJI-Mediendateien in den konfigurierten Media-Bucket,
+- direkte Verdrahtung des verifizierten Media-Uploadvertrags mit den realen DJI-MSDK-/Cloud-Media-Downloadpfaden,
 - Operator-Weboberfläche für Jobanlage/Fortschritt,
 - End-to-End-Abnahme mit echtem NodeODM-Datensatz und realem S3/MinIO,
 - optional Wake-on-LAN und Ressourcen-Scheduling.
