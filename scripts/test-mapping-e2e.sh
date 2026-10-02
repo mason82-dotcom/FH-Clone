@@ -73,7 +73,10 @@ dc down -v --remove-orphans >/dev/null 2>&1 || true
 # Validate the merged root + E2E compose model before building anything.
 dc config >/dev/null
 
-dc up -d --build   mapping-minio   mapping-minio-init   mapping-fake-nodeodm   mapping-e2e-agent
+# Phase 1: start storage, fake NodeODM and the Control API stack only.
+# Do not start the worker yet: its service_healthy dependency would make
+# docker compose abort before the explicit /ready diagnostics below can run.
+dc up -d --build   mapping-minio   mapping-minio-init   mapping-fake-nodeodm   control-api
 
 ready=0
 last_status=""
@@ -95,6 +98,9 @@ fi
 
 grep -F '"status":"ready"' /tmp/fh2-mapping-e2e-ready.json >/dev/null
 
+# Phase 2: only after the API and all configured mapping dependencies are
+# explicitly ready, start the worker and then run the E2E driver.
+dc up -d --build mapping-e2e-agent
 dc run --rm --no-deps mapping-e2e-driver
 
 job_status="$(dc exec -T timescaledb   psql -U fhclone -d fhclone -tAc   "SELECT status FROM mapping_jobs ORDER BY created_at DESC LIMIT 1;"   | tr -d '[:space:]')"
