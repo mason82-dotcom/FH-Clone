@@ -52,6 +52,13 @@ export function useDroneTelemetry(
       return;
     }
 
+    setTelemetry({});
+    setSources({});
+    setConnected(false);
+    setLoading(true);
+    setError(null);
+    setRefreshedAt(undefined);
+
     let cancelled = false;
     let controller: AbortController | undefined;
 
