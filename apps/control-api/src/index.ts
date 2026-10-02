@@ -39,7 +39,11 @@ import {
   parseMappingJobCreateInput,
   parseMappingUploadUrlsInput
 } from "./mapping-model.js";
-import { createMappingObjectStoreFromEnv } from "./mapping-object-store.js";
+import {
+  buildManagedMediaObjectKey,
+  createMappingObjectStoreFromEnv,
+  isManagedMediaObjectKeyForAsset
+} from "./mapping-object-store.js";
 import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
@@ -1585,6 +1589,126 @@ const internalServer = createServer(async (request, response) => {
       } catch (error) {
         return json(response, 400, {
           error: "m3m_media_normalization_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (request.method === "POST" && request.url === "/internal/media/upload-url") {
+      try {
+        if (!hasValidBearerToken(request, mediaIngestToken)) {
+          return json(response, 401, { error: "media_ingest_unauthorized" });
+        }
+        if (!mappingObjectStore) {
+          return json(response, 503, { error: "media_object_store_not_configured" });
+        }
+        if (!mediaStore.enabled) {
+          return json(response, 503, { error: "media_store_not_configured" });
+        }
+
+        const body = await readJson<unknown>(request, 16_384);
+        if (typeof body !== "object" || body === null || Array.isArray(body)) {
+          return json(response, 400, { error: "invalid_media_upload_request" });
+        }
+
+        const value = body as Record<string, unknown>;
+        const assetId =
+          typeof value.assetId === "string" ? value.assetId.trim() : "";
+        const fileName =
+          typeof value.fileName === "string" ? value.fileName.trim() : "";
+        const objectKey = buildManagedMediaObjectKey(assetId, fileName);
+        const ttl = mappingObjectStore.status().presignTtlSeconds;
+
+        return json(response, 201, {
+          objectKey,
+          uploadUrl: mappingObjectStore.presignMediaPut(objectKey),
+          expiresIn: ttl,
+          method: "PUT"
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "media_upload_url_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (
+      request.method === "POST" &&
+      request.url === "/internal/media/assets/verified"
+    ) {
+      try {
+        if (!hasValidBearerToken(request, mediaIngestToken)) {
+          return json(response, 401, { error: "media_ingest_unauthorized" });
+        }
+        if (!mappingObjectStore) {
+          return json(response, 503, { error: "media_object_store_not_configured" });
+        }
+        if (!mediaStore.enabled) {
+          return json(response, 503, { error: "media_store_not_configured" });
+        }
+
+        const body = await readJson<unknown>(request, 2_000_000);
+        const candidates = Array.isArray(body) ? body : [body];
+        if (candidates.length === 0 || candidates.length > 100) {
+          return json(response, 400, { error: "invalid_verified_media_asset_batch" });
+        }
+
+        const assets = candidates.filter(isMediaAsset);
+        if (assets.length !== candidates.length) {
+          return json(response, 400, { error: "invalid_media_asset" });
+        }
+        if (new Set(assets.map((asset) => asset.id)).size !== assets.length) {
+          return json(response, 400, { error: "duplicate_media_asset_id" });
+        }
+
+        const unmanaged = assets
+          .filter(
+            (asset) =>
+              !asset.objectKey ||
+              !asset.fileName ||
+              !isManagedMediaObjectKeyForAsset(
+                asset.objectKey,
+                asset.id,
+                asset.fileName
+              )
+          )
+          .map((asset) => asset.id);
+        if (unmanaged.length > 0) {
+          return json(response, 400, {
+            error: "media_asset_object_key_not_managed",
+            assetIds: unmanaged
+          });
+        }
+
+        const missing: string[] = [];
+        for (const asset of assets) {
+          if (!(await mappingObjectStore.mediaExists(asset.objectKey!))) {
+            missing.push(asset.id);
+          }
+        }
+        if (missing.length > 0) {
+          return json(response, 422, {
+            error: "media_object_missing",
+            assetIds: missing
+          });
+        }
+
+        await mediaStore.upsertMany(assets);
+        let overlayed = 0;
+        for (const asset of assets) {
+          if (mediaOverlays.upsert(asset)) overlayed += 1;
+        }
+
+        return json(response, 200, {
+          accepted: assets.length,
+          overlayed,
+          persisted: true,
+          objectStoreVerified: true
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "verified_media_ingest_failed",
           detail: errorMessage(error)
         });
       }
