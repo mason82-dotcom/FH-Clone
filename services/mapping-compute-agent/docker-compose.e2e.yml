@@ -1,4 +1,9 @@
 services:
+  control-api:
+    environment:
+      # Mapping E2E must not depend on DJI MQTT authorization/readiness.
+      DJI_MQTT_URL: ""
+
   mapping-fake-nodeodm:
     profiles: ["mapping-e2e"]
     build:
