@@ -1052,6 +1052,9 @@ const publicServer = createServer(async (request, response) => {
       if (!mappingStore.enabled) {
         return json(response, 503, { error: "mapping_store_not_configured" });
       }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "mapping_object_store_not_configured" });
+      }
       const layers = await mappingStore.listLayers();
       return json(
         response,
@@ -1107,6 +1110,8 @@ const publicServer = createServer(async (request, response) => {
         layer.tileFormat !== "png" ||
         layer.minZoom === undefined ||
         layer.maxZoom === undefined ||
+        z < 0 ||
+        z > 24 ||
         z < layer.minZoom ||
         z > layer.maxZoom ||
         x < 0 ||
