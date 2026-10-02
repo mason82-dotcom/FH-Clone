@@ -76,7 +76,10 @@ test("storage configuration is all-or-nothing", () => {
 test("resultExists uses an internally signed HEAD request", async () => {
   let seen: { url: string; method?: string } | undefined;
   const fetchImpl: typeof fetch = async (input, init) => {
-    seen = { url: String(input), method: init?.method };
+    seen = {
+      url: String(input),
+      ...(init?.method ? { method: init.method } : {})
+    };
     return new Response(null, { status: 200 });
   };
   const exists = await store(fetchImpl).resultExists(
