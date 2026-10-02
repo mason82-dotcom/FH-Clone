@@ -161,3 +161,29 @@ test("mediaExists checks the media bucket through the internal endpoint", async 
   assert.equal(new URL(seen!.url).hostname, "minio");
   assert.ok(new URL(seen!.url).pathname.startsWith("/fh2-media/ingest/"));
 });
+
+
+test("SigV4 canonical query sorts encoded parameter names bytewise", async () => {
+  let seenUrl: string | undefined;
+  const fetchImpl: typeof fetch = async (input) => {
+    seenUrl = String(input);
+    return new Response(
+      "<?xml version=\"1.0\"?><ListBucketResult><KeyCount>0</KeyCount></ListBucketResult>",
+      { status: 200 }
+    );
+  };
+
+  assert.equal(await store(fetchImpl).ping(), true);
+  assert.ok(seenUrl);
+
+  const query = seenUrl!.split("?", 2)[1] ?? "";
+  const algorithm = query.indexOf("X-Amz-Algorithm=");
+  const signedHeaders = query.indexOf("X-Amz-SignedHeaders=");
+  const listType = query.indexOf("list-type=");
+  const maxKeys = query.indexOf("max-keys=");
+
+  assert.ok(algorithm >= 0);
+  assert.ok(signedHeaders > algorithm);
+  assert.ok(listType > signedHeaders);
+  assert.ok(maxKeys > listType);
+});
