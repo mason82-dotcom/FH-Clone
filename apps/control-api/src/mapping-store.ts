@@ -249,6 +249,18 @@ export class MappingStore {
     return row ? rowToLayer(row) : undefined;
   }
 
+  async resolveSourceAssets(
+    assetIds: readonly string[]
+  ): Promise<MappingSourceAsset[]> {
+    const pool = this.requirePool();
+    const client = await pool.connect();
+    try {
+      return await this.resolveSources(client, assetIds);
+    } finally {
+      client.release();
+    }
+  }
+
   async claim(input: MappingAgentClaimInput): Promise<MappingClaim | undefined> {
     const pool = this.requirePool();
     const leaseSeconds = input.leaseSeconds ?? this.defaultLeaseSeconds;
