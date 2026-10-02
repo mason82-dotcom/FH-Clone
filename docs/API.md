@@ -168,6 +168,32 @@ Authorization: Bearer <agentToken>
 Der Agent-Token muss zur RC-/Aircraft-Identität im Snapshot passen. Dieser
 Endpunkt nimmt **keine** Flight-Control-Kommandos an.
 
+### POST /api/msdk/media/upload-url
+
+Stellt für eine bereits gepairte und aktuell heartbeatende RC Bridge eine
+kurzlebige Presigned-PUT-URL für den Media-Bucket aus.
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+Der Endpunkt verlangt zusätzlich einen frischen MSDK-Agent-Zustand
+(`lastSeenAt <= 10 s`). Die Antwort enthält weder S3 Access Key noch Secret.
+
+### POST /api/msdk/media/assets/verified
+
+Registriert ein zuvor hochgeladenes `MediaAsset`. Vor der Persistenz prüft
+die Control API:
+
+- Agent-Token gültig und nicht widerrufen,
+- frischen Heartbeat,
+- `asset.capture.deviceId` entspricht exakt der Aircraft-SN des Tokens,
+- der Object-Key wurde von FH2 für `asset.id + fileName` erzeugt,
+- das Objekt existiert tatsächlich im Media-Bucket.
+
+Damit kann ein gepairter RC-Agent weder ein Asset für eine andere Aircraft
+registrieren noch einen beliebigen fremden S3-Key referenzieren.
+
 ### GET /api/msdk/agents
 
 Read-only Sicht auf die zuletzt von MSDK-Agents gemeldeten Snapshots und
