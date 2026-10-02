@@ -45,6 +45,36 @@ export interface MappingClaim {
   capabilities: Record<string, unknown>;
 }
 
+export interface MappingLayer {
+  id: string;
+  jobId?: string;
+  name: string;
+  layerType: "xyz" | "cog";
+  objectPrefix: string;
+  tileFormat?: string;
+  minZoom?: number;
+  maxZoom?: number;
+  boundsWgs84?: [number, number, number, number];
+  crs?: string;
+  opacity: number;
+  createdAt: string;
+}
+
+interface MappingLayerRow {
+  id: string;
+  job_id: string | null;
+  name: string;
+  layer_type: "xyz" | "cog";
+  object_prefix: string;
+  tile_format: string | null;
+  min_zoom: number | null;
+  max_zoom: number | null;
+  bounds_wgs84: unknown;
+  crs: string | null;
+  opacity: number;
+  created_at: Date;
+}
+
 export class MappingLeaseConflict extends Error {
   constructor() {
     super("mapping_job_not_leased_to_agent");
@@ -196,6 +226,27 @@ export class MappingStore {
     );
     const row = result.rows[0];
     return row ? rowToJob(row) : undefined;
+  }
+
+
+  async listLayers(): Promise<MappingLayer[]> {
+    const pool = this.requirePool();
+    const result = await pool.query<MappingLayerRow>(
+      `SELECT *
+       FROM mapping_layers
+       ORDER BY created_at DESC, id DESC`
+    );
+    return result.rows.map(rowToLayer);
+  }
+
+  async getLayer(layerId: string): Promise<MappingLayer | undefined> {
+    const pool = this.requirePool();
+    const result = await pool.query<MappingLayerRow>(
+      "SELECT * FROM mapping_layers WHERE id = $1",
+      [layerId]
+    );
+    const row = result.rows[0];
+    return row ? rowToLayer(row) : undefined;
   }
 
   async claim(input: MappingAgentClaimInput): Promise<MappingClaim | undefined> {
@@ -602,6 +653,31 @@ function rowToJob(row: MappingJobRow): MappingJob {
     ...(row.finished_at ? { finishedAt: row.finished_at.toISOString() } : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
+  };
+}
+
+function rowToLayer(row: MappingLayerRow): MappingLayer {
+  const bounds = Array.isArray(row.bounds_wgs84) &&
+    row.bounds_wgs84.length === 4 &&
+    row.bounds_wgs84.every(
+      (value) => typeof value === "number" && Number.isFinite(value)
+    )
+    ? row.bounds_wgs84 as [number, number, number, number]
+    : undefined;
+
+  return {
+    id: row.id,
+    ...(row.job_id ? { jobId: row.job_id } : {}),
+    name: row.name,
+    layerType: row.layer_type,
+    objectPrefix: row.object_prefix,
+    ...(row.tile_format ? { tileFormat: row.tile_format } : {}),
+    ...(row.min_zoom !== null ? { minZoom: row.min_zoom } : {}),
+    ...(row.max_zoom !== null ? { maxZoom: row.max_zoom } : {}),
+    ...(bounds ? { boundsWgs84: bounds } : {}),
+    ...(row.crs ? { crs: row.crs } : {}),
+    opacity: Number(row.opacity),
+    createdAt: row.created_at.toISOString()
   };
 }
 
