@@ -89,3 +89,17 @@ test("generic MSDK upload does not invent historical capture metadata", () => {
   assert.match(block, /put\("deviceId", aircraftSn\)/);
   assert.doesNotMatch(block, /latitudeDeg|longitudeDeg|capturedAt|rtkFixed/);
 });
+
+
+test("MSDK media identity binds file hash to the authenticated aircraft", () => {
+  const start = bridgeSource.indexOf("fun uploadMedia(");
+  const end = bridgeSource.indexOf("\n    fun addListener(", start);
+  const block = bridgeSource.slice(start, end);
+
+  assert.match(
+    block,
+    /sha256Text\("\$aircraftSn\\u0000\$sha256"\)/
+  );
+  assert.match(block, /put\("fileName", originalFileName\)/);
+  assert.doesNotMatch(block, /"msdk-media:\$aircraftSn/);
+});
