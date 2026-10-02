@@ -62,6 +62,31 @@ const dynamic = [
     name: "telemetryMatch",
     method: "GET",
     path: "/api/devices/{device_sn}/telemetry"
+  },
+  {
+    name: "mappingAgentImageUrlsMatch",
+    method: "POST",
+    path: "/api/mapping/agent/jobs/{job_id}/image-urls"
+  },
+  {
+    name: "mappingAgentHeartbeatMatch",
+    method: "POST",
+    path: "/api/mapping/agent/jobs/{job_id}/heartbeat"
+  },
+  {
+    name: "mappingAgentUploadUrlsMatch",
+    method: "POST",
+    path: "/api/mapping/agent/jobs/{job_id}/upload-urls"
+  },
+  {
+    name: "mappingAgentCompleteMatch",
+    method: "POST",
+    path: "/api/mapping/agent/jobs/{job_id}/complete"
+  },
+  {
+    name: "mappingAgentFailMatch",
+    method: "POST",
+    path: "/api/mapping/agent/jobs/{job_id}/fail"
   }
 ];
 
