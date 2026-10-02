@@ -6,6 +6,7 @@ import type {
   MappingAgentHeartbeatInput,
   MappingJob,
   MappingJobCreateInput,
+  MappingResultManifest,
   MappingSourceAsset
 } from "./mapping-model.js";
 
@@ -287,8 +288,149 @@ export class MappingStore {
     }
   }
 
-  async complete(jobId: string, agentId: string): Promise<MappingJob> {
-    return this.finish(jobId, agentId, "DONE");
+  async leaseSources(
+    jobId: string,
+    agentId: string
+  ): Promise<MappingSourceAsset[]> {
+    const pool = this.requirePool();
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const job = await this.lockActiveLease(client, jobId, agentId);
+      const sources = await this.resolveSources(client, job.asset_ids);
+      await client.query("COMMIT");
+      return sources;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async assertActiveLease(jobId: string, agentId: string): Promise<void> {
+    const pool = this.requirePool();
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await this.lockActiveLease(client, jobId, agentId);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async completeWithManifest(
+    jobId: string,
+    agentId: string,
+    manifest: MappingResultManifest
+  ): Promise<{ job: MappingJob; layerId?: string }> {
+    const pool = this.requirePool();
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await this.lockActiveLease(client, jobId, agentId);
+
+      for (const file of manifest.files) {
+        await client.query(
+          `INSERT INTO mapping_results (
+             job_id,
+             kind,
+             object_key,
+             sha256,
+             size_bytes,
+             metadata
+           ) VALUES (
+             $1,
+             $2,
+             $3,
+             $4,
+             $5,
+             '{}'::jsonb
+           )
+           ON CONFLICT (job_id, object_key) DO UPDATE
+           SET kind = EXCLUDED.kind,
+               sha256 = EXCLUDED.sha256,
+               size_bytes = EXCLUDED.size_bytes`,
+          [
+            jobId,
+            file.kind,
+            `${jobId}/${file.path}`,
+            file.sha256 ?? null,
+            file.size ?? null
+          ]
+        );
+      }
+
+      let layerId: string | undefined;
+      if (manifest.tiles) {
+        layerId = randomUUID();
+        await client.query(
+          `INSERT INTO mapping_layers (
+             id,
+             job_id,
+             name,
+             layer_type,
+             object_prefix,
+             tile_format,
+             min_zoom,
+             max_zoom,
+             bounds_wgs84,
+             crs
+           ) VALUES (
+             $1,
+             $2,
+             $3,
+             'xyz',
+             $4,
+             $5,
+             $6,
+             $7,
+             $8::jsonb,
+             $9
+           )`,
+          [
+            layerId,
+            jobId,
+            current.name,
+            `${jobId}/${manifest.tiles.path}`,
+            manifest.tiles.format,
+            manifest.tiles.minzoom,
+            manifest.tiles.maxzoom,
+            manifest.boundsWgs84 ? JSON.stringify(manifest.boundsWgs84) : null,
+            manifest.crs ?? null
+          ]
+        );
+      }
+
+      const updated = await client.query<MappingJobRow>(
+        `UPDATE mapping_jobs
+         SET status = 'DONE',
+             progress = 100,
+             message = 'completed',
+             error = NULL,
+             lease_until = NULL,
+             agent_id = NULL,
+             finished_at = now(),
+             updated_at = now()
+         WHERE id = $1
+         RETURNING *`,
+        [jobId]
+      );
+      await client.query("COMMIT");
+      return {
+        job: rowToJob(requiredRow(updated.rows[0])),
+        ...(layerId ? { layerId } : {})
+      };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async fail(
