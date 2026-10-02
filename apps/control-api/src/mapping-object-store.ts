@@ -410,9 +410,15 @@ function objectUri(base: URL, bucketName: string, objectKey: string): string {
 function queryString(query: Record<string, string>): string {
   return Object.entries(query)
     .map(([key, value]) => [encodeRfc3986(key), encodeRfc3986(value)] as const)
-    .sort(([ka, va], [kb, vb]) => ka.localeCompare(kb) || va.localeCompare(vb))
+    .sort(([ka, va], [kb, vb]) => compareBytes(ka, kb) || compareBytes(va, vb))
     .map(([key, value]) => `${key}=${value}`)
     .join("&");
+}
+
+function compareBytes(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 function encodeRfc3986(value: string): string {
