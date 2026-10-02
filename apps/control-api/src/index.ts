@@ -25,6 +25,16 @@ import {
   isMediaAsset
 } from "./media-overlay.js";
 import { MediaStore } from "./media-store.js";
+import {
+  MappingLeaseConflict,
+  MappingSourceAssetError,
+  MappingStore
+} from "./mapping-store.js";
+import {
+  parseMappingAgentClaimInput,
+  parseMappingAgentHeartbeatInput,
+  parseMappingJobCreateInput
+} from "./mapping-model.js";
 import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
@@ -170,6 +180,15 @@ const mediaStore = new MediaStore({
     ? { connectionString: process.env.TIMESCALE_URL }
     : {})
 });
+const mappingStore = new MappingStore({
+  ...(process.env.TIMESCALE_URL
+    ? { connectionString: process.env.TIMESCALE_URL }
+    : {}),
+  maxLeaseAttempts: envInt("MAPPING_MAX_LEASE_ATTEMPTS", 3),
+  defaultLeaseSeconds: envInt("MAPPING_DEFAULT_LEASE_SECONDS", 600)
+});
+const mappingOperatorToken = process.env.MAPPING_OPERATOR_TOKEN?.trim();
+const mappingAgentToken = process.env.MAPPING_AGENT_TOKEN?.trim();
 const telemetryStore = new TelemetryStore({
   ...(process.env.TIMESCALE_URL
     ? { connectionString: process.env.TIMESCALE_URL }
@@ -279,6 +298,12 @@ const publicServer = createServer(async (request, response) => {
           assets: mediaOverlays.size(),
           persistenceEnabled: mediaStore.enabled
         },
+        mapping: {
+          persistenceEnabled: mappingStore.enabled,
+          operatorApiEnabled: Boolean(mappingOperatorToken),
+          agentApiEnabled: Boolean(mappingAgentToken),
+          storageDispatchEnabled: false
+        },
         telemetryPersistence: {
           enabled: telemetryStore.enabled,
           queue: telemetryStore.status
@@ -305,6 +330,7 @@ const publicServer = createServer(async (request, response) => {
         msdkTokenRevocationStoreReady,
         missionStoreReady,
         mediaStoreReady,
+        mappingStoreReady,
         telemetryStoreReady
       ] = await Promise.all([
         topologyStore
@@ -326,6 +352,9 @@ const publicServer = createServer(async (request, response) => {
           : Promise.resolve(false),
         mediaStore.enabled
           ? mediaStore.ping()
+          : Promise.resolve(false),
+        mappingStore.enabled
+          ? mappingStore.ping()
           : Promise.resolve(false),
         telemetryStore.enabled
           ? telemetryStore.ping()
@@ -365,15 +394,25 @@ const publicServer = createServer(async (request, response) => {
           ? (msdkTokenRevocationStoreReady ? "ready" : "unavailable")
           : "disabled"
       };
+      const mappingStoreCheck = {
+        configured: mappingStore.enabled,
+        ready: mappingStoreReady,
+        state: mappingStore.enabled
+          ? (mappingStoreReady ? "ready" : "unavailable")
+          : "disabled"
+      };
       const ready =
-        readiness.ready && msdkTokenRevocationStore.state !== "unavailable";
+        readiness.ready &&
+        msdkTokenRevocationStore.state !== "unavailable" &&
+        mappingStoreCheck.state !== "unavailable";
 
       return json(response, ready ? 200 : 503, {
         status: ready ? "ready" : "not_ready",
         service: "control-api",
         checks: {
           ...readiness.checks,
-          msdkTokenRevocationStore
+          msdkTokenRevocationStore,
+          mappingStore: mappingStoreCheck
         }
       });
     }
@@ -873,6 +912,89 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, mediaOverlays.list());
     }
 
+    if (request.method === "GET" && url.pathname === "/api/mapping/status") {
+      return json(response, 200, {
+        persistenceEnabled: mappingStore.enabled,
+        operatorApiEnabled: Boolean(mappingOperatorToken),
+        agentApiEnabled: Boolean(mappingAgentToken),
+        storageDispatchEnabled: false,
+        note:
+          "Scheduler foundation is active. Agent dispatch remains disabled until the S3/MinIO presigned-URL boundary is configured."
+      });
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/mapping/jobs"
+    ) {
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingOperatorToken) {
+        return json(response, 503, { error: "mapping_operator_api_disabled" });
+      }
+      if (!hasValidBearerToken(request, mappingOperatorToken)) {
+        return json(response, 401, { error: "mapping_operator_unauthorized" });
+      }
+      const limit = queryInt(url, "limit", 200, 1, 500);
+      return json(response, 200, await mappingStore.list(limit));
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/mapping/jobs"
+    ) {
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingOperatorToken) {
+        return json(response, 503, { error: "mapping_operator_api_disabled" });
+      }
+      if (!hasValidBearerToken(request, mappingOperatorToken)) {
+        return json(response, 401, { error: "mapping_operator_unauthorized" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 256_000);
+        const input = parseMappingJobCreateInput(body);
+        return json(
+          response,
+          201,
+          await mappingStore.create(input, "operator-api")
+        );
+      } catch (error) {
+        if (error instanceof MappingSourceAssetError) {
+          return json(response, 422, {
+            error: error.message,
+            assetIds: error.assetIds
+          });
+        }
+        if (error instanceof SyntaxError || error instanceof TypeError) {
+          return json(response, 400, {
+            error: "invalid_mapping_job_request",
+            detail: errorMessage(error)
+          });
+        }
+        if (
+          error instanceof Error &&
+          (
+            error.message.startsWith("assetIds_") ||
+            error.message.startsWith("name_") ||
+            error.message.startsWith("odmOptions_") ||
+            error.message.startsWith("missionId_") ||
+            error.message.startsWith("deviceSn_") ||
+            error.message === "invalid_mapping_profile"
+          )
+        ) {
+          return json(response, 400, {
+            error: "invalid_mapping_job_request",
+            detail: error.message
+          });
+        }
+        throw error;
+      }
+    }
+
     const missionMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/mission$/);
     if (request.method === "GET" && missionMatch) {
       const deviceId = decodeURIComponent(missionMatch[1] ?? "");
@@ -1216,6 +1338,10 @@ const shutdown = onceAsync(async () => {
     {
       name: "media_store",
       run: () => mediaStore.close()
+    },
+    {
+      name: "mapping_store",
+      run: () => mappingStore.close()
     },
     {
       name: "telemetry_store",
