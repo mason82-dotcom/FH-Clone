@@ -1749,6 +1749,84 @@
         },
         "x-fh2-safety-level": "FC0"
       }
+    },
+    "/api/mapping/layers": {
+      "get": {
+        "operationId": "listMappingLayers",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Freigegebene read-only Mapping-Layer auflisten",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/layers/{layer_id}/tiles/{z}/{x}/{y}.png": {
+      "get": {
+        "operationId": "getMappingTile",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "XYZ-Tile über kurzlebige S3-Weiterleitung lesen",
+        "parameters": [
+          {
+            "name": "layer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 24
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Weiterleitung auf kurzlebige signierte Objekt-URL"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
     }
   },
   "components": {
