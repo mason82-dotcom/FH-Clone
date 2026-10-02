@@ -13,6 +13,7 @@ import {
   type Fh2OverlaySnapshot
 } from "./overlays.js";
 import { useFh2CesiumViewer } from "./useFh2CesiumViewer.js";
+import { Fh2MappingLayerControl } from "./Fh2MappingLayerControl.js";
 
 export interface Fh2OverlayTopology {
   gatewaySn: string;
@@ -511,6 +512,7 @@ function radiansToDegrees(value: number): number {
           <strong>{snapshot[kind].length}</strong>
         </label>
       ))}
+      <Fh2MappingLayerControl />
       <span className="fh2-overlay-viewer-state">
         {viewer ? "global viewer aktiv" : "warte auf Cesium"}
       </span>
