@@ -441,12 +441,31 @@ const publicServer = createServer(async (request, response) => {
             ? "ready"
             : "unavailable"
       };
+      const mappingLayerViewCheck = {
+        configured: mappingLayerViewEnabled,
+        ready: Boolean(
+          mappingLayerViewEnabled &&
+          mappingStoreReady &&
+          mappingObjectStore &&
+          mappingObjectStoreReady
+        ),
+        state: !mappingLayerViewEnabled
+          ? "disabled"
+          : (
+              mappingStoreReady &&
+              mappingObjectStore &&
+              mappingObjectStoreReady
+            )
+            ? "ready"
+            : "unavailable"
+      };
       const ready =
         readiness.ready &&
         msdkTokenRevocationStore.state !== "unavailable" &&
         mappingStoreCheck.state !== "unavailable" &&
         mappingObjectStoreCheck.state !== "unavailable" &&
-        mappingAgentApiCheck.state !== "unavailable";
+        mappingAgentApiCheck.state !== "unavailable" &&
+        mappingLayerViewCheck.state !== "unavailable";
 
       return json(response, ready ? 200 : 503, {
         status: ready ? "ready" : "not_ready",
@@ -456,7 +475,8 @@ const publicServer = createServer(async (request, response) => {
           msdkTokenRevocationStore,
           mappingStore: mappingStoreCheck,
           mappingObjectStore: mappingObjectStoreCheck,
-          mappingAgentApi: mappingAgentApiCheck
+          mappingAgentApi: mappingAgentApiCheck,
+          mappingLayerView: mappingLayerViewCheck
         }
       });
     }
