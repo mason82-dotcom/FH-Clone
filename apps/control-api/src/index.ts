@@ -194,6 +194,8 @@ const mappingStore = new MappingStore({
 });
 const mappingOperatorToken = process.env.MAPPING_OPERATOR_TOKEN?.trim();
 const mappingAgentToken = process.env.MAPPING_AGENT_TOKEN?.trim();
+const mappingLayerViewEnabled =
+  process.env.MAPPING_LAYER_VIEW_ENABLED?.trim().toLowerCase() === "true";
 const mappingObjectStore = createMappingObjectStoreFromEnv();
 const telemetryStore = new TelemetryStore({
   ...(process.env.TIMESCALE_URL
@@ -310,7 +312,8 @@ const publicServer = createServer(async (request, response) => {
           agentTokenConfigured: Boolean(mappingAgentToken),
           objectStoreConfigured: Boolean(mappingObjectStore),
           agentApiEnabled: Boolean(mappingAgentToken && mappingObjectStore),
-          storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore)
+          storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+          layerViewEnabled: mappingLayerViewEnabled
         },
         telemetryPersistence: {
           enabled: telemetryStore.enabled,
@@ -961,6 +964,7 @@ const publicServer = createServer(async (request, response) => {
         objectStoreConfigured: Boolean(mappingObjectStore),
         agentApiEnabled: Boolean(mappingAgentToken && mappingObjectStore),
         storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+        layerViewEnabled: mappingLayerViewEnabled,
         presignTtlSeconds:
           mappingObjectStore?.status().presignTtlSeconds ?? null
       });
@@ -1036,6 +1040,96 @@ const publicServer = createServer(async (request, response) => {
         }
         throw error;
       }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/mapping/layers"
+    ) {
+      if (!mappingLayerViewEnabled) {
+        return json(response, 503, { error: "mapping_layer_view_disabled" });
+      }
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      const layers = await mappingStore.listLayers();
+      return json(
+        response,
+        200,
+        layers
+          .filter(
+            (layer) =>
+              layer.layerType === "xyz" &&
+              layer.tileFormat === "png" &&
+              layer.minZoom !== undefined &&
+              layer.maxZoom !== undefined
+          )
+          .map((layer) => ({
+            id: layer.id,
+            jobId: layer.jobId ?? null,
+            name: layer.name,
+            type: layer.layerType,
+            format: layer.tileFormat,
+            minZoom: layer.minZoom,
+            maxZoom: layer.maxZoom,
+            boundsWgs84: layer.boundsWgs84 ?? null,
+            crs: layer.crs ?? null,
+            opacity: layer.opacity,
+            createdAt: layer.createdAt,
+            tileUrl: `/api/mapping/layers/${encodeURIComponent(layer.id)}/tiles/{z}/{x}/{y}.png`
+          }))
+      );
+    }
+
+    const mappingLayerTileMatch = url.pathname.match(
+      /^\/api\/mapping\/layers\/([0-9a-fA-F-]{36})\/tiles\/(\d+)\/(\d+)\/(\d+)\.png$/
+    );
+    if (request.method === "GET" && mappingLayerTileMatch) {
+      if (!mappingLayerViewEnabled) {
+        return json(response, 503, { error: "mapping_layer_view_disabled" });
+      }
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "mapping_object_store_not_configured" });
+      }
+
+      const layerId = mappingLayerTileMatch[1]!;
+      const z = Number.parseInt(mappingLayerTileMatch[2]!, 10);
+      const x = Number.parseInt(mappingLayerTileMatch[3]!, 10);
+      const y = Number.parseInt(mappingLayerTileMatch[4]!, 10);
+      const layer = await mappingStore.getLayer(layerId);
+
+      if (
+        !layer ||
+        layer.layerType !== "xyz" ||
+        layer.tileFormat !== "png" ||
+        layer.minZoom === undefined ||
+        layer.maxZoom === undefined ||
+        z < layer.minZoom ||
+        z > layer.maxZoom ||
+        x < 0 ||
+        y < 0 ||
+        x >= 2 ** z ||
+        y >= 2 ** z ||
+        !layer.jobId ||
+        !layer.objectPrefix.startsWith(`${layer.jobId}/`)
+      ) {
+        return json(response, 404, { error: "mapping_tile_not_found" });
+      }
+
+      const relativePrefix = layer.objectPrefix.slice(layer.jobId.length + 1);
+      const target = mappingObjectStore.presignResultGet(
+        layer.jobId,
+        `${relativePrefix}/${z}/${x}/${y}.png`,
+        300
+      );
+      response.statusCode = 302;
+      response.setHeader("location", target);
+      response.setHeader("cache-control", "private, no-store");
+      response.end();
+      return;
     }
 
     if (
