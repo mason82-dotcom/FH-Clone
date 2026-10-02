@@ -62,8 +62,6 @@ services:
       UPLOAD_WORKERS: "4"
       KEEP_FAILED: "true"
       GPU: "false"
-    tmpfs:
-      - /work
     depends_on:
       control-api:
         condition: service_started
