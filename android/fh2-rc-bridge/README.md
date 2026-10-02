@@ -584,8 +584,34 @@ Ein Tap auf einen Eintrag lädt die Originaldatei manuell in:
 Android/data/com.fh2.rcbridge/files/media/
 ```
 
-Es gibt keinen automatischen Media-Sync und keinen automatischen Upload zum
-FH2-Backend. Beim Verlassen des Screens werden laufende Pulls beendet und der
+Nach abgeschlossenem Download kann **Letzten Download zu FH2 hochladen**
+explizit ausgelöst werden. Der Upload verwendet das bereits gepairte
+MSDK-Agent-Token:
+
+```text
+RC Bridge
+  -> POST /api/msdk/media/upload-url
+  -> Presigned PUT direkt zum Media-Bucket
+  -> POST /api/msdk/media/assets/verified
+```
+
+Der Binärdatenstrom läuft nicht durch die Control API. Das Agent-Token wird
+nicht an den Object Store weitergegeben; der PUT verwendet nur die kurzlebige
+signierte URL.
+
+Das erzeugte `MediaAsset` ist absichtlich konservativ:
+
+- `capture.deviceId` = authentifizierte Aircraft-SN,
+- `profile=GENERIC`,
+- Sensor = `unknown/unavailable`,
+- SHA-256 und Dateigröße als technische Metadaten,
+- **keine** nachträglich erfundene Aufnahmezeit, GPS-Position oder RTK-Lage.
+
+Solche fachlichen Metadaten werden erst ergänzt, wenn sie aus der Datei selbst
+oder einer autoritativen DJI-Quelle belegt werden können.
+
+Es gibt weiterhin **keinen automatischen Media-Sync** und keinen automatischen
+Upload. Beim Verlassen des Screens werden laufende Kamera-Pulls beendet und der
 MediaManager wieder deaktiviert.
 
 
