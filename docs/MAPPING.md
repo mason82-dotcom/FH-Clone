@@ -157,6 +157,30 @@ NodeODM 3.6.2 und der GPU-Unterbau sind per Version/Digest beziehungsweise
 Commit gepinnt. ODM/NodeODM bleiben separate AGPL-3.0-Container und werden nur
 über HTTP angesprochen.
 
+## Cesium-Layer
+
+Persistierte XYZ-Layer können optional in der bestehenden FH2-Cesium-Karte
+eingeblendet werden.
+
+```text
+MAPPING_LAYER_VIEW_ENABLED=true
+```
+
+aktiviert:
+
+- `GET /api/mapping/layers`
+- `GET /api/mapping/layers/{layer_id}/tiles/{z}/{x}/{y}.png`
+
+Der Browser lädt ausschließlich den FH2-Tile-Proxy. Die Control API erzeugt
+für jeden Tile-Request serverseitig eine kurzlebige signierte Result-URL und
+antwortet mit HTTP 302. Weder `MAPPING_S3_ACCESS_KEY` noch
+`MAPPING_S3_SECRET_KEY` werden in das Vite-Bundle oder in die Layerliste
+geschrieben.
+
+Die bestehende Overlay-Leiste zeigt einen eigenen `Mapping`-Schalter und die
+Zahl aktuell verfügbarer Photogrammetrie-Layer. Die Cesium-Imagery-Layer werden
+beim Viewer-Wechsel und beim Deaktivieren sauber entfernt.
+
 ## Sicherheitsgrenze
 
 Mapping ist FC0-Datenverarbeitung. Der Pfad:
@@ -173,7 +197,6 @@ Der Compute-Agent kennt weder DJI- noch MQTT-Credentials.
 
 - produktiver Ingest echter DJI-Mediendateien in den konfigurierten Media-Bucket,
 - Operator-Weboberfläche für Jobanlage/Fortschritt,
-- Cesium-Darstellung persistierter `mapping_layers`,
 - End-to-End-Abnahme mit echtem NodeODM-Datensatz und realem S3/MinIO,
 - optional Wake-on-LAN und Ressourcen-Scheduling.
 
