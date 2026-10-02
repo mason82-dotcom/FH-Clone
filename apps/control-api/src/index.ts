@@ -26,10 +26,20 @@ import {
 } from "./media-overlay.js";
 import { MediaStore } from "./media-store.js";
 import {
+  MappingLeaseConflict,
   MappingSourceAssetError,
   MappingStore
 } from "./mapping-store.js";
-import { parseMappingJobCreateInput } from "./mapping-model.js";
+import {
+  parseMappingAgentClaimInput,
+  parseMappingAgentHeartbeatInput,
+  parseMappingAgentRefInput,
+  parseMappingCompleteInput,
+  parseMappingFailInput,
+  parseMappingJobCreateInput,
+  parseMappingUploadUrlsInput
+} from "./mapping-model.js";
+import { createMappingObjectStoreFromEnv } from "./mapping-object-store.js";
 import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
@@ -184,6 +194,7 @@ const mappingStore = new MappingStore({
 });
 const mappingOperatorToken = process.env.MAPPING_OPERATOR_TOKEN?.trim();
 const mappingAgentToken = process.env.MAPPING_AGENT_TOKEN?.trim();
+const mappingObjectStore = createMappingObjectStoreFromEnv();
 const telemetryStore = new TelemetryStore({
   ...(process.env.TIMESCALE_URL
     ? { connectionString: process.env.TIMESCALE_URL }
@@ -296,8 +307,10 @@ const publicServer = createServer(async (request, response) => {
         mapping: {
           persistenceEnabled: mappingStore.enabled,
           operatorApiEnabled: Boolean(mappingOperatorToken),
-          agentApiEnabled: Boolean(mappingAgentToken),
-          storageDispatchEnabled: false
+          agentTokenConfigured: Boolean(mappingAgentToken),
+          objectStoreConfigured: Boolean(mappingObjectStore),
+          agentApiEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+          storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore)
         },
         telemetryPersistence: {
           enabled: telemetryStore.enabled,
@@ -326,6 +339,7 @@ const publicServer = createServer(async (request, response) => {
         missionStoreReady,
         mediaStoreReady,
         mappingStoreReady,
+        mappingObjectStoreReady,
         telemetryStoreReady
       ] = await Promise.all([
         topologyStore
@@ -350,6 +364,9 @@ const publicServer = createServer(async (request, response) => {
           : Promise.resolve(false),
         mappingStore.enabled
           ? mappingStore.ping()
+          : Promise.resolve(false),
+        mappingObjectStore
+          ? mappingObjectStore.ping()
           : Promise.resolve(false),
         telemetryStore.enabled
           ? telemetryStore.ping()
@@ -396,10 +413,37 @@ const publicServer = createServer(async (request, response) => {
           ? (mappingStoreReady ? "ready" : "unavailable")
           : "disabled"
       };
+      const mappingObjectStoreCheck = {
+        configured: Boolean(mappingObjectStore),
+        ready: mappingObjectStoreReady,
+        state: mappingObjectStore
+          ? (mappingObjectStoreReady ? "ready" : "unavailable")
+          : "disabled"
+      };
+      const mappingAgentApiCheck = {
+        configured: Boolean(mappingAgentToken),
+        ready: Boolean(
+          mappingAgentToken &&
+          mappingStoreReady &&
+          mappingObjectStore &&
+          mappingObjectStoreReady
+        ),
+        state: !mappingAgentToken
+          ? "disabled"
+          : (
+              mappingStoreReady &&
+              mappingObjectStore &&
+              mappingObjectStoreReady
+            )
+            ? "ready"
+            : "unavailable"
+      };
       const ready =
         readiness.ready &&
         msdkTokenRevocationStore.state !== "unavailable" &&
-        mappingStoreCheck.state !== "unavailable";
+        mappingStoreCheck.state !== "unavailable" &&
+        mappingObjectStoreCheck.state !== "unavailable" &&
+        mappingAgentApiCheck.state !== "unavailable";
 
       return json(response, ready ? 200 : 503, {
         status: ready ? "ready" : "not_ready",
@@ -407,7 +451,9 @@ const publicServer = createServer(async (request, response) => {
         checks: {
           ...readiness.checks,
           msdkTokenRevocationStore,
-          mappingStore: mappingStoreCheck
+          mappingStore: mappingStoreCheck,
+          mappingObjectStore: mappingObjectStoreCheck,
+          mappingAgentApi: mappingAgentApiCheck
         }
       });
     }
@@ -911,10 +957,12 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, {
         persistenceEnabled: mappingStore.enabled,
         operatorApiEnabled: Boolean(mappingOperatorToken),
-        agentApiEnabled: Boolean(mappingAgentToken),
-        storageDispatchEnabled: false,
-        note:
-          "Scheduler foundation is active. Agent dispatch remains disabled until the S3/MinIO presigned-URL boundary is configured."
+        agentTokenConfigured: Boolean(mappingAgentToken),
+        objectStoreConfigured: Boolean(mappingObjectStore),
+        agentApiEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+        storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+        presignTtlSeconds:
+          mappingObjectStore?.status().presignTtlSeconds ?? null
       });
     }
 
@@ -985,6 +1033,247 @@ const publicServer = createServer(async (request, response) => {
             error: "invalid_mapping_job_request",
             detail: error.message
           });
+        }
+        throw error;
+      }
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/mapping/agent/claim"
+    ) {
+      if (!requireMappingAgent(request, response)) return;
+      const body = await readJson<unknown>(request, 128_000);
+      let input;
+      try {
+        input = parseMappingAgentClaimInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+
+      try {
+        const claim = await mappingStore.claim(input);
+        if (!claim) {
+          response.statusCode = 204;
+          response.setHeader("cache-control", "no-store");
+          response.end();
+          return;
+        }
+        const ttl = mappingObjectStore!.status().presignTtlSeconds;
+        return json(response, 200, {
+          job: {
+            id: claim.job.id,
+            name: claim.job.name,
+            status: claim.job.status,
+            options: claim.job.options,
+            attempts: claim.job.attempts,
+            lease_until: claim.job.leaseUntil
+          },
+          images: claim.sources.map((source) => ({
+            asset_id: source.assetId,
+            key: source.objectKey,
+            ...(source.fileName ? { file_name: source.fileName } : {}),
+            url: mappingObjectStore!.presignMediaGet(source.objectKey),
+            expires_in: ttl
+          })),
+          results_prefix: `${claim.job.id}/`
+        });
+      } catch (error) {
+        if (error instanceof MappingSourceAssetError) {
+          return json(response, 422, {
+            error: error.message,
+            assetIds: error.assetIds
+          });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentImageUrlsMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/image-urls$/
+    );
+    if (request.method === "POST" && mappingAgentImageUrlsMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentImageUrlsMatch[1]!;
+      const body = await readJson<unknown>(request, 32_000);
+      let input;
+      try {
+        input = parseMappingAgentRefInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        const sources = await mappingStore.leaseSources(jobId, input.agentId);
+        const ttl = mappingObjectStore!.status().presignTtlSeconds;
+        return json(response, 200, {
+          images: sources.map((source) => ({
+            asset_id: source.assetId,
+            key: source.objectKey,
+            ...(source.fileName ? { file_name: source.fileName } : {}),
+            url: mappingObjectStore!.presignMediaGet(source.objectKey),
+            expires_in: ttl
+          }))
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentHeartbeatMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/heartbeat$/
+    );
+    if (request.method === "POST" && mappingAgentHeartbeatMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentHeartbeatMatch[1]!;
+      const body = await readJson<unknown>(request, 32_000);
+      let input;
+      try {
+        input = parseMappingAgentHeartbeatInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        const job = await mappingStore.heartbeat(jobId, input);
+        return json(response, 200, {
+          status: job.status,
+          lease_until: job.leaseUntil
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentUploadUrlsMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/upload-urls$/
+    );
+    if (request.method === "POST" && mappingAgentUploadUrlsMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentUploadUrlsMatch[1]!;
+      const body = await readJson<unknown>(request, 256_000);
+      let input;
+      try {
+        input = parseMappingUploadUrlsInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        await mappingStore.assertActiveLease(jobId, input.agentId);
+        const ttl = mappingObjectStore!.status().presignTtlSeconds;
+        return json(response, 200, {
+          urls: Object.fromEntries(
+            input.paths.map((path) => [
+              path,
+              mappingObjectStore!.presignResultPut(jobId, path)
+            ])
+          ),
+          expires_in: ttl
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentCompleteMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/complete$/
+    );
+    if (request.method === "POST" && mappingAgentCompleteMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentCompleteMatch[1]!;
+      const body = await readJson<unknown>(request, 256_000);
+      let input;
+      try {
+        input = parseMappingCompleteInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+
+      try {
+        await mappingStore.assertActiveLease(jobId, input.agentId);
+        const missing: string[] = [];
+        for (const file of input.manifest.files) {
+          if (!(await mappingObjectStore!.resultExists(jobId, file.path))) {
+            missing.push(file.path);
+          }
+        }
+        if (
+          input.manifest.tiles &&
+          !(await mappingObjectStore!.resultPrefixExists(
+            jobId,
+            input.manifest.tiles.path
+          ))
+        ) {
+          missing.push(`${input.manifest.tiles.path}/`);
+        }
+        if (missing.length > 0) {
+          return json(response, 422, {
+            error: "mapping_results_missing",
+            missing: missing.slice(0, 100)
+          });
+        }
+
+        const completed = await mappingStore.completeWithManifest(
+          jobId,
+          input.agentId,
+          input.manifest
+        );
+        return json(response, 200, {
+          status: completed.job.status,
+          layer_id: completed.layerId ?? null
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentFailMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/fail$/
+    );
+    if (request.method === "POST" && mappingAgentFailMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentFailMatch[1]!;
+      const body = await readJson<unknown>(request, 32_000);
+      let input;
+      try {
+        input = parseMappingFailInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        const job = await mappingStore.fail(jobId, input.agentId, input.error);
+        return json(response, 200, { status: job.status });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
         }
         throw error;
       }
@@ -1479,6 +1768,29 @@ function mqttPayloadMethod(payload: unknown): string | undefined {
     return (payload as Record<string, unknown>).method as string;
   }
   return undefined;
+}
+
+function requireMappingAgent(
+  request: IncomingMessage,
+  response: ServerResponse
+): boolean {
+  if (!mappingStore.enabled) {
+    json(response, 503, { error: "mapping_store_not_configured" });
+    return false;
+  }
+  if (!mappingAgentToken) {
+    json(response, 503, { error: "mapping_agent_api_disabled" });
+    return false;
+  }
+  if (!mappingObjectStore) {
+    json(response, 503, { error: "mapping_object_store_not_configured" });
+    return false;
+  }
+  if (!hasValidBearerToken(request, mappingAgentToken)) {
+    json(response, 401, { error: "mapping_agent_unauthorized" });
+    return false;
+  }
+  return true;
 }
 
 function listenServer(
