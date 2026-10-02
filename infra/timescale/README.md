@@ -35,6 +35,7 @@ Die Datenbank wird nicht standardmäßig auf einen Host-Port veröffentlicht. De
 - `002_rtk_fix_enum.sql` erzwingt für `is_fixed` ausschließlich `0/1/2/3` oder `NULL`
 - `007_telemetry_history.sql` legt `raw_messages` und `normalized_parameters` als 1-Tages-Hypertables mit 24-Monats-Retention an
 - `008_mqtt_outbound_evidence.sql` legt die passive, sanitierte `mqtt_outbound_messages`-Evidence mit 30-Tage-Retention an
+- `009_mapping_jobs.sql` legt `mapping_jobs`, `mapping_results` und `mapping_layers` für den optionalen Photogrammetrie-Scheduler an
 - bestehende Volumes erhalten neue Tabellen über den idempotenten `db-migrations`-One-Shot
 
 ## Produktkennung
