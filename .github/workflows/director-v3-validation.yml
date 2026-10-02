@@ -95,6 +95,9 @@ jobs:
       - name: Control API OpenAPI Contract
         run: npm run test:control-api-openapi
 
+      - name: Mapping Compute-Agent Contract
+        run: sh scripts/verify-mapping-compute-agent.sh
+
       - name: Pilot2 JSBridge Safety
         run: |
           npm run test:pilot2-jsbridge
@@ -225,6 +228,9 @@ jobs:
 
       - name: Control API OpenAPI Contract
         run: npm run test:control-api-openapi
+
+      - name: Mapping Compute-Agent Contract
+        run: sh scripts/verify-mapping-compute-agent.sh
 
       - name: Pilot2 JSBridge Safety
         run: |
