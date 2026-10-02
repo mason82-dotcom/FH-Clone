@@ -85,6 +85,8 @@ for attempt in $(seq 1 90); do
 done
 if [ "$ready" -ne 1 ]; then
   echo "Control API did not become ready for Mapping E2E." >&2
+  curl -sS "http://127.0.0.1:18080/ready" >&2 || true
+  echo >&2
   exit 1
 fi
 
