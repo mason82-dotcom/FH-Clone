@@ -31,6 +31,31 @@ Die Ports sind konfigurierbar.
 
 ## Öffentliche API
 
+### Mapping / Photogrammetrie
+
+Die Mapping-Erweiterung ist ein FC0-Datenverarbeitungspfad und besitzt keine
+Flugsteuerungsrechte.
+
+```http
+GET /api/mapping/status
+GET /api/mapping/jobs
+POST /api/mapping/jobs
+```
+
+`GET/POST /api/mapping/jobs` sind nur aktiv, wenn
+`MAPPING_OPERATOR_TOKEN` gesetzt ist, und verlangen:
+
+```http
+Authorization: Bearer <MAPPING_OPERATOR_TOKEN>
+```
+
+Ein neuer Job referenziert ausschließlich bereits persistierte
+`media_assets.asset_id`-Werte. Alle referenzierten Assets müssen einen
+`objectKey` besitzen. Der Agent-Dispatch ist in dieser Integrationsstufe noch
+fail-closed, bis S3/MinIO-Presigned-URLs integriert sind.
+
+Details: [Mapping / Photogrammetrie](MAPPING.md).
+
 ### GET /health
 
 Dienststatus.
