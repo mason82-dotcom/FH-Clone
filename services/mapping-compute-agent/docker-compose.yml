@@ -1,0 +1,50 @@
+name: fh2-mapping-compute
+
+services:
+  nodeodm:
+    # NodeODM/ODM is AGPL-3.0 and remains an unmodified, separate service.
+    image: opendronemap/nodeodm:3.6.2@sha256:fcd99eb23d8db194a7d1dc95f029f518283b3d6be32dd64422395f4e7af56720
+    command:
+      [
+        "--token",
+        "${NODEODM_TOKEN}",
+        "--max_images",
+        "${MAX_IMAGES:-200}",
+        "--cleanup_tasks_after",
+        "1440"
+      ]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - nodeodm_data:/var/www/data
+
+  agent:
+    build:
+      context: ./agent
+    image: fh2/mapping-compute-agent:local
+    restart: unless-stopped
+    environment:
+      FH2_URL: ${FH2_URL}
+      MAPPING_AGENT_TOKEN: ${MAPPING_AGENT_TOKEN}
+      AGENT_ID: ${AGENT_ID:-fh2-x64}
+      NODEODM_URL: http://nodeodm:3000
+      NODEODM_TOKEN: ${NODEODM_TOKEN}
+      MAX_IMAGES: ${MAX_IMAGES:-200}
+      TARGET_CRS: ${TARGET_CRS:-EPSG:25832}
+      LEASE_SECONDS: ${LEASE_SECONDS:-600}
+      HEARTBEAT_SECONDS: ${HEARTBEAT_SECONDS:-120}
+      POLL_SECONDS: ${POLL_SECONDS:-20}
+      TILE_ZOOM_SPAN: ${TILE_ZOOM_SPAN:-5}
+      DOWNLOAD_WORKERS: ${DOWNLOAD_WORKERS:-4}
+      UPLOAD_WORKERS: ${UPLOAD_WORKERS:-8}
+      KEEP_FAILED: ${KEEP_FAILED:-false}
+      GPU: "false"
+    volumes:
+      - agent_work:/work
+    depends_on:
+      - nodeodm
+
+volumes:
+  nodeodm_data:
+  agent_work:
