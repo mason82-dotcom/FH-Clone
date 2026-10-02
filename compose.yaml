@@ -18,6 +18,7 @@ services:
       - ./infra/timescale/sql/006_media_assets.sql:/docker-entrypoint-initdb.d/007_media_assets.sql:ro
       - ./infra/timescale/sql/007_telemetry_history.sql:/docker-entrypoint-initdb.d/008_telemetry_history.sql:ro
       - ./infra/timescale/sql/008_mqtt_outbound_evidence.sql:/docker-entrypoint-initdb.d/009_mqtt_outbound_evidence.sql:ro
+      - ./infra/timescale/sql/009_mapping_jobs.sql:/docker-entrypoint-initdb.d/010_mapping_jobs.sql:ro
     healthcheck:
       test:
         [
@@ -42,6 +43,7 @@ services:
       - ./infra/timescale/sql/006_media_assets.sql:/migrations/006_media_assets.sql:ro
       - ./infra/timescale/sql/007_telemetry_history.sql:/migrations/007_telemetry_history.sql:ro
       - ./infra/timescale/sql/008_mqtt_outbound_evidence.sql:/migrations/008_mqtt_outbound_evidence.sql:ro
+      - ./infra/timescale/sql/009_mapping_jobs.sql:/migrations/009_mapping_jobs.sql:ro
     command:
       [
         "psql",
@@ -58,7 +60,9 @@ services:
         "-f",
         "/migrations/007_telemetry_history.sql",
         "-f",
-        "/migrations/008_mqtt_outbound_evidence.sql"
+        "/migrations/008_mqtt_outbound_evidence.sql",
+        "-f",
+        "/migrations/009_mapping_jobs.sql"
       ]
     restart: "no"
     networks:
@@ -112,6 +116,13 @@ services:
       UGCS_BRIDGE_URL: ${UGCS_BRIDGE_URL:-}
       UGCS_BRIDGE_TIMEOUT_MS: ${UGCS_BRIDGE_TIMEOUT_MS:-5000}
       MEDIA_INGEST_TOKEN: ${MEDIA_INGEST_TOKEN:-}
+
+      # AeroNexus-derived mapping scheduler. Operator and agent APIs stay disabled
+      # when their bearer token is empty.
+      MAPPING_OPERATOR_TOKEN: ${MAPPING_OPERATOR_TOKEN:-}
+      MAPPING_AGENT_TOKEN: ${MAPPING_AGENT_TOKEN:-}
+      MAPPING_DEFAULT_LEASE_SECONDS: ${MAPPING_DEFAULT_LEASE_SECONDS:-600}
+      MAPPING_MAX_LEASE_ATTEMPTS: ${MAPPING_MAX_LEASE_ATTEMPTS:-3}
 
       # Native Android/MSDK bridge. Ohne beide Secrets bleibt der Pfad aus.
       MSDK_PAIRING_TOKEN: ${MSDK_PAIRING_TOKEN:-}
