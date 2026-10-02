@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useRtkLive } from "../../hooks/useRtkLive.js";
 import {
@@ -93,7 +93,7 @@ export function DroneStatusDashboard({
   const [showRawOnly, setShowRawOnly] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  useMemo(() => {
+  useEffect(() => {
     const timer = window.setInterval(
       () => setNow(Date.now()),
       1_000
