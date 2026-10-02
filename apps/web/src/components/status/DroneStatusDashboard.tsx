@@ -22,8 +22,8 @@ interface TelemetryRow {
 interface MetricSpec {
   key: string;
   label: string;
-  digits?: number;
-  value?: (sample: TelemetryParameterSample) => string;
+  digits?: number | undefined;
+  value?: ((sample: TelemetryParameterSample) => string) | undefined;
 }
 
 const SUMMARY_GROUPS: Array<{
@@ -460,8 +460,8 @@ function StatusMetric({
   label: string;
   sample: TelemetryParameterSample;
   now: number;
-  digits?: number;
-  format?: (sample: TelemetryParameterSample) => string;
+  digits?: number | undefined;
+  format?: ((sample: TelemetryParameterSample) => string) | undefined;
 }) {
   const age = Math.max(0, now - sample.sampledAt);
   return (
@@ -500,7 +500,7 @@ function OverviewMetric({
 function QualityBadge({
   quality
 }: {
-  quality?: TelemetryParameterSample["quality"];
+  quality: TelemetryParameterSample["quality"] | undefined;
 }) {
   const label = quality ?? "unknown";
   return (
