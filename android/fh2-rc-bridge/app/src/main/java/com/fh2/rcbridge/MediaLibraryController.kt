@@ -57,6 +57,9 @@ object MediaLibraryController {
     @Volatile
     private var lastDownloadedFileIndex: Int? = null
 
+    @Volatile
+    private var lastDownloadedFileName: String? = null
+
     private val stateListener =
         object : MediaFileListStateListener {
             override fun onUpdate(state: MediaFileListState) {
@@ -190,6 +193,7 @@ object MediaLibraryController {
         activeDownload = mediaFile
         activeOutput = output
         lastDownloadedFileIndex = null
+        lastDownloadedFileName = null
 
         update {
             copy(
@@ -238,6 +242,7 @@ object MediaLibraryController {
                     closeDownloadOutput()
                     activeDownload = null
                     lastDownloadedFileIndex = fileIndex
+                    lastDownloadedFileName = mediaFile.fileName
                     update {
                         copy(
                             downloadingFile = null,
@@ -275,7 +280,12 @@ object MediaLibraryController {
 
         val path = snapshot.lastDownloadPath
         val fileIndex = lastDownloadedFileIndex
-        if (path == null || fileIndex == null) {
+        val originalFileName = lastDownloadedFileName
+        if (
+            path == null ||
+            fileIndex == null ||
+            originalFileName == null
+        ) {
             uploadActive.set(false)
             error("media_download_required")
         }
@@ -297,6 +307,7 @@ object MediaLibraryController {
         Fh2BridgeClient.uploadMedia(
             file = file,
             fileIndex = fileIndex,
+            originalFileName = originalFileName,
             onProgress = { progress ->
                 update {
                     copy(
@@ -355,6 +366,8 @@ object MediaLibraryController {
         )
 
         filesByIndex.clear()
+        lastDownloadedFileIndex = null
+        lastDownloadedFileName = null
         update {
             MediaLibrarySnapshot()
         }
