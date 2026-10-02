@@ -309,10 +309,20 @@ Gateway-/Aircraft-Identity oder Runtime-Control-Rechte zu persistieren.
 
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
-| `MEDIA_INGEST_TOKEN` | leer | internes Bearer-Secret für `POST /internal/media/assets`; ohne Wert ist der Ingest gesperrt |
+| `MEDIA_INGEST_TOKEN` | leer | internes Bearer-Secret für interne Media-Ingest-Endpunkte; ohne Wert bleiben diese gesperrt |
 
-Der Ingest akzeptiert ausschließlich `MediaAsset`-Domainobjekte. Die
-browserseitige Kartenansicht liest nur `GET /api/media/overlays`.
+Der bestehende interne Ingest akzeptiert ausschließlich
+`MediaAsset`-Domainobjekte. Für große Binärdateien stehen zusätzlich
+`/internal/media/upload-url` und `/internal/media/assets/verified` zur
+Verfügung; dafür muss der Mapping-S3/Object-Store vollständig konfiguriert
+sein.
+
+Die native RC Bridge verwendet **nicht** `MEDIA_INGEST_TOKEN`. Ihr manueller
+Upload läuft über `/api/msdk/media/*` mit dem bereits gepairten
+MSDK-Agent-Token und einem frischen Heartbeat. Dadurch gelangt kein
+Infrastruktur-Secret auf die Fernsteuerung.
+
+Die browserseitige Kartenansicht liest nur `GET /api/media/overlays`.
 
 ## Root-Compose-Konfiguration
 
