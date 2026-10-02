@@ -40,7 +40,8 @@
     "test:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node --test scripts/export-wpml-pilot-evidence.test.mjs",
     "export:wpml-evidence": "npm run build --workspace @fh-clone/adapter-dji-cloud && node scripts/export-wpml-pilot-evidence.mjs",
     "verify:dji-thermal-sdk": "npm run build --workspace @fh-clone/adapter-dji-thermal && node scripts/dji-thermal-sdk.mjs --action status",
-    "thermal:rjpeg": "npm run build --workspace @fh-clone/adapter-dji-thermal && node scripts/dji-thermal-sdk.mjs"
+    "thermal:rjpeg": "npm run build --workspace @fh-clone/adapter-dji-thermal && node scripts/dji-thermal-sdk.mjs",
+    "test:mapping-e2e": "sh scripts/test-mapping-e2e.sh"
   },
   "engines": {
     "node": ">=22.12.0",
