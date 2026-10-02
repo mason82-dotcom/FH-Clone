@@ -70,6 +70,9 @@ trap cleanup EXIT HUP INT TERM
 # A stale local run must never influence this validation.
 dc down -v --remove-orphans >/dev/null 2>&1 || true
 
+# Validate the merged root + E2E compose model before building anything.
+dc config >/dev/null
+
 dc up -d --build   mapping-minio   mapping-minio-init   mapping-fake-nodeodm   mapping-e2e-agent
 
 ready=0
