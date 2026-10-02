@@ -551,6 +551,173 @@ const publicServer = createServer(async (request, response) => {
       });
     }
 
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/msdk/media/upload-url"
+    ) {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "media_object_store_not_configured" });
+      }
+      if (!mediaStore.enabled) {
+        return json(response, 503, { error: "media_store_not_configured" });
+      }
+
+      const token = readBearerToken(request);
+      const identity = token
+        ? msdkBridge.authenticateAgent(token)
+        : undefined;
+      if (!identity) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      const currentAgent = msdkBridge.getByAircraftSn(identity.aircraftSn);
+      if (
+        !currentAgent ||
+        currentAgent.gatewaySn !== identity.gatewaySn ||
+        Date.now() - currentAgent.lastSeenAt > 10_000
+      ) {
+        return json(response, 409, { error: "msdk_agent_not_fresh" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 16_384);
+        if (typeof body !== "object" || body === null || Array.isArray(body)) {
+          return json(response, 400, { error: "invalid_media_upload_request" });
+        }
+        const value = body as Record<string, unknown>;
+        const assetId =
+          typeof value.assetId === "string" ? value.assetId.trim() : "";
+        const fileName =
+          typeof value.fileName === "string" ? value.fileName.trim() : "";
+        const objectKey = buildManagedMediaObjectKey(assetId, fileName);
+        const ttl = mappingObjectStore.status().presignTtlSeconds;
+
+        return json(response, 201, {
+          objectKey,
+          uploadUrl: mappingObjectStore.presignMediaPut(objectKey),
+          expiresIn: ttl,
+          method: "PUT",
+          aircraftSn: identity.aircraftSn
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "media_upload_url_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/msdk/media/assets/verified"
+    ) {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "media_object_store_not_configured" });
+      }
+      if (!mediaStore.enabled) {
+        return json(response, 503, { error: "media_store_not_configured" });
+      }
+
+      const token = readBearerToken(request);
+      const identity = token
+        ? msdkBridge.authenticateAgent(token)
+        : undefined;
+      if (!identity) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      const currentAgent = msdkBridge.getByAircraftSn(identity.aircraftSn);
+      if (
+        !currentAgent ||
+        currentAgent.gatewaySn !== identity.gatewaySn ||
+        Date.now() - currentAgent.lastSeenAt > 10_000
+      ) {
+        return json(response, 409, { error: "msdk_agent_not_fresh" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 2_000_000);
+        const candidates = Array.isArray(body) ? body : [body];
+        if (candidates.length === 0 || candidates.length > 25) {
+          return json(response, 400, { error: "invalid_verified_media_asset_batch" });
+        }
+
+        const assets = candidates.filter(isMediaAsset);
+        if (assets.length !== candidates.length) {
+          return json(response, 400, { error: "invalid_media_asset" });
+        }
+        if (new Set(assets.map((asset) => asset.id)).size !== assets.length) {
+          return json(response, 400, { error: "duplicate_media_asset_id" });
+        }
+
+        const wrongAircraft = assets
+          .filter((asset) => asset.capture.deviceId !== identity.aircraftSn)
+          .map((asset) => asset.id);
+        if (wrongAircraft.length > 0) {
+          return json(response, 403, {
+            error: "media_asset_aircraft_mismatch",
+            assetIds: wrongAircraft
+          });
+        }
+
+        const unmanaged = assets
+          .filter(
+            (asset) =>
+              !asset.objectKey ||
+              !asset.fileName ||
+              !isManagedMediaObjectKeyForAsset(
+                asset.objectKey,
+                asset.id,
+                asset.fileName
+              )
+          )
+          .map((asset) => asset.id);
+        if (unmanaged.length > 0) {
+          return json(response, 400, {
+            error: "media_asset_object_key_not_managed",
+            assetIds: unmanaged
+          });
+        }
+
+        const missing: string[] = [];
+        for (const asset of assets) {
+          if (!(await mappingObjectStore.mediaExists(asset.objectKey!))) {
+            missing.push(asset.id);
+          }
+        }
+        if (missing.length > 0) {
+          return json(response, 422, {
+            error: "media_object_missing",
+            assetIds: missing
+          });
+        }
+
+        await mediaStore.upsertMany(assets);
+        let overlayed = 0;
+        for (const asset of assets) {
+          if (mediaOverlays.upsert(asset)) overlayed += 1;
+        }
+
+        return json(response, 200, {
+          accepted: assets.length,
+          overlayed,
+          persisted: true,
+          objectStoreVerified: true
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "verified_media_ingest_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/msdk/agents") {
       return json(response, 200, msdkBridge.listAgents());
     }
