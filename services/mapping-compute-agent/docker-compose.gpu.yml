@@ -1,0 +1,21 @@
+services:
+  nodeodm:
+    # Published nodeodm:gpu is not used. Build the pinned NodeODM revision on
+    # the pinned ODM 3.6.2 GPU image, matching the validated AeroNexus path.
+    build:
+      context: https://github.com/OpenDroneMap/NodeODM.git#d45bc41b0c7a51e7f3796035f3bc238e9e01d0a2
+      dockerfile: Dockerfile.gpu
+      args:
+        FROM_REPO: opendronemap/odm:3.6.2-gpu@sha256:4588fbf8b3574752dce9903345ecfb98d71b20c7834d376a84bfce2f8315ef28
+    image: fh2/nodeodm-gpu:3.6.2
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  agent:
+    environment:
+      GPU: "true"
