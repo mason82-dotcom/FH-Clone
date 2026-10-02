@@ -71,6 +71,35 @@ export class MappingObjectStore {
     );
   }
 
+  presignMediaPut(objectKey: string, seconds?: number): string {
+    return this.presign(
+      "PUT",
+      this.publicEndpoint,
+      this.mediaBucket,
+      objectKey,
+      seconds
+    );
+  }
+
+  async mediaExists(objectKey: string): Promise<boolean> {
+    const url = this.presign(
+      "HEAD",
+      this.internalEndpoint,
+      this.mediaBucket,
+      objectKey,
+      300
+    );
+    const response = await this.fetchImpl(url, {
+      method: "HEAD",
+      redirect: "manual"
+    });
+    if (response.status === 404) return false;
+    if (!response.ok) {
+      throw new Error(`mapping_media_store_head_http_${response.status}`);
+    }
+    return true;
+  }
+
   presignResultPut(jobId: string, relativePath: string, seconds?: number): string {
     const path = resultPath(jobId, relativePath);
     return this.presign(
@@ -260,6 +289,30 @@ export function createMappingObjectStoreFromEnv(
   });
 }
 
+export function buildManagedMediaObjectKey(
+  assetIdValue: unknown,
+  fileNameValue: unknown
+): string {
+  const assetId = mediaIdentityPart(assetIdValue, "assetId", 512);
+  const fileName = mediaFileName(fileNameValue);
+  const digest = sha256Hex(`${assetId}\u0000${fileName}`);
+  const extension = mediaExtension(fileName);
+  return `ingest/${digest.slice(0, 2)}/${digest}${extension}`;
+}
+
+export function isManagedMediaObjectKeyForAsset(
+  objectKey: unknown,
+  assetId: unknown,
+  fileName: unknown
+): boolean {
+  if (typeof objectKey !== "string") return false;
+  try {
+    return objectKey === buildManagedMediaObjectKey(assetId, fileName);
+  } catch {
+    return false;
+  }
+}
+
 export function validateMappingResultPath(value: unknown): string {
   if (typeof value !== "string") throw new Error("mapping_result_path_must_be_string");
   const path = value.trim();
@@ -291,6 +344,46 @@ function resultPrefix(jobId: string, relativePrefix: string): string {
 function safeJobId(value: string): string {
   if (!/^[0-9a-fA-F-]{36}$/.test(value)) throw new Error("mapping_job_id_invalid");
   return value;
+}
+
+function mediaIdentityPart(
+  value: unknown,
+  field: string,
+  max: number
+): string {
+  if (typeof value !== "string") {
+    throw new Error(`media_upload_${field}_must_be_string`);
+  }
+  const normalized = value.trim();
+  if (normalized.length < 1 || normalized.length > max) {
+    throw new Error(`media_upload_${field}_length_invalid`);
+  }
+  if (/\0/.test(normalized)) {
+    throw new Error(`media_upload_${field}_invalid`);
+  }
+  return normalized;
+}
+
+function mediaFileName(value: unknown): string {
+  const fileName = mediaIdentityPart(value, "fileName", 255);
+  if (
+    fileName === "." ||
+    fileName === ".." ||
+    fileName.includes("/") ||
+    fileName.includes("\\")
+  ) {
+    throw new Error("media_upload_fileName_invalid");
+  }
+  return fileName;
+}
+
+function mediaExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf(".");
+  if (dot <= 0 || dot === fileName.length - 1) return "";
+  const extension = fileName.slice(dot + 1);
+  return /^[A-Za-z0-9]{1,10}$/.test(extension)
+    ? `.${extension.toLowerCase()}`
+    : "";
 }
 
 function endpoint(value: string, field: string): URL {
