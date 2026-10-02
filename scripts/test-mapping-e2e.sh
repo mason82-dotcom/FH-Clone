@@ -76,16 +76,19 @@ dc config >/dev/null
 dc up -d --build   mapping-minio   mapping-minio-init   mapping-fake-nodeodm   mapping-e2e-agent
 
 ready=0
+last_status=""
 for attempt in $(seq 1 90); do
-  if curl -fsS "http://127.0.0.1:18080/ready" >/tmp/fh2-mapping-e2e-ready.json 2>/dev/null; then
+  last_status="$(curl -sS -o /tmp/fh2-mapping-e2e-ready.json -w '%{http_code}'     "http://127.0.0.1:18080/ready" 2>/dev/null || true)"
+  if [ "$last_status" = "200" ]; then
     ready=1
     break
   fi
   sleep 2
 done
 if [ "$ready" -ne 1 ]; then
-  echo "Control API did not become ready for Mapping E2E." >&2
-  curl -sS "http://127.0.0.1:18080/ready" >&2 || true
+  echo "Control API did not become ready for Mapping E2E (HTTP $last_status)." >&2
+  echo "Last /ready response:" >&2
+  cat /tmp/fh2-mapping-e2e-ready.json >&2 2>/dev/null || true
   echo >&2
   exit 1
 fi
