@@ -1,9 +1,11 @@
 package com.fh2.rcbridge
 
 import android.content.Context
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.security.MessageDigest
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -21,9 +23,16 @@ data class Fh2BridgeConnectionSnapshot(
     val lastError: String? = null
 )
 
+data class Fh2MediaUploadResult(
+    val assetId: String,
+    val objectKey: String
+)
+
 object Fh2BridgeClient {
     private val executor =
         Executors.newSingleThreadScheduledExecutor()
+    private val mediaExecutor =
+        Executors.newSingleThreadExecutor()
     private val listeners =
         CopyOnWriteArrayList<(Fh2BridgeConnectionSnapshot) -> Unit>()
 
@@ -282,6 +291,112 @@ object Fh2BridgeClient {
         }
     }
 
+    fun uploadMedia(
+        file: File,
+        fileIndex: Int,
+        onProgress: (Double) -> Unit = {},
+        onResult: (Result<Fh2MediaUploadResult>) -> Unit
+    ) {
+        mediaExecutor.execute {
+            runCatching {
+                require(file.isFile) { "media_file_missing" }
+                require(file.length() > 0L) { "media_file_empty" }
+
+                val current = snapshot
+                val token = agentToken
+                    ?: error("fh2_agent_token_unavailable")
+                val baseUrl = current.baseUrl
+                    ?: error("fh2_base_url_unavailable")
+                val aircraftSn = current.aircraftSn
+                    ?: error("fh2_aircraft_identity_unavailable")
+                require(current.status == "paired") {
+                    "fh2_pairing_required"
+                }
+
+                val sha256 = sha256Hex(file)
+                val assetId = "msdk-media:$sha256"
+                val reservation =
+                    postJson(
+                        "$baseUrl/api/msdk/media/upload-url",
+                        token,
+                        JSONObject().apply {
+                            put("assetId", assetId)
+                            put("fileName", file.name)
+                        }
+                    )
+
+                val reservedAircraftSn =
+                    reservation.getString("aircraftSn")
+                require(reservedAircraftSn == aircraftSn) {
+                    "media_upload_aircraft_mismatch"
+                }
+
+                val objectKey =
+                    reservation.getString("objectKey")
+                val uploadUrl =
+                    reservation.getString("uploadUrl")
+                val method =
+                    reservation.optString("method", "PUT")
+                require(method == "PUT") {
+                    "media_upload_method_invalid"
+                }
+
+                putFile(
+                    url = uploadUrl,
+                    file = file,
+                    onProgress = onProgress
+                )
+
+                val asset =
+                    JSONObject().apply {
+                        put("id", assetId)
+                        put("objectKey", objectKey)
+                        put("fileName", file.name)
+                        put(
+                            "sensor",
+                            JSONObject().apply {
+                                put("id", "dji-msdk-v5:media-manager")
+                                put("kind", "unknown")
+                                put("confidence", "unavailable")
+                            }
+                        )
+                        put(
+                            "capture",
+                            JSONObject().apply {
+                                put("deviceId", aircraftSn)
+                            }
+                        )
+                        put("profile", "GENERIC")
+                        put(
+                            "metadata",
+                            JSONObject().apply {
+                                put("source", "dji-msdk-v5-media-manager")
+                                put("mediaFileIndex", fileIndex)
+                                put("sha256", sha256)
+                                put("sizeBytes", file.length())
+                            }
+                        )
+                    }
+
+                postJson(
+                    "$baseUrl/api/msdk/media/assets/verified",
+                    token,
+                    asset
+                )
+
+                Fh2MediaUploadResult(
+                    assetId = assetId,
+                    objectKey = objectKey
+                )
+            }.onSuccess { result ->
+                onProgress(1.0)
+                onResult(Result.success(result))
+            }.onFailure { error ->
+                onResult(Result.failure(error))
+            }
+        }
+    }
+
     fun addListener(
         listener: (Fh2BridgeConnectionSnapshot) -> Unit
     ) {
@@ -427,6 +542,81 @@ object Fh2BridgeClient {
         }
 
         return false
+    }
+
+    private fun sha256Hex(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(1024 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                if (count > 0) {
+                    digest.update(buffer, 0, count)
+                }
+            }
+        }
+        return digest.digest().joinToString("") { byte ->
+            "%02x".format(byte.toInt() and 0xff)
+        }
+    }
+
+    private fun putFile(
+        url: String,
+        file: File,
+        onProgress: (Double) -> Unit
+    ) {
+        val connection =
+            URL(url).openConnection() as HttpURLConnection
+
+        try {
+            connection.requestMethod = "PUT"
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 30_000
+            connection.instanceFollowRedirects = false
+            connection.doOutput = true
+            connection.setRequestProperty(
+                "Content-Type",
+                "application/octet-stream"
+            )
+            connection.setFixedLengthStreamingMode(file.length())
+
+            val total = file.length().coerceAtLeast(1L)
+            var sent = 0L
+
+            file.inputStream().buffered().use { input ->
+                connection.outputStream.buffered().use { output ->
+                    val buffer = ByteArray(1024 * 1024)
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+
+                        output.write(buffer, 0, count)
+                        sent += count
+                        onProgress(
+                            (sent.toDouble() / total.toDouble())
+                                .coerceIn(0.0, 1.0)
+                        )
+                    }
+                    output.flush()
+                }
+            }
+
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val responseText =
+                    connection.errorStream
+                        ?.bufferedReader(Charsets.UTF_8)
+                        ?.use { reader -> reader.readText() }
+                        .orEmpty()
+                throw IllegalStateException(
+                    "media_put_http_$status:${responseText.take(256)}"
+                )
+            }
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun postJson(
