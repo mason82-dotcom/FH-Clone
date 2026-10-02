@@ -26,15 +26,10 @@ import {
 } from "./media-overlay.js";
 import { MediaStore } from "./media-store.js";
 import {
-  MappingLeaseConflict,
   MappingSourceAssetError,
   MappingStore
 } from "./mapping-store.js";
-import {
-  parseMappingAgentClaimInput,
-  parseMappingAgentHeartbeatInput,
-  parseMappingJobCreateInput
-} from "./mapping-model.js";
+import { parseMappingJobCreateInput } from "./mapping-model.js";
 import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
