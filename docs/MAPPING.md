@@ -6,69 +6,180 @@ FH-Clone V3.1 übernimmt für die Photogrammetrie gezielt Architekturbausteine a
 `mason82-dotcom/AeroNexus`, ohne dessen DJI-Demo-Backend oder MySQL-Datenmodell
 zu duplizieren.
 
-## Übernommenes Konzept
+## Architektur
 
-Aus AeroNexus werden folgende bewährte Mechanismen adaptiert:
+```text
+MediaAsset + objectKey
+        |
+        v
+S3/MinIO Media Bucket
+        |
+        | Presigned GET
+        v
+x64/GPU Compute-Agent
+        |
+        v
+NodeODM / ODM
+        |
+        +--> Orthofoto COG
+        +--> DSM / DTM COG
+        +--> Report
+        +--> XYZ PNG Tiles
+        |
+        | Presigned PUT
+        v
+S3/MinIO Result Bucket
+        |
+        v
+FH2 Control API
+        |
+        +--> mapping_results
+        +--> mapping_layers
+```
 
-- persistente Mapping-Jobs,
-- Zustände `QUEUED -> CLAIMED -> RUNNING -> DONE/FAILED`,
-- exklusives Claiming mit Lease,
-- Heartbeat-Verlängerung,
-- Requeue abgelaufener Leases,
-- begrenzte Wiederholungsversuche,
-- externer x64/GPU-Compute-Agent als Pull-Worker.
+Der Scheduler verwendet PostgreSQL/TimescaleDB. Ein Mapping-Job referenziert
+bestehende `media_assets.asset_id`-Werte. Jedes Quell-Asset muss einen
+`objectKey` besitzen.
 
-Die FH-Clone-Implementierung verwendet dafür PostgreSQL/TimescaleDB und die
-bereits normalisierten `media_assets`. Ein Mapping-Job referenziert
-`asset_id`-Werte; der Scheduler akzeptiert nur Assets, die vorhanden sind und
-einen nichtleeren `objectKey` besitzen.
+## Scheduler
 
-## Sicherheitsgrenze
+Übernommen und an FH-Clone angepasst:
 
-Mapping ist ein Datenverarbeitungspfad. Es erzeugt **keine** Control Authority,
-keinen DRC-Kontext, keinen Control Lease und keine FC-Freigabe.
+- `QUEUED -> CLAIMED -> RUNNING -> DONE/FAILED`,
+- exklusives Claiming über `FOR UPDATE SKIP LOCKED`,
+- Lease + Heartbeat,
+- automatisches Requeue abgelaufener Leases,
+- begrenzte Lease-Wiederholungen,
+- persistierte Ergebnisse und Kartenlayer.
 
-Die Operator-API ist standardmäßig deaktiviert. Erst ein gesetztes
-`MAPPING_OPERATOR_TOKEN` aktiviert:
+## Operator-API
+
+Standardmäßig deaktiviert. Ein gesetztes `MAPPING_OPERATOR_TOKEN` aktiviert:
 
 - `GET /api/mapping/jobs`
 - `POST /api/mapping/jobs`
 
-Beide Endpunkte erwarten `Authorization: Bearer <MAPPING_OPERATOR_TOKEN>`.
+Authentifizierung:
 
-`GET /api/mapping/status` zeigt nur den nicht sensitiven Aktivierungszustand.
+```http
+Authorization: Bearer <MAPPING_OPERATOR_TOKEN>
+```
 
-## Aktueller Integrationsstand
+`GET /api/mapping/status` enthält nur nicht-sensitive Aktivierungszustände.
 
-Vorhanden:
+## Compute-Agent-API
 
-- Migration `009_mapping_jobs.sql`,
-- `MappingStore` mit atomischem Claiming über `FOR UPDATE SKIP LOCKED`,
-- Lease/Heartbeat/Requeue/Complete/Fail im Store,
-- Validierung der Job- und Agent-Eingaben,
-- MediaAsset-Auflösung über die bestehende Persistenz,
-- Readiness- und Shutdown-Integration,
-- geschützte Operator-Endpunkte.
+Der Agent-Pfad wird nur aktiv, wenn gleichzeitig
 
-Noch bewusst **nicht** freigeschaltet:
+- `MAPPING_AGENT_TOKEN` gesetzt ist und
+- der S3-kompatible Object Store vollständig konfiguriert ist.
 
-- Agent-HTTP-Endpunkte,
-- Presigned GET/PUT URLs,
-- MinIO/S3-Storage,
-- NodeODM-Compute-Agent,
-- COG/DSM/DTM/XYZ-Ergebnisregistrierung,
-- Cesium-Layerdarstellung.
+Endpunkte:
 
-Der Agent-Pfad bleibt bis zur Storage-Integration fail-closed. Dadurch kann kein
-Worker einen Job claimen, ohne die Quelldateien sicher herunterladen und
-Ergebnisse sicher hochladen zu können.
+```text
+POST /api/mapping/agent/claim
+POST /api/mapping/agent/jobs/{job_id}/image-urls
+POST /api/mapping/agent/jobs/{job_id}/heartbeat
+POST /api/mapping/agent/jobs/{job_id}/upload-urls
+POST /api/mapping/agent/jobs/{job_id}/complete
+POST /api/mapping/agent/jobs/{job_id}/fail
+```
+
+Der Agent erhält keine S3-Dauer-Credentials. Quellbilder werden über kurzlebige
+GET-URLs gelesen; Resultate werden ausschließlich über kurzlebige PUT-URLs
+unter dem Prefix des geclaimten Jobs hochgeladen.
+
+Vor `complete` prüft die Control API serverseitig, dass alle im Manifest
+angegebenen Dateien existieren. Für XYZ-Tiles muss mindestens ein Objekt unter
+dem angegebenen Tile-Prefix vorhanden sein.
+
+## Object Store
+
+FH-Clone spricht S3-kompatible Stores über SigV4 an. Die Signierung wird mit
+Node-Bordmitteln erzeugt; zusätzliche AWS-/MinIO-SDK-Abhängigkeiten sind nicht
+erforderlich.
+
+Pflichtwerte für den Agent-Pfad:
+
+```text
+MAPPING_S3_INTERNAL_ENDPOINT
+MAPPING_S3_PUBLIC_ENDPOINT
+MAPPING_S3_ACCESS_KEY
+MAPPING_S3_SECRET_KEY
+MAPPING_MEDIA_BUCKET
+MAPPING_RESULTS_BUCKET
+```
+
+Optional:
+
+```text
+MAPPING_S3_REGION=us-east-1
+MAPPING_PRESIGN_TTL_SECONDS=3600
+```
+
+`MAPPING_S3_INTERNAL_ENDPOINT` ist die vom Control-API-Container erreichbare
+Adresse. `MAPPING_S3_PUBLIC_ENDPOINT` muss vom externen Compute-Knoten
+erreichbar sein.
+
+### Optionales lokales MinIO
+
+```bash
+docker compose --profile mapping up -d mapping-minio mapping-minio-init
+```
+
+Der MinIO-Baustein wurde aus dem in AeroNexus verwendeten gepinnten Source-Build
+übernommen. Er ist für den lokalen/LAN-Betrieb gedacht. Root-Zugang und
+dedizierter Mapping-Benutzer müssen vor dem Start gesetzt werden.
+
+## Compute-Agent / NodeODM
+
+Der portierte Worker liegt unter:
+
+```text
+services/mapping-compute-agent/
+```
+
+CPU:
+
+```bash
+cd services/mapping-compute-agent
+cp .env.example .env
+docker compose up -d --build
+```
+
+NVIDIA-GPU:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+```
+
+NodeODM 3.6.2 und der GPU-Unterbau sind per Version/Digest beziehungsweise
+Commit gepinnt. ODM/NodeODM bleiben separate AGPL-3.0-Container und werden nur
+über HTTP angesprochen.
+
+## Sicherheitsgrenze
+
+Mapping ist FC0-Datenverarbeitung. Der Pfad:
+
+- vergibt keine Control Authority,
+- erzeugt keinen DRC-Kontext,
+- erzeugt keinen Control Lease,
+- erhöht keine FC-Stufe,
+- sendet keine Flug- oder Payload-Kommandos.
+
+Der Compute-Agent kennt weder DJI- noch MQTT-Credentials.
+
+## Noch offen
+
+- produktiver Ingest echter DJI-Mediendateien in den konfigurierten Media-Bucket,
+- Operator-Weboberfläche für Jobanlage/Fortschritt,
+- Cesium-Darstellung persistierter `mapping_layers`,
+- End-to-End-Abnahme mit echtem NodeODM-Datensatz und realem S3/MinIO,
+- optional Wake-on-LAN und Ressourcen-Scheduling.
 
 ## Herkunft
 
-Das Job-/Lease-Konzept basiert auf dem AeroNexus Mapping Tool und Compute-Agent.
-Der Code wurde an die FH-Clone-Domäne angepasst; AeroNexus-MySQL-, DJI-Demo-JWT-
-und direkte `cloud_sample.media_file`-Abhängigkeiten werden nicht übernommen.
-
-ODM/NodeODM soll weiterhin als separater Container über dessen HTTP-API
-angebunden werden. Damit bleibt die Engine technisch und lizenzseitig klar vom
-FH-Clone-Code getrennt.
+Das Job-/Lease-, Presign-, Pull-Agent- und Postprocessing-Konzept basiert auf
+AeroNexus Mapping Tool / Compute-Agent und wurde an FH-Clone angepasst.
+AeroNexus-MySQL-, DJI-Demo-JWT- und direkte
+`cloud_sample.media_file`-Abhängigkeiten werden nicht übernommen.
