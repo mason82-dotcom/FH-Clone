@@ -294,6 +294,7 @@ object Fh2BridgeClient {
     fun uploadMedia(
         file: File,
         fileIndex: Int,
+        originalFileName: String,
         onProgress: (Double) -> Unit = {},
         onResult: (Result<Fh2MediaUploadResult>) -> Unit
     ) {
@@ -301,6 +302,9 @@ object Fh2BridgeClient {
             runCatching {
                 require(file.isFile) { "media_file_missing" }
                 require(file.length() > 0L) { "media_file_empty" }
+                require(originalFileName.isNotBlank()) {
+                    "media_file_name_required"
+                }
 
                 val current = snapshot
                 val token = agentToken
@@ -314,14 +318,16 @@ object Fh2BridgeClient {
                 }
 
                 val sha256 = sha256Hex(file)
-                val assetId = "msdk-media:$sha256"
+                val assetId =
+                    "msdk-media:" +
+                        sha256Text("$aircraftSn\u0000$sha256")
                 val reservation =
                     postJson(
                         "$baseUrl/api/msdk/media/upload-url",
                         token,
                         JSONObject().apply {
                             put("assetId", assetId)
-                            put("fileName", file.name)
+                            put("fileName", originalFileName)
                         }
                     )
 
@@ -351,7 +357,7 @@ object Fh2BridgeClient {
                     JSONObject().apply {
                         put("id", assetId)
                         put("objectKey", objectKey)
-                        put("fileName", file.name)
+                        put("fileName", originalFileName)
                         put(
                             "sensor",
                             JSONObject().apply {
@@ -542,6 +548,15 @@ object Fh2BridgeClient {
         }
 
         return false
+    }
+
+    private fun sha256Text(value: String): String {
+        val digest =
+            MessageDigest.getInstance("SHA-256")
+                .digest(value.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { byte ->
+            "%02x".format(byte.toInt() and 0xff)
+        }
     }
 
     private fun sha256Hex(file: File): String {
