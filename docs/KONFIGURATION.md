@@ -141,6 +141,7 @@ Der Mapping-Pfad ist optional und standardmäßig deaktiviert.
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
 | `MAPPING_OPERATOR_TOKEN` | leer | Bearer-Secret für Jobanlage und Jobliste |
+| `MAPPING_LAYER_VIEW_ENABLED` | `false` | aktiviert read-only Layerliste und Tile-Proxy für die Webkarte |
 | `MAPPING_AGENT_TOKEN` | leer | Bearer-Secret für den externen Compute-Agent |
 | `MAPPING_DEFAULT_LEASE_SECONDS` | `600` | Standard-Lease eines geclaimten Jobs |
 | `MAPPING_MAX_LEASE_ATTEMPTS` | `3` | maximale Zahl abgelaufener Leases |
