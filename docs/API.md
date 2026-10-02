@@ -178,7 +178,9 @@ Authorization: Bearer <agentToken>
 ```
 
 Der Endpunkt verlangt zusätzlich einen frischen MSDK-Agent-Zustand
-(`lastSeenAt <= 10 s`). Die Antwort enthält weder S3 Access Key noch Secret.
+(`lastSeenAt <= 10 s`). Die Presigned URL enthält SigV4-bedingt die
+Access-Key-ID im Credential-Scope, aber **kein S3-Secret und keine
+wiederverwendbaren S3-Dauer-Credentials**.
 
 ### POST /api/msdk/media/assets/verified
 
