@@ -1195,6 +1195,23 @@ const publicServer = createServer(async (request, response) => {
       try {
         const body = await readJson<unknown>(request, 256_000);
         const input = parseMappingJobCreateInput(body);
+
+        if (mappingObjectStore) {
+          const sources = await mappingStore.resolveSourceAssets(input.assetIds);
+          const missingObjects: string[] = [];
+          for (const source of sources) {
+            if (!(await mappingObjectStore.mediaExists(source.objectKey))) {
+              missingObjects.push(source.assetId);
+            }
+          }
+          if (missingObjects.length > 0) {
+            return json(response, 422, {
+              error: "mapping_source_object_missing",
+              assetIds: missingObjects
+            });
+          }
+        }
+
         return json(
           response,
           201,
