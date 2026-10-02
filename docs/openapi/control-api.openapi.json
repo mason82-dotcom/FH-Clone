@@ -41,6 +41,9 @@
     },
     {
       "name": "RTK"
+    },
+    {
+      "name": "Mapping"
     }
   ],
   "paths": {
@@ -1341,6 +1344,579 @@
             "$ref": "#/components/responses/JsonError"
           },
           "404": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/status": {
+      "get": {
+        "operationId": "getMappingStatus",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Status der optionalen Mapping-/Photogrammetrie-Erweiterung",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/jobs": {
+      "get": {
+        "operationId": "listMappingJobs",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Persistierte Mapping-Jobs auflisten",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      },
+      "post": {
+        "operationId": "createMappingJob",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Mapping-Job aus bestehenden MediaAssets anlegen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "assetIds"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "assetIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2000,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    }
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "fast",
+                      "standard",
+                      "high"
+                    ],
+                    "default": "standard"
+                  },
+                  "odmOptions": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                      ]
+                    }
+                  },
+                  "missionId": {
+                    "type": "string"
+                  },
+                  "deviceSn": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/JsonAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "422": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/agent/claim": {
+      "post": {
+        "operationId": "claimMappingJob",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Nächsten Mapping-Job exklusiv per Lease claimen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "204": {
+            "description": "Kein Job verfügbar"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "422": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/agent/jobs/{job_id}/image-urls": {
+      "post": {
+        "operationId": "refreshMappingImageUrls",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Kurzlebige Quellbild-URLs erneuern",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/agent/jobs/{job_id}/heartbeat": {
+      "post": {
+        "operationId": "heartbeatMappingJob",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Mapping-Lease verlängern und Fortschritt melden",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/agent/jobs/{job_id}/upload-urls": {
+      "post": {
+        "operationId": "createMappingUploadUrls",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Kurzlebige Ergebnis-Upload-URLs ausstellen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/agent/jobs/{job_id}/complete": {
+      "post": {
+        "operationId": "completeMappingJob",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Verifizierte Mapping-Ergebnisse abschließen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "422": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/agent/jobs/{job_id}/fail": {
+      "post": {
+        "operationId": "failMappingJob",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Mapping-Job als fehlgeschlagen abschließen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/layers": {
+      "get": {
+        "operationId": "listMappingLayers",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Freigegebene read-only Mapping-Layer auflisten",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/mapping/layers/{layer_id}/tiles/{z}/{x}/{y}.png": {
+      "get": {
+        "operationId": "getMappingTile",
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "XYZ-Tile über kurzlebige S3-Weiterleitung lesen",
+        "parameters": [
+          {
+            "name": "layer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 24
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Weiterleitung auf kurzlebige signierte Objekt-URL"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/media/upload-url": {
+      "post": {
+        "operationId": "createMsdkMediaUploadUrl",
+        "tags": [
+          "MSDK",
+          "Media"
+        ],
+        "summary": "Kurzlebige Upload-URL für manuell ausgewählte RC-Mediendatei erzeugen",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "assetId",
+                  "fileName"
+                ],
+                "properties": {
+                  "assetId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/JsonAccepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonError"
+          }
+        },
+        "x-fh2-safety-level": "FC0"
+      }
+    },
+    "/api/msdk/media/assets/verified": {
+      "post": {
+        "operationId": "registerVerifiedMsdkMediaAssets",
+        "tags": [
+          "MSDK",
+          "Media"
+        ],
+        "summary": "Bereits hochgeladene MSDK-MediaAssets nach Object-Store-Prüfung registrieren",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonOk"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "401": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "403": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "409": {
+            "$ref": "#/components/responses/JsonError"
+          },
+          "422": {
             "$ref": "#/components/responses/JsonError"
           },
           "503": {

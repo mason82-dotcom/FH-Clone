@@ -25,6 +25,25 @@ import {
   isMediaAsset
 } from "./media-overlay.js";
 import { MediaStore } from "./media-store.js";
+import {
+  MappingLeaseConflict,
+  MappingSourceAssetError,
+  MappingStore
+} from "./mapping-store.js";
+import {
+  parseMappingAgentClaimInput,
+  parseMappingAgentHeartbeatInput,
+  parseMappingAgentRefInput,
+  parseMappingCompleteInput,
+  parseMappingFailInput,
+  parseMappingJobCreateInput,
+  parseMappingUploadUrlsInput
+} from "./mapping-model.js";
+import {
+  buildManagedMediaObjectKey,
+  createMappingObjectStoreFromEnv,
+  isManagedMediaObjectKeyForAsset
+} from "./mapping-object-store.js";
 import { TelemetryStore } from "./telemetry-store.js";
 import {
   evaluateEmqxAuthorization,
@@ -170,6 +189,18 @@ const mediaStore = new MediaStore({
     ? { connectionString: process.env.TIMESCALE_URL }
     : {})
 });
+const mappingStore = new MappingStore({
+  ...(process.env.TIMESCALE_URL
+    ? { connectionString: process.env.TIMESCALE_URL }
+    : {}),
+  maxLeaseAttempts: envInt("MAPPING_MAX_LEASE_ATTEMPTS", 3),
+  defaultLeaseSeconds: envInt("MAPPING_DEFAULT_LEASE_SECONDS", 600)
+});
+const mappingOperatorToken = process.env.MAPPING_OPERATOR_TOKEN?.trim();
+const mappingAgentToken = process.env.MAPPING_AGENT_TOKEN?.trim();
+const mappingLayerViewEnabled =
+  process.env.MAPPING_LAYER_VIEW_ENABLED?.trim().toLowerCase() === "true";
+const mappingObjectStore = createMappingObjectStoreFromEnv();
 const telemetryStore = new TelemetryStore({
   ...(process.env.TIMESCALE_URL
     ? { connectionString: process.env.TIMESCALE_URL }
@@ -279,6 +310,15 @@ const publicServer = createServer(async (request, response) => {
           assets: mediaOverlays.size(),
           persistenceEnabled: mediaStore.enabled
         },
+        mapping: {
+          persistenceEnabled: mappingStore.enabled,
+          operatorApiEnabled: Boolean(mappingOperatorToken),
+          agentTokenConfigured: Boolean(mappingAgentToken),
+          objectStoreConfigured: Boolean(mappingObjectStore),
+          agentApiEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+          storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+          layerViewEnabled: mappingLayerViewEnabled
+        },
         telemetryPersistence: {
           enabled: telemetryStore.enabled,
           queue: telemetryStore.status
@@ -305,6 +345,8 @@ const publicServer = createServer(async (request, response) => {
         msdkTokenRevocationStoreReady,
         missionStoreReady,
         mediaStoreReady,
+        mappingStoreReady,
+        mappingObjectStoreReady,
         telemetryStoreReady
       ] = await Promise.all([
         topologyStore
@@ -326,6 +368,12 @@ const publicServer = createServer(async (request, response) => {
           : Promise.resolve(false),
         mediaStore.enabled
           ? mediaStore.ping()
+          : Promise.resolve(false),
+        mappingStore.enabled
+          ? mappingStore.ping()
+          : Promise.resolve(false),
+        mappingObjectStore
+          ? mappingObjectStore.ping()
           : Promise.resolve(false),
         telemetryStore.enabled
           ? telemetryStore.ping()
@@ -365,15 +413,74 @@ const publicServer = createServer(async (request, response) => {
           ? (msdkTokenRevocationStoreReady ? "ready" : "unavailable")
           : "disabled"
       };
+      const mappingStoreCheck = {
+        configured: mappingStore.enabled,
+        ready: mappingStoreReady,
+        state: mappingStore.enabled
+          ? (mappingStoreReady ? "ready" : "unavailable")
+          : "disabled"
+      };
+      const mappingObjectStoreCheck = {
+        configured: Boolean(mappingObjectStore),
+        ready: mappingObjectStoreReady,
+        state: mappingObjectStore
+          ? (mappingObjectStoreReady ? "ready" : "unavailable")
+          : "disabled"
+      };
+      const mappingAgentApiCheck = {
+        configured: Boolean(mappingAgentToken),
+        ready: Boolean(
+          mappingAgentToken &&
+          mappingStoreReady &&
+          mappingObjectStore &&
+          mappingObjectStoreReady
+        ),
+        state: !mappingAgentToken
+          ? "disabled"
+          : (
+              mappingStoreReady &&
+              mappingObjectStore &&
+              mappingObjectStoreReady
+            )
+            ? "ready"
+            : "unavailable"
+      };
+      const mappingLayerViewCheck = {
+        configured: mappingLayerViewEnabled,
+        ready: Boolean(
+          mappingLayerViewEnabled &&
+          mappingStoreReady &&
+          mappingObjectStore &&
+          mappingObjectStoreReady
+        ),
+        state: !mappingLayerViewEnabled
+          ? "disabled"
+          : (
+              mappingStoreReady &&
+              mappingObjectStore &&
+              mappingObjectStoreReady
+            )
+            ? "ready"
+            : "unavailable"
+      };
       const ready =
-        readiness.ready && msdkTokenRevocationStore.state !== "unavailable";
+        readiness.ready &&
+        msdkTokenRevocationStore.state !== "unavailable" &&
+        mappingStoreCheck.state !== "unavailable" &&
+        mappingObjectStoreCheck.state !== "unavailable" &&
+        mappingAgentApiCheck.state !== "unavailable" &&
+        mappingLayerViewCheck.state !== "unavailable";
 
       return json(response, ready ? 200 : 503, {
         status: ready ? "ready" : "not_ready",
         service: "control-api",
         checks: {
           ...readiness.checks,
-          msdkTokenRevocationStore
+          msdkTokenRevocationStore,
+          mappingStore: mappingStoreCheck,
+          mappingObjectStore: mappingObjectStoreCheck,
+          mappingAgentApi: mappingAgentApiCheck,
+          mappingLayerView: mappingLayerViewCheck
         }
       });
     }
@@ -442,6 +549,173 @@ const publicServer = createServer(async (request, response) => {
         accepted: true,
         serverTimeMs
       });
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/msdk/media/upload-url"
+    ) {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "media_object_store_not_configured" });
+      }
+      if (!mediaStore.enabled) {
+        return json(response, 503, { error: "media_store_not_configured" });
+      }
+
+      const token = readBearerToken(request);
+      const identity = token
+        ? msdkBridge.authenticateAgent(token)
+        : undefined;
+      if (!identity) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      const currentAgent = msdkBridge.getByAircraftSn(identity.aircraftSn);
+      if (
+        !currentAgent ||
+        currentAgent.gatewaySn !== identity.gatewaySn ||
+        Date.now() - currentAgent.lastSeenAt > 10_000
+      ) {
+        return json(response, 409, { error: "msdk_agent_not_fresh" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 16_384);
+        if (typeof body !== "object" || body === null || Array.isArray(body)) {
+          return json(response, 400, { error: "invalid_media_upload_request" });
+        }
+        const value = body as Record<string, unknown>;
+        const assetId =
+          typeof value.assetId === "string" ? value.assetId.trim() : "";
+        const fileName =
+          typeof value.fileName === "string" ? value.fileName.trim() : "";
+        const objectKey = buildManagedMediaObjectKey(assetId, fileName);
+        const ttl = mappingObjectStore.status().presignTtlSeconds;
+
+        return json(response, 201, {
+          objectKey,
+          uploadUrl: mappingObjectStore.presignMediaPut(objectKey),
+          expiresIn: ttl,
+          method: "PUT",
+          aircraftSn: identity.aircraftSn
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "media_upload_url_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/msdk/media/assets/verified"
+    ) {
+      if (!msdkBridge.configured) {
+        return json(response, 503, { error: "msdk_bridge_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "media_object_store_not_configured" });
+      }
+      if (!mediaStore.enabled) {
+        return json(response, 503, { error: "media_store_not_configured" });
+      }
+
+      const token = readBearerToken(request);
+      const identity = token
+        ? msdkBridge.authenticateAgent(token)
+        : undefined;
+      if (!identity) {
+        return json(response, 401, { error: "msdk_agent_unauthorized" });
+      }
+
+      const currentAgent = msdkBridge.getByAircraftSn(identity.aircraftSn);
+      if (
+        !currentAgent ||
+        currentAgent.gatewaySn !== identity.gatewaySn ||
+        Date.now() - currentAgent.lastSeenAt > 10_000
+      ) {
+        return json(response, 409, { error: "msdk_agent_not_fresh" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 2_000_000);
+        const candidates = Array.isArray(body) ? body : [body];
+        if (candidates.length === 0 || candidates.length > 25) {
+          return json(response, 400, { error: "invalid_verified_media_asset_batch" });
+        }
+
+        const assets = candidates.filter(isMediaAsset);
+        if (assets.length !== candidates.length) {
+          return json(response, 400, { error: "invalid_media_asset" });
+        }
+        if (new Set(assets.map((asset) => asset.id)).size !== assets.length) {
+          return json(response, 400, { error: "duplicate_media_asset_id" });
+        }
+
+        const wrongAircraft = assets
+          .filter((asset) => asset.capture.deviceId !== identity.aircraftSn)
+          .map((asset) => asset.id);
+        if (wrongAircraft.length > 0) {
+          return json(response, 403, {
+            error: "media_asset_aircraft_mismatch",
+            assetIds: wrongAircraft
+          });
+        }
+
+        const unmanaged = assets
+          .filter(
+            (asset) =>
+              !asset.objectKey ||
+              !asset.fileName ||
+              !isManagedMediaObjectKeyForAsset(
+                asset.objectKey,
+                asset.id,
+                asset.fileName
+              )
+          )
+          .map((asset) => asset.id);
+        if (unmanaged.length > 0) {
+          return json(response, 400, {
+            error: "media_asset_object_key_not_managed",
+            assetIds: unmanaged
+          });
+        }
+
+        const missing: string[] = [];
+        for (const asset of assets) {
+          if (!(await mappingObjectStore.mediaExists(asset.objectKey!))) {
+            missing.push(asset.id);
+          }
+        }
+        if (missing.length > 0) {
+          return json(response, 422, {
+            error: "media_object_missing",
+            assetIds: missing
+          });
+        }
+
+        await mediaStore.upsertMany(assets);
+        let overlayed = 0;
+        for (const asset of assets) {
+          if (mediaOverlays.upsert(asset)) overlayed += 1;
+        }
+
+        return json(response, 200, {
+          accepted: assets.length,
+          overlayed,
+          persisted: true,
+          objectStoreVerified: true
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "verified_media_ingest_failed",
+          detail: errorMessage(error)
+        });
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/msdk/agents") {
@@ -873,6 +1147,445 @@ const publicServer = createServer(async (request, response) => {
       return json(response, 200, mediaOverlays.list());
     }
 
+    if (request.method === "GET" && url.pathname === "/api/mapping/status") {
+      return json(response, 200, {
+        persistenceEnabled: mappingStore.enabled,
+        operatorApiEnabled: Boolean(mappingOperatorToken),
+        agentTokenConfigured: Boolean(mappingAgentToken),
+        objectStoreConfigured: Boolean(mappingObjectStore),
+        agentApiEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+        storageDispatchEnabled: Boolean(mappingAgentToken && mappingObjectStore),
+        layerViewEnabled: mappingLayerViewEnabled,
+        presignTtlSeconds:
+          mappingObjectStore?.status().presignTtlSeconds ?? null
+      });
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/mapping/jobs"
+    ) {
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingOperatorToken) {
+        return json(response, 503, { error: "mapping_operator_api_disabled" });
+      }
+      if (!hasValidBearerToken(request, mappingOperatorToken)) {
+        return json(response, 401, { error: "mapping_operator_unauthorized" });
+      }
+      const limit = queryInt(url, "limit", 200, 1, 500);
+      return json(response, 200, await mappingStore.list(limit));
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/mapping/jobs"
+    ) {
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingOperatorToken) {
+        return json(response, 503, { error: "mapping_operator_api_disabled" });
+      }
+      if (!hasValidBearerToken(request, mappingOperatorToken)) {
+        return json(response, 401, { error: "mapping_operator_unauthorized" });
+      }
+
+      try {
+        const body = await readJson<unknown>(request, 256_000);
+        const input = parseMappingJobCreateInput(body);
+
+        if (mappingObjectStore) {
+          const sources = await mappingStore.resolveSourceAssets(input.assetIds);
+          const missingObjects: string[] = [];
+          for (const source of sources) {
+            if (!(await mappingObjectStore.mediaExists(source.objectKey))) {
+              missingObjects.push(source.assetId);
+            }
+          }
+          if (missingObjects.length > 0) {
+            return json(response, 422, {
+              error: "mapping_source_object_missing",
+              assetIds: missingObjects
+            });
+          }
+        }
+
+        return json(
+          response,
+          201,
+          await mappingStore.create(input, "operator-api")
+        );
+      } catch (error) {
+        if (error instanceof MappingSourceAssetError) {
+          return json(response, 422, {
+            error: error.message,
+            assetIds: error.assetIds
+          });
+        }
+        if (error instanceof SyntaxError || error instanceof TypeError) {
+          return json(response, 400, {
+            error: "invalid_mapping_job_request",
+            detail: errorMessage(error)
+          });
+        }
+        if (
+          error instanceof Error &&
+          (
+            error.message.startsWith("assetIds_") ||
+            error.message.startsWith("name_") ||
+            error.message.startsWith("odmOptions_") ||
+            error.message.startsWith("missionId_") ||
+            error.message.startsWith("deviceSn_") ||
+            error.message === "invalid_mapping_profile"
+          )
+        ) {
+          return json(response, 400, {
+            error: "invalid_mapping_job_request",
+            detail: error.message
+          });
+        }
+        throw error;
+      }
+    }
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/api/mapping/layers"
+    ) {
+      if (!mappingLayerViewEnabled) {
+        return json(response, 503, { error: "mapping_layer_view_disabled" });
+      }
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "mapping_object_store_not_configured" });
+      }
+      const layers = await mappingStore.listLayers();
+      return json(
+        response,
+        200,
+        layers
+          .filter(
+            (layer) =>
+              layer.layerType === "xyz" &&
+              layer.tileFormat === "png" &&
+              layer.minZoom !== undefined &&
+              layer.maxZoom !== undefined
+          )
+          .map((layer) => ({
+            id: layer.id,
+            jobId: layer.jobId ?? null,
+            name: layer.name,
+            type: layer.layerType,
+            format: layer.tileFormat,
+            minZoom: layer.minZoom,
+            maxZoom: layer.maxZoom,
+            boundsWgs84: layer.boundsWgs84 ?? null,
+            crs: layer.crs ?? null,
+            opacity: layer.opacity,
+            createdAt: layer.createdAt,
+            tileUrl: `/api/mapping/layers/${encodeURIComponent(layer.id)}/tiles/{z}/{x}/{y}.png`
+          }))
+      );
+    }
+
+    const mappingLayerTileMatch = url.pathname.match(
+      /^\/api\/mapping\/layers\/([0-9a-fA-F-]{36})\/tiles\/(\d+)\/(\d+)\/(\d+)\.png$/
+    );
+    if (request.method === "GET" && mappingLayerTileMatch) {
+      if (!mappingLayerViewEnabled) {
+        return json(response, 503, { error: "mapping_layer_view_disabled" });
+      }
+      if (!mappingStore.enabled) {
+        return json(response, 503, { error: "mapping_store_not_configured" });
+      }
+      if (!mappingObjectStore) {
+        return json(response, 503, { error: "mapping_object_store_not_configured" });
+      }
+
+      const layerId = mappingLayerTileMatch[1]!;
+      const z = Number.parseInt(mappingLayerTileMatch[2]!, 10);
+      const x = Number.parseInt(mappingLayerTileMatch[3]!, 10);
+      const y = Number.parseInt(mappingLayerTileMatch[4]!, 10);
+      const layer = await mappingStore.getLayer(layerId);
+
+      if (
+        !layer ||
+        layer.layerType !== "xyz" ||
+        layer.tileFormat !== "png" ||
+        layer.minZoom === undefined ||
+        layer.maxZoom === undefined ||
+        z < 0 ||
+        z > 24 ||
+        z < layer.minZoom ||
+        z > layer.maxZoom ||
+        x < 0 ||
+        y < 0 ||
+        x >= 2 ** z ||
+        y >= 2 ** z ||
+        !layer.jobId ||
+        !layer.objectPrefix.startsWith(`${layer.jobId}/`)
+      ) {
+        return json(response, 404, { error: "mapping_tile_not_found" });
+      }
+
+      const relativePrefix = layer.objectPrefix.slice(layer.jobId.length + 1);
+      const target = mappingObjectStore.presignResultGet(
+        layer.jobId,
+        `${relativePrefix}/${z}/${x}/${y}.png`,
+        300
+      );
+      response.statusCode = 302;
+      response.setHeader("location", target);
+      response.setHeader("cache-control", "private, no-store");
+      response.end();
+      return;
+    }
+
+    if (
+      request.method === "POST" &&
+      url.pathname === "/api/mapping/agent/claim"
+    ) {
+      if (!requireMappingAgent(request, response)) return;
+      const body = await readJson<unknown>(request, 128_000);
+      let input;
+      try {
+        input = parseMappingAgentClaimInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+
+      try {
+        const claim = await mappingStore.claim(input);
+        if (!claim) {
+          response.statusCode = 204;
+          response.setHeader("cache-control", "no-store");
+          response.end();
+          return;
+        }
+        const ttl = mappingObjectStore!.status().presignTtlSeconds;
+        return json(response, 200, {
+          job: {
+            id: claim.job.id,
+            name: claim.job.name,
+            status: claim.job.status,
+            options: claim.job.options,
+            attempts: claim.job.attempts,
+            lease_until: claim.job.leaseUntil
+          },
+          images: claim.sources.map((source) => ({
+            asset_id: source.assetId,
+            key: source.objectKey,
+            ...(source.fileName ? { file_name: source.fileName } : {}),
+            url: mappingObjectStore!.presignMediaGet(source.objectKey),
+            expires_in: ttl
+          })),
+          results_prefix: `${claim.job.id}/`
+        });
+      } catch (error) {
+        if (error instanceof MappingSourceAssetError) {
+          return json(response, 422, {
+            error: error.message,
+            assetIds: error.assetIds
+          });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentImageUrlsMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/image-urls$/
+    );
+    if (request.method === "POST" && mappingAgentImageUrlsMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentImageUrlsMatch[1]!;
+      const body = await readJson<unknown>(request, 32_000);
+      let input;
+      try {
+        input = parseMappingAgentRefInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        const sources = await mappingStore.leaseSources(jobId, input.agentId);
+        const ttl = mappingObjectStore!.status().presignTtlSeconds;
+        return json(response, 200, {
+          images: sources.map((source) => ({
+            asset_id: source.assetId,
+            key: source.objectKey,
+            ...(source.fileName ? { file_name: source.fileName } : {}),
+            url: mappingObjectStore!.presignMediaGet(source.objectKey),
+            expires_in: ttl
+          }))
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentHeartbeatMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/heartbeat$/
+    );
+    if (request.method === "POST" && mappingAgentHeartbeatMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentHeartbeatMatch[1]!;
+      const body = await readJson<unknown>(request, 32_000);
+      let input;
+      try {
+        input = parseMappingAgentHeartbeatInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        const job = await mappingStore.heartbeat(jobId, input);
+        return json(response, 200, {
+          status: job.status,
+          lease_until: job.leaseUntil
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentUploadUrlsMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/upload-urls$/
+    );
+    if (request.method === "POST" && mappingAgentUploadUrlsMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentUploadUrlsMatch[1]!;
+      const body = await readJson<unknown>(request, 256_000);
+      let input;
+      try {
+        input = parseMappingUploadUrlsInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        await mappingStore.assertActiveLease(jobId, input.agentId);
+        const ttl = mappingObjectStore!.status().presignTtlSeconds;
+        return json(response, 200, {
+          urls: Object.fromEntries(
+            input.paths.map((path) => [
+              path,
+              mappingObjectStore!.presignResultPut(jobId, path)
+            ])
+          ),
+          expires_in: ttl
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentCompleteMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/complete$/
+    );
+    if (request.method === "POST" && mappingAgentCompleteMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentCompleteMatch[1]!;
+      const body = await readJson<unknown>(request, 256_000);
+      let input;
+      try {
+        input = parseMappingCompleteInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+
+      try {
+        await mappingStore.assertActiveLease(jobId, input.agentId);
+        const missing: string[] = [];
+        for (const file of input.manifest.files) {
+          if (!(await mappingObjectStore!.resultExists(jobId, file.path))) {
+            missing.push(file.path);
+          }
+        }
+        if (
+          input.manifest.tiles &&
+          !(await mappingObjectStore!.resultPrefixExists(
+            jobId,
+            input.manifest.tiles.path
+          ))
+        ) {
+          missing.push(`${input.manifest.tiles.path}/`);
+        }
+        if (missing.length > 0) {
+          return json(response, 422, {
+            error: "mapping_results_missing",
+            missing: missing.slice(0, 100)
+          });
+        }
+
+        const completed = await mappingStore.completeWithManifest(
+          jobId,
+          input.agentId,
+          input.manifest
+        );
+        return json(response, 200, {
+          status: completed.job.status,
+          layer_id: completed.layerId ?? null
+        });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
+    const mappingAgentFailMatch = url.pathname.match(
+      /^\/api\/mapping\/agent\/jobs\/([0-9a-fA-F-]{36})\/fail$/
+    );
+    if (request.method === "POST" && mappingAgentFailMatch) {
+      if (!requireMappingAgent(request, response)) return;
+      const jobId = mappingAgentFailMatch[1]!;
+      const body = await readJson<unknown>(request, 32_000);
+      let input;
+      try {
+        input = parseMappingFailInput(body);
+      } catch (error) {
+        return json(response, 400, {
+          error: "invalid_mapping_agent_request",
+          detail: errorMessage(error)
+        });
+      }
+      try {
+        const job = await mappingStore.fail(jobId, input.agentId, input.error);
+        return json(response, 200, { status: job.status });
+      } catch (error) {
+        if (error instanceof MappingLeaseConflict) {
+          return json(response, 409, { error: error.message });
+        }
+        throw error;
+      }
+    }
+
     const missionMatch = url.pathname.match(/^\/api\/devices\/([^/]+)\/mission$/);
     if (request.method === "GET" && missionMatch) {
       const deviceId = decodeURIComponent(missionMatch[1] ?? "");
@@ -1065,6 +1778,126 @@ const internalServer = createServer(async (request, response) => {
       }
     }
 
+    if (request.method === "POST" && request.url === "/internal/media/upload-url") {
+      try {
+        if (!hasValidBearerToken(request, mediaIngestToken)) {
+          return json(response, 401, { error: "media_ingest_unauthorized" });
+        }
+        if (!mappingObjectStore) {
+          return json(response, 503, { error: "media_object_store_not_configured" });
+        }
+        if (!mediaStore.enabled) {
+          return json(response, 503, { error: "media_store_not_configured" });
+        }
+
+        const body = await readJson<unknown>(request, 16_384);
+        if (typeof body !== "object" || body === null || Array.isArray(body)) {
+          return json(response, 400, { error: "invalid_media_upload_request" });
+        }
+
+        const value = body as Record<string, unknown>;
+        const assetId =
+          typeof value.assetId === "string" ? value.assetId.trim() : "";
+        const fileName =
+          typeof value.fileName === "string" ? value.fileName.trim() : "";
+        const objectKey = buildManagedMediaObjectKey(assetId, fileName);
+        const ttl = mappingObjectStore.status().presignTtlSeconds;
+
+        return json(response, 201, {
+          objectKey,
+          uploadUrl: mappingObjectStore.presignMediaPut(objectKey),
+          expiresIn: ttl,
+          method: "PUT"
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "media_upload_url_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
+    if (
+      request.method === "POST" &&
+      request.url === "/internal/media/assets/verified"
+    ) {
+      try {
+        if (!hasValidBearerToken(request, mediaIngestToken)) {
+          return json(response, 401, { error: "media_ingest_unauthorized" });
+        }
+        if (!mappingObjectStore) {
+          return json(response, 503, { error: "media_object_store_not_configured" });
+        }
+        if (!mediaStore.enabled) {
+          return json(response, 503, { error: "media_store_not_configured" });
+        }
+
+        const body = await readJson<unknown>(request, 2_000_000);
+        const candidates = Array.isArray(body) ? body : [body];
+        if (candidates.length === 0 || candidates.length > 100) {
+          return json(response, 400, { error: "invalid_verified_media_asset_batch" });
+        }
+
+        const assets = candidates.filter(isMediaAsset);
+        if (assets.length !== candidates.length) {
+          return json(response, 400, { error: "invalid_media_asset" });
+        }
+        if (new Set(assets.map((asset) => asset.id)).size !== assets.length) {
+          return json(response, 400, { error: "duplicate_media_asset_id" });
+        }
+
+        const unmanaged = assets
+          .filter(
+            (asset) =>
+              !asset.objectKey ||
+              !asset.fileName ||
+              !isManagedMediaObjectKeyForAsset(
+                asset.objectKey,
+                asset.id,
+                asset.fileName
+              )
+          )
+          .map((asset) => asset.id);
+        if (unmanaged.length > 0) {
+          return json(response, 400, {
+            error: "media_asset_object_key_not_managed",
+            assetIds: unmanaged
+          });
+        }
+
+        const missing: string[] = [];
+        for (const asset of assets) {
+          if (!(await mappingObjectStore.mediaExists(asset.objectKey!))) {
+            missing.push(asset.id);
+          }
+        }
+        if (missing.length > 0) {
+          return json(response, 422, {
+            error: "media_object_missing",
+            assetIds: missing
+          });
+        }
+
+        await mediaStore.upsertMany(assets);
+        let overlayed = 0;
+        for (const asset of assets) {
+          if (mediaOverlays.upsert(asset)) overlayed += 1;
+        }
+
+        return json(response, 200, {
+          accepted: assets.length,
+          overlayed,
+          persisted: true,
+          objectStoreVerified: true
+        });
+      } catch (error) {
+        return json(response, 400, {
+          error: "verified_media_ingest_failed",
+          detail: errorMessage(error)
+        });
+      }
+    }
+
     if (request.method === "POST" && request.url === "/internal/media/assets") {
       try {
         if (!hasValidBearerToken(request, mediaIngestToken)) {
@@ -1218,6 +2051,10 @@ const shutdown = onceAsync(async () => {
       run: () => mediaStore.close()
     },
     {
+      name: "mapping_store",
+      run: () => mappingStore.close()
+    },
+    {
       name: "telemetry_store",
       run: () => telemetryStore.close()
     },
@@ -1358,6 +2195,29 @@ function mqttPayloadMethod(payload: unknown): string | undefined {
     return (payload as Record<string, unknown>).method as string;
   }
   return undefined;
+}
+
+function requireMappingAgent(
+  request: IncomingMessage,
+  response: ServerResponse
+): boolean {
+  if (!mappingStore.enabled) {
+    json(response, 503, { error: "mapping_store_not_configured" });
+    return false;
+  }
+  if (!mappingAgentToken) {
+    json(response, 503, { error: "mapping_agent_api_disabled" });
+    return false;
+  }
+  if (!mappingObjectStore) {
+    json(response, 503, { error: "mapping_object_store_not_configured" });
+    return false;
+  }
+  if (!hasValidBearerToken(request, mappingAgentToken)) {
+    json(response, 401, { error: "mapping_agent_unauthorized" });
+    return false;
+  }
+  return true;
 }
 
 function listenServer(

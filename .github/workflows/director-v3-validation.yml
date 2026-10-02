@@ -95,6 +95,9 @@ jobs:
       - name: Control API OpenAPI Contract
         run: npm run test:control-api-openapi
 
+      - name: Mapping Compute-Agent Contract
+        run: sh scripts/verify-mapping-compute-agent.sh
+
       - name: Pilot2 JSBridge Safety
         run: |
           npm run test:pilot2-jsbridge
@@ -226,6 +229,9 @@ jobs:
       - name: Control API OpenAPI Contract
         run: npm run test:control-api-openapi
 
+      - name: Mapping Compute-Agent Contract
+        run: sh scripts/verify-mapping-compute-agent.sh
+
       - name: Pilot2 JSBridge Safety
         run: |
           npm run test:pilot2-jsbridge
@@ -300,6 +306,9 @@ jobs:
                  AND to_regclass('public.raw_messages') IS NOT NULL
                  AND to_regclass('public.normalized_parameters') IS NOT NULL
                  AND to_regclass('public.mqtt_outbound_messages') IS NOT NULL
+                 AND to_regclass('public.mapping_jobs') IS NOT NULL
+                 AND to_regclass('public.mapping_results') IS NOT NULL
+                 AND to_regclass('public.mapping_layers') IS NOT NULL
                THEN 1 ELSE 0 END" 2>/dev/null || true)"
             if [ "$(printf '%s' "$schema_ready" | tr -d '[:space:]')" = "1" ]; then
               break
@@ -343,12 +352,16 @@ jobs:
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
             -c "SELECT 1 FROM mqtt_outbound_messages LIMIT 1;" >/dev/null
 
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM mapping_jobs LIMIT 1; SELECT 1 FROM mapping_results LIMIT 1; SELECT 1 FROM mapping_layers LIMIT 1;" >/dev/null
+
           # Upgrade-Pfad prüfen: auf einem bestehenden Volume wird initdb nicht
           # erneut ausgeführt. Der One-Shot-Migrator muss die Tabelle daher
           # selbständig wiederherstellen können.
           docker compose --env-file .env exec -T timescaledb \
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
-            -c "DROP TABLE media_assets, raw_messages, normalized_parameters, mqtt_outbound_messages;" >/dev/null
+            -c "DROP TABLE mapping_results, mapping_layers, mapping_jobs, media_assets, raw_messages, normalized_parameters, mqtt_outbound_messages;" >/dev/null
 
           docker compose --env-file .env run --rm db-migrations >/dev/null
 
@@ -367,6 +380,10 @@ jobs:
           docker compose --env-file .env exec -T timescaledb \
             psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
             -c "SELECT 1 FROM mqtt_outbound_messages LIMIT 1;" >/dev/null
+
+          docker compose --env-file .env exec -T timescaledb \
+            psql -U fhclone -d fhclone -v ON_ERROR_STOP=1 \
+            -c "SELECT 1 FROM mapping_jobs LIMIT 1; SELECT 1 FROM mapping_results LIMIT 1; SELECT 1 FROM mapping_layers LIMIT 1;" >/dev/null
 
       - name: Vollstaendiges Backup/Restore-Gate
         env:

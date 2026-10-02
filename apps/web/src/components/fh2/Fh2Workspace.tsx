@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { RtkDashboard } from "../rtk/RtkDashboard.js";
+import { DroneStatusDashboard } from "../status/DroneStatusDashboard.js";
 import { useFh2 } from "../../fh2/Fh2Provider.js";
 import { useFh2CesiumViewer } from "../../fh2/useFh2CesiumViewer.js";
 import { useDjiPilotBridge } from "../../pilot-bridge/DjiPilotBridgeProvider.js";
@@ -22,7 +22,7 @@ type WorkspaceView =
   | "route-edit"
   | "flight-history"
   | "cockpit"
-  | "rtk";
+  | "status";
 
 interface DevicePair {
   gatewaySn: string;
@@ -231,8 +231,8 @@ export function Fh2Workspace() {
           <ViewButton active={view === "cockpit"} onClick={() => setView("cockpit")}>
             Virtual Cockpit
           </ViewButton>
-          <ViewButton active={view === "rtk"} onClick={() => setView("rtk")}>
-            RTK
+          <ViewButton active={view === "status"} onClick={() => setView("status")}>
+            Status
           </ViewButton>
         </div>
 
@@ -323,7 +323,12 @@ export function Fh2Workspace() {
         {view === "cockpit" && (
           <Fh2VirtualCockpit gatewaySn={gatewaySn} droneSn={droneSn} />
         )}
-        {view === "rtk" && <RtkDashboard />}
+        {view === "status" && (
+          <DroneStatusDashboard
+            gatewaySn={gatewaySn}
+            droneSn={droneSn}
+          />
+        )}
       </div>
     </section>
   );

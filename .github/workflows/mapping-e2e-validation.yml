@@ -1,0 +1,38 @@
+name: Mapping E2E Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/control-api/src/mapping-*.ts"
+      - "apps/control-api/src/media-*.ts"
+      - "services/mapping-compute-agent/**"
+      - "infra/mapping/**"
+      - "infra/timescale/sql/006_media_assets.sql"
+      - "infra/timescale/sql/009_mapping_jobs.sql"
+      - "scripts/test-mapping-e2e.sh"
+      - "compose.yaml"
+      - ".env.example"
+      - ".github/workflows/mapping-e2e-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mapping-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mapping-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Full Mapping E2E
+        shell: bash
+        run: sh scripts/test-mapping-e2e.sh

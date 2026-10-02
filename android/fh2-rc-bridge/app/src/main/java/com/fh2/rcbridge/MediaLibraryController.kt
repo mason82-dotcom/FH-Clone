@@ -29,6 +29,10 @@ data class MediaLibrarySnapshot(
     val downloadingFile: String? = null,
     val downloadProgress: Double? = null,
     val lastDownloadPath: String? = null,
+    val uploadingFile: String? = null,
+    val uploadProgress: Double? = null,
+    val lastUploadedAssetId: String? = null,
+    val lastUploadedObjectKey: String? = null,
     val lastError: String? = null
 )
 
@@ -37,6 +41,7 @@ object MediaLibraryController {
         get() = MediaDataCenter.getInstance().mediaManager
 
     private val active = AtomicBoolean(false)
+    private val uploadActive = AtomicBoolean(false)
     private val listeners =
         CopyOnWriteArrayList<(MediaLibrarySnapshot) -> Unit>()
 
@@ -48,6 +53,12 @@ object MediaLibraryController {
 
     private var activeDownload: MediaFile? = null
     private var activeOutput: BufferedOutputStream? = null
+
+    @Volatile
+    private var lastDownloadedFileIndex: Int? = null
+
+    @Volatile
+    private var lastDownloadedFileName: String? = null
 
     private val stateListener =
         object : MediaFileListStateListener {
@@ -152,6 +163,9 @@ object MediaLibraryController {
         check(activeDownload == null) {
             "media_download_in_progress"
         }
+        check(!uploadActive.get()) {
+            "media_upload_in_progress"
+        }
 
         val mediaFile =
             filesByIndex[fileIndex]
@@ -178,6 +192,8 @@ object MediaLibraryController {
 
         activeDownload = mediaFile
         activeOutput = output
+        lastDownloadedFileIndex = null
+        lastDownloadedFileName = null
 
         update {
             copy(
@@ -225,6 +241,8 @@ object MediaLibraryController {
                 override fun onFinish() {
                     closeDownloadOutput()
                     activeDownload = null
+                    lastDownloadedFileIndex = fileIndex
+                    lastDownloadedFileName = mediaFile.fileName
                     update {
                         copy(
                             downloadingFile = null,
@@ -245,6 +263,80 @@ object MediaLibraryController {
                             downloadProgress = null,
                             lastError = error?.toString()
                                 ?: "media_download_failed"
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+    fun uploadLastDownload() {
+        check(activeDownload == null) {
+            "media_download_in_progress"
+        }
+        check(uploadActive.compareAndSet(false, true)) {
+            "media_upload_in_progress"
+        }
+
+        val path = snapshot.lastDownloadPath
+        val fileIndex = lastDownloadedFileIndex
+        val originalFileName = lastDownloadedFileName
+        if (
+            path == null ||
+            fileIndex == null ||
+            originalFileName == null
+        ) {
+            uploadActive.set(false)
+            error("media_download_required")
+        }
+
+        val file = File(path)
+        if (!file.isFile || file.length() <= 0L) {
+            uploadActive.set(false)
+            error("media_download_missing")
+        }
+
+        update {
+            copy(
+                uploadingFile = file.name,
+                uploadProgress = 0.0,
+                lastError = null
+            )
+        }
+
+        Fh2BridgeClient.uploadMedia(
+            file = file,
+            fileIndex = fileIndex,
+            originalFileName = originalFileName,
+            onProgress = { progress ->
+                update {
+                    copy(
+                        uploadingFile = file.name,
+                        uploadProgress =
+                            progress.coerceIn(0.0, 1.0)
+                    )
+                }
+            },
+            onResult = { result ->
+                uploadActive.set(false)
+                result.onSuccess { uploaded ->
+                    update {
+                        copy(
+                            uploadingFile = null,
+                            uploadProgress = 1.0,
+                            lastUploadedAssetId = uploaded.assetId,
+                            lastUploadedObjectKey = uploaded.objectKey,
+                            lastError = null
+                        )
+                    }
+                }.onFailure { error ->
+                    update {
+                        copy(
+                            uploadingFile = null,
+                            uploadProgress = null,
+                            lastError =
+                                "media_upload_failed:" +
+                                    (error.message ?: error.toString())
                         )
                     }
                 }
@@ -274,6 +366,8 @@ object MediaLibraryController {
         )
 
         filesByIndex.clear()
+        lastDownloadedFileIndex = null
+        lastDownloadedFileName = null
         update {
             MediaLibrarySnapshot()
         }

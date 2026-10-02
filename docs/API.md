@@ -31,6 +31,56 @@ Die Ports sind konfigurierbar.
 
 ## Öffentliche API
 
+### Mapping / Photogrammetrie
+
+Die Mapping-Erweiterung ist ein FC0-Datenverarbeitungspfad und besitzt keine
+Flugsteuerungsrechte.
+
+```http
+GET /api/mapping/status
+GET /api/mapping/jobs
+POST /api/mapping/jobs
+```
+
+`GET/POST /api/mapping/jobs` sind nur aktiv, wenn
+`MAPPING_OPERATOR_TOKEN` gesetzt ist, und verlangen:
+
+```http
+Authorization: Bearer <MAPPING_OPERATOR_TOKEN>
+```
+
+Ein neuer Job referenziert ausschließlich bereits persistierte
+`media_assets.asset_id`-Werte. Alle referenzierten Assets müssen einen
+`objectKey` besitzen.
+
+Der externe Compute-Agent verwendet einen separaten Bearer-Vertrag:
+
+```http
+POST /api/mapping/agent/claim
+POST /api/mapping/agent/jobs/{job_id}/image-urls
+POST /api/mapping/agent/jobs/{job_id}/heartbeat
+POST /api/mapping/agent/jobs/{job_id}/upload-urls
+POST /api/mapping/agent/jobs/{job_id}/complete
+POST /api/mapping/agent/jobs/{job_id}/fail
+Authorization: Bearer <MAPPING_AGENT_TOKEN>
+```
+
+Der Agent erhält nur kurzlebige Presigned-URLs, keine S3-Dauer-Credentials.
+
+Für die Webkarte ist zusätzlich ein read-only View-Gate vorhanden:
+
+```http
+GET /api/mapping/layers
+GET /api/mapping/layers/{layer_id}/tiles/{z}/{x}/{y}.png
+```
+
+Diese beiden Pfade sind nur aktiv, wenn
+`MAPPING_LAYER_VIEW_ENABLED=true` gesetzt ist. Der Tile-Endpunkt leitet auf
+eine kurzlebige signierte Result-URL weiter; S3-Credentials werden nie an den
+Browser ausgegeben.
+
+Details: [Mapping / Photogrammetrie](MAPPING.md).
+
 ### GET /health
 
 Dienststatus.
@@ -117,6 +167,34 @@ Authorization: Bearer <agentToken>
 
 Der Agent-Token muss zur RC-/Aircraft-Identität im Snapshot passen. Dieser
 Endpunkt nimmt **keine** Flight-Control-Kommandos an.
+
+### POST /api/msdk/media/upload-url
+
+Stellt für eine bereits gepairte und aktuell heartbeatende RC Bridge eine
+kurzlebige Presigned-PUT-URL für den Media-Bucket aus.
+
+```http
+Authorization: Bearer <agentToken>
+```
+
+Der Endpunkt verlangt zusätzlich einen frischen MSDK-Agent-Zustand
+(`lastSeenAt <= 10 s`). Die Presigned URL enthält SigV4-bedingt die
+Access-Key-ID im Credential-Scope, aber **kein S3-Secret und keine
+wiederverwendbaren S3-Dauer-Credentials**.
+
+### POST /api/msdk/media/assets/verified
+
+Registriert ein zuvor hochgeladenes `MediaAsset`. Vor der Persistenz prüft
+die Control API:
+
+- Agent-Token gültig und nicht widerrufen,
+- frischen Heartbeat,
+- `asset.capture.deviceId` entspricht exakt der Aircraft-SN des Tokens,
+- der Object-Key wurde von FH2 für `asset.id + fileName` erzeugt,
+- das Objekt existiert tatsächlich im Media-Bucket.
+
+Damit kann ein gepairter RC-Agent weder ein Asset für eine andere Aircraft
+registrieren noch einen beliebigen fremden S3-Key referenzieren.
 
 ### GET /api/msdk/agents
 
@@ -559,6 +637,48 @@ ugcs_not_configured`. Bei konfigurierter, aber nicht erreichbarer Bridge wird
 `/api/ugcs/routes` enthält echte Segment-/FigurePoint-Geometrie aus UCS.
 `/api/ugcs/telemetry` erhält zusätzlich die ursprüngliche UgCS-Semantik,
 Subsystem und Feldcode.
+
+### Interner Media-Object-Ingest
+
+Für große DJI-Mediendateien existiert zusätzlich zum bisherigen
+Metadaten-Ingest ein zweistufiger, verifizierter Object-Store-Pfad auf der
+internen API (Port 8081):
+
+```http
+POST /internal/media/upload-url
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+Content-Type: application/json
+
+{
+  "assetId": "stable-asset-id",
+  "fileName": "DJI_0001.TIF"
+}
+```
+
+Die Antwort enthält einen serverseitig erzeugten, gehashten `objectKey` und
+eine kurzlebige Presigned-PUT-URL. Der Binärdatenstrom läuft direkt zum
+S3/MinIO-Media-Bucket und nicht durch die Control API.
+
+Nach erfolgreichem PUT wird das vollständige `MediaAsset` mit genau diesem
+`objectKey` registriert:
+
+```http
+POST /internal/media/assets/verified
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+```
+
+Vor der Persistenz prüft FH2:
+
+- gültigen `MediaAsset`-Vertrag,
+- eindeutige Asset-IDs im Batch,
+- exakte Bindung von `objectKey` an `asset.id + fileName`,
+- Existenz des Objekts per serverseitigem HEAD im Media-Bucket.
+
+Fehlende Objekte liefern HTTP 422. Eine fehlende Object-Store- oder
+MediaStore-Konfiguration bleibt fail-closed mit HTTP 503.
+
+Der bestehende `POST /internal/media/assets`-Pfad bleibt für bereits extern
+verwaltete beziehungsweise reine Metadatenquellen erhalten.
 
 ### GET /api/media/overlays
 

@@ -97,6 +97,10 @@ Auf `main` sind unter anderem vorhanden:
 - Android-MSDK-V5-Bridge mit KeyManager-Runtimeinventar und read-only Hardware-Probes
 - Pilot-2-JSBridge read-only Runtime mit exaktem RC-/Aircraft-Topologie-Match
 - read-only Mission-/Wayline-/Capability-APIs
+- V3.1 Mapping-/Photogrammetrie-Pipeline mit persistentem Lease-Scheduler
+- optionaler S3/MinIO-Media-/Result-Store mit kurzlebigen Presigned URLs
+- separater x64/GPU-Compute-Agent für NodeODM/ODM, COG/DSM/DTM und XYZ-Tiles
+- read-only Cesium-Mapping-Layer und manueller, verifizierter MSDK-Media-Upload
 
 Nicht Bestandteil der V3.0.0-Hardware-Supportzusage sind insbesondere:
 
@@ -168,9 +172,12 @@ packages/
 
 services/
   ugcs-bridge/       UCS/Java-Bridge
+  mapping-compute-agent/
+                     x64/GPU-Worker für NodeODM/Photogrammetrie
 
 infra/
   emqx/              Broker-Autorisierung und ACL
+  mapping/           optionaler S3/MinIO-Objektspeicher für Mapping
 
 docs/                verbindliche Projektdokumentation
 ```

@@ -1,0 +1,97 @@
+services:
+  control-api:
+    environment:
+      # Mapping E2E must not depend on DJI MQTT authorization/readiness.
+      DJI_MQTT_URL: ""
+
+  mapping-fake-nodeodm:
+    profiles: ["mapping-e2e"]
+    build:
+      context: ./services/mapping-compute-agent/agent
+      dockerfile: Dockerfile
+    image: fh2/mapping-compute-agent:e2e
+    command:
+      [
+        "python3",
+        "/e2e/fake_nodeodm.py",
+        "--port",
+        "3001",
+        "--token",
+        "${NODEODM_TOKEN:-e2e-nodeodm-token}",
+        "--lon",
+        "8.60",
+        "--lat",
+        "49.10"
+      ]
+    volumes:
+      - ./services/mapping-compute-agent/tools:/e2e:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3001/info?token=e2e-nodeodm-token', timeout=2).read()"
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: "no"
+    networks:
+      - backend
+
+  mapping-e2e-agent:
+    profiles: ["mapping-e2e"]
+    build:
+      context: ./services/mapping-compute-agent/agent
+      dockerfile: Dockerfile
+    image: fh2/mapping-compute-agent:e2e
+    environment:
+      FH2_URL: http://control-api:8080
+      MAPPING_AGENT_TOKEN: ${MAPPING_AGENT_TOKEN}
+      AGENT_ID: mapping-e2e-agent
+      NODEODM_URL: http://mapping-fake-nodeodm:3001
+      NODEODM_TOKEN: ${NODEODM_TOKEN:-e2e-nodeodm-token}
+      MAX_IMAGES: "10"
+      TARGET_CRS: EPSG:25832
+      LEASE_SECONDS: "120"
+      HEARTBEAT_SECONDS: "10"
+      POLL_SECONDS: "1"
+      TILE_ZOOM_SPAN: "0"
+      DOWNLOAD_WORKERS: "2"
+      UPLOAD_WORKERS: "4"
+      KEEP_FAILED: "true"
+      GPU: "false"
+    depends_on:
+      control-api:
+        condition: service_started
+      mapping-minio-init:
+        condition: service_completed_successfully
+      mapping-fake-nodeodm:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - backend
+
+  mapping-e2e-driver:
+    profiles: ["mapping-e2e"]
+    build:
+      context: ./services/mapping-compute-agent/agent
+      dockerfile: Dockerfile
+    image: fh2/mapping-compute-agent:e2e
+    command: ["python3", "/e2e/mapping_e2e_driver.py"]
+    environment:
+      FH2_PUBLIC_URL: http://control-api:8080
+      FH2_INTERNAL_URL: http://control-api:8081
+      MEDIA_INGEST_TOKEN: ${MEDIA_INGEST_TOKEN}
+      MAPPING_OPERATOR_TOKEN: ${MAPPING_OPERATOR_TOKEN}
+    volumes:
+      - ./services/mapping-compute-agent/tools:/e2e:ro
+    depends_on:
+      control-api:
+        condition: service_healthy
+      mapping-e2e-agent:
+        condition: service_started
+    restart: "no"
+    networks:
+      - backend
