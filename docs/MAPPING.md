@@ -220,6 +220,66 @@ Mapping ist FC0-Datenverarbeitung. Der Pfad:
 
 Der Compute-Agent kennt weder DJI- noch MQTT-Credentials.
 
+## Reproduzierbare End-to-End-Abnahme
+
+Für die vollständige Softwarekette ohne reale Drohne existiert ein eigener
+E2E-Test:
+
+```bash
+npm run test:mapping-e2e
+```
+
+Der Test startet einen isolierten Compose-Projektstack mit:
+
+- TimescaleDB + Migrationen,
+- FH2 Control API,
+- optionalem Mapping-MinIO,
+- echtem FH2 Compute-Agent,
+- Fake-NodeODM auf derselben GDAL-Basis wie der Agent.
+
+Der Ablauf verwendet keine direkten DB-Seeds für das Quellbild:
+
+```text
+synthetisches PPM
+  -> /internal/media/upload-url
+  -> Presigned PUT zum Media-Bucket
+  -> /internal/media/assets/verified
+  -> POST /api/mapping/jobs
+  -> Compute-Agent claimt den Job
+  -> Fake-NodeODM erzeugt georeferenziertes Orthofoto + DSM
+  -> Agent erzeugt COGs + XYZ-Tiles
+  -> Presigned Result-PUTs
+  -> /complete
+  -> mapping_results + mapping_layers
+  -> GET /api/mapping/layers
+  -> echter PNG-Tile über den read-only Tile-Proxy
+```
+
+Das Gate prüft anschließend zusätzlich direkt in PostgreSQL:
+
+- genau ein persistiertes E2E-`MediaAsset`,
+- den letzten Mapping-Job als `DONE`,
+- mindestens drei `mapping_results`,
+- genau einen XYZ-`mapping_layer`.
+
+CI: `.github/workflows/mapping-e2e-validation.yml` wird für Änderungen an
+Mapping-, Media-, Object-Store- und Compute-Agent-Pfaden ausgelöst. Der
+Workflow ist bewusst getrennt von der schnellen Direktor-V3-Validierung, weil
+er Container baut und einen vollständigen GDAL-/Object-Store-Lauf ausführt.
+
+### Reale Hardware-/NodeODM-Abnahme
+
+Der synthetische E2E-Test ersetzt nicht die reale Abnahme. Vor Freigabe des
+Mapping-Pfads sind zusätzlich mindestens erforderlich:
+
+1. echte M3M- oder M3T-Datei auf der RC Pro auswählen und manuell zu FH2 laden,
+2. Object-Existenz und `MediaAsset.objectKey` prüfen,
+3. Job mit einem realen Bildsatz anlegen,
+4. echten NodeODM/ODM-Lauf auf dem x64/GPU-Knoten durchführen,
+5. Orthofoto/DSM/DTM und Cesium-Layer visuell prüfen,
+6. Job-/Result-/Layer-Datensätze und Hashes sichern,
+7. erst danach PR aus Draft nehmen.
+
 ## Noch offen
 
 - automatische DJI-Cloud-Media-Übernahme in den lokalen Media-Bucket; der MSDK-Pfad ist bereits manuell verdrahtet,
