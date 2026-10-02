@@ -1,5 +1,7 @@
 """Tiny HTTP helpers on the standard library (no third-party dependencies in the agent)."""
+import http.client
 import json
+import os
 import shutil
 import time
 import urllib.error
@@ -60,13 +62,36 @@ def download(url: str, path: str, timeout: float = 300, retries: int = 3) -> int
 
 
 def put_file(url: str, path: str, content_type: str = "application/octet-stream", retries: int = 3) -> None:
-    with open(path, "rb") as f:
-        data = f.read()
+    """Stream a file to a presigned PUT URL without loading large COGs into RAM."""
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("presigned upload URL must use http/https")
+    target = parsed.path + (f"?{parsed.query}" if parsed.query else "")
+    size = os.path.getsize(path)
+
     for attempt in range(1, retries + 1):
+        connection = None
         try:
-            request("PUT", url, data=data, headers={"Content-Type": content_type}, timeout=300)
+            cls = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+            connection = cls(parsed.hostname, parsed.port, timeout=300)
+            connection.putrequest("PUT", target)
+            connection.putheader("Content-Type", content_type)
+            connection.putheader("Content-Length", str(size))
+            connection.endheaders()
+
+            with open(path, "rb") as source:
+                while chunk := source.read(1024 * 1024):
+                    connection.send(chunk)
+
+            response = connection.getresponse()
+            payload = response.read()
+            if not 200 <= response.status < 300:
+                raise HttpError(response.status, payload.decode(errors="replace"), url)
             return
-        except (HttpError, urllib.error.URLError, TimeoutError, ConnectionError):
+        except (HttpError, OSError, TimeoutError, ConnectionError):
             if attempt == retries:
                 raise
             time.sleep(2 * attempt)
+        finally:
+            if connection is not None:
+                connection.close()
