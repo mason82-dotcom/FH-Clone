@@ -51,8 +51,33 @@ Authorization: Bearer <MAPPING_OPERATOR_TOKEN>
 
 Ein neuer Job referenziert ausschließlich bereits persistierte
 `media_assets.asset_id`-Werte. Alle referenzierten Assets müssen einen
-`objectKey` besitzen. Der Agent-Dispatch ist in dieser Integrationsstufe noch
-fail-closed, bis S3/MinIO-Presigned-URLs integriert sind.
+`objectKey` besitzen.
+
+Der externe Compute-Agent verwendet einen separaten Bearer-Vertrag:
+
+```http
+POST /api/mapping/agent/claim
+POST /api/mapping/agent/jobs/{job_id}/image-urls
+POST /api/mapping/agent/jobs/{job_id}/heartbeat
+POST /api/mapping/agent/jobs/{job_id}/upload-urls
+POST /api/mapping/agent/jobs/{job_id}/complete
+POST /api/mapping/agent/jobs/{job_id}/fail
+Authorization: Bearer <MAPPING_AGENT_TOKEN>
+```
+
+Der Agent erhält nur kurzlebige Presigned-URLs, keine S3-Dauer-Credentials.
+
+Für die Webkarte ist zusätzlich ein read-only View-Gate vorhanden:
+
+```http
+GET /api/mapping/layers
+GET /api/mapping/layers/{layer_id}/tiles/{z}/{x}/{y}.png
+```
+
+Diese beiden Pfade sind nur aktiv, wenn
+`MAPPING_LAYER_VIEW_ENABLED=true` gesetzt ist. Der Tile-Endpunkt leitet auf
+eine kurzlebige signierte Result-URL weiter; S3-Credentials werden nie an den
+Browser ausgegeben.
 
 Details: [Mapping / Photogrammetrie](MAPPING.md).
 
