@@ -3,6 +3,8 @@
 Pull model (mapping-tool/docs/adr-001-architektur.md): the node only makes outgoing requests and may be
 switched off at any time; an expired lease puts the job back into the FH2 queue.
 """
+import hashlib
+import json
 import logging
 import os
 import shutil
@@ -88,7 +90,9 @@ def process(settings: config.Settings, pi: PiClient, odm: NodeOdmClient, claim: 
 
         def fetch(item: dict) -> None:
             nonlocal done
-            name = item["key"].rsplit("/", 1)[-1]
+            base = item["key"].rsplit("/", 1)[-1]
+            prefix = hashlib.sha256(item["key"].encode("utf-8")).hexdigest()[:12]
+            name = f"{prefix}_{base}"
             download(item["url"], str(img_dir / name))
             done += 1
             hb.set(10 * done / len(images), f"downloading images {done}/{len(images)}")
@@ -132,8 +136,9 @@ def process(settings: config.Settings, pi: PiClient, odm: NodeOdmClient, claim: 
         found = postprocess.extract(zip_path, work / "odm")
         out = work / "out"
         manifest = postprocess.build(found, out, settings.target_crs, settings.tile_min_zoom_span, os.cpu_count() or 2)
-        manifest["files"].append({"path": "manifest.json", "kind": "other"})
+        manifest["files"].append({"path": "manifest.json", "kind": "manifest"})
         manifest["source"]["gpu_sift"] = gpu_used
+        (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
         hb.check()
 
         # 5. upload results (presigned PUT under mapping-results/{jobId}/)
