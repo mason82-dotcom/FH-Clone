@@ -64,6 +64,11 @@ const dynamic = [
     path: "/api/devices/{device_sn}/telemetry"
   },
   {
+    name: "mappingLayerTileMatch",
+    method: "GET",
+    path: "/api/mapping/layers/{layer_id}/tiles/{z}/{x}/{y}.png"
+  },
+  {
     name: "mappingAgentImageUrlsMatch",
     method: "POST",
     path: "/api/mapping/agent/jobs/{job_id}/image-urls"
