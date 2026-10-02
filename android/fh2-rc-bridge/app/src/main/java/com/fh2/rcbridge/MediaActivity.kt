@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 class MediaActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     private lateinit var listView: ListView
+    private lateinit var uploadButton: Button
 
     private var items: List<MediaItemSnapshot> = emptyList()
 
@@ -33,6 +34,15 @@ class MediaActivity : AppCompatActivity() {
                 state.downloadProgress?.let {
                     String.format("%.1f%%", it * 100.0)
                 } ?: "-"
+            val uploadProgress =
+                state.uploadProgress?.let {
+                    String.format("%.1f%%", it * 100.0)
+                } ?: "-"
+
+            uploadButton.isEnabled =
+                state.lastDownloadPath != null &&
+                    state.uploadingFile == null &&
+                    Fh2BridgeClient.snapshot.status == "paired"
 
             statusText.text = buildString {
                 appendLine("DJI Media")
@@ -44,6 +54,15 @@ class MediaActivity : AppCompatActivity() {
                 )
                 state.lastDownloadPath?.let {
                     appendLine("Gespeichert: $it")
+                }
+                appendLine(
+                    "FH2 Upload: ${state.uploadingFile ?: "-"} · $uploadProgress"
+                )
+                state.lastUploadedAssetId?.let {
+                    appendLine("FH2 Asset: $it")
+                }
+                state.lastUploadedObjectKey?.let {
+                    appendLine("Object-Key: $it")
                 }
                 state.lastError?.let {
                     append("Fehler: $it")
@@ -86,6 +105,23 @@ class MediaActivity : AppCompatActivity() {
             }
         }
 
+
+        uploadButton = Button(this).apply {
+            text = "Letzten Download zu FH2 hochladen"
+            isEnabled = false
+            setOnClickListener {
+                runCatching {
+                    MediaLibraryController.uploadLastDownload()
+                }.onFailure { error ->
+                    Toast.makeText(
+                        this@MediaActivity,
+                        "FH2 Upload fehlgeschlagen: ${error.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 16, 16, 16)
@@ -99,6 +135,13 @@ class MediaActivity : AppCompatActivity() {
             )
             addView(
                 refreshButton,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            addView(
+                uploadButton,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
