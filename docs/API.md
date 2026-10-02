@@ -610,6 +610,48 @@ ugcs_not_configured`. Bei konfigurierter, aber nicht erreichbarer Bridge wird
 `/api/ugcs/telemetry` erhält zusätzlich die ursprüngliche UgCS-Semantik,
 Subsystem und Feldcode.
 
+### Interner Media-Object-Ingest
+
+Für große DJI-Mediendateien existiert zusätzlich zum bisherigen
+Metadaten-Ingest ein zweistufiger, verifizierter Object-Store-Pfad auf der
+internen API (Port 8081):
+
+```http
+POST /internal/media/upload-url
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+Content-Type: application/json
+
+{
+  "assetId": "stable-asset-id",
+  "fileName": "DJI_0001.TIF"
+}
+```
+
+Die Antwort enthält einen serverseitig erzeugten, gehashten `objectKey` und
+eine kurzlebige Presigned-PUT-URL. Der Binärdatenstrom läuft direkt zum
+S3/MinIO-Media-Bucket und nicht durch die Control API.
+
+Nach erfolgreichem PUT wird das vollständige `MediaAsset` mit genau diesem
+`objectKey` registriert:
+
+```http
+POST /internal/media/assets/verified
+Authorization: Bearer <MEDIA_INGEST_TOKEN>
+```
+
+Vor der Persistenz prüft FH2:
+
+- gültigen `MediaAsset`-Vertrag,
+- eindeutige Asset-IDs im Batch,
+- exakte Bindung von `objectKey` an `asset.id + fileName`,
+- Existenz des Objekts per serverseitigem HEAD im Media-Bucket.
+
+Fehlende Objekte liefern HTTP 422. Eine fehlende Object-Store- oder
+MediaStore-Konfiguration bleibt fail-closed mit HTTP 503.
+
+Der bestehende `POST /internal/media/assets`-Pfad bleibt für bereits extern
+verwaltete beziehungsweise reine Metadatenquellen erhalten.
+
 ### GET /api/media/overlays
 
 Read-only Kartenfeed für georeferenzierte Thermal-/Multispektral-/NDVI-
