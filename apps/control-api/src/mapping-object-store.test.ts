@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   MappingObjectStore,
+  buildManagedMediaObjectKey,
   createMappingObjectStoreFromEnv,
+  isManagedMediaObjectKeyForAsset,
   validateMappingResultPath
 } from "./mapping-object-store.js";
 
@@ -89,4 +91,73 @@ test("resultExists uses an internally signed HEAD request", async () => {
   assert.equal(exists, true);
   assert.equal(seen?.method, "HEAD");
   assert.equal(new URL(seen!.url).hostname, "minio");
+});
+
+
+test("managed media object keys are deterministic and hide source identifiers", () => {
+  const key = buildManagedMediaObjectKey(
+    "DJI-M3M-SERIAL-EXAMPLE:capture-17",
+    "DJI_20261002_160000_0001.TIF"
+  );
+
+  assert.match(key, /^ingest\/[0-9a-f]{2}\/[0-9a-f]{64}\.tif$/);
+  assert.ok(!key.includes("DJI-M3M-SERIAL-EXAMPLE"));
+  assert.ok(!key.includes("DJI_20261002"));
+
+  assert.equal(
+    isManagedMediaObjectKeyForAsset(
+      key,
+      "DJI-M3M-SERIAL-EXAMPLE:capture-17",
+      "DJI_20261002_160000_0001.TIF"
+    ),
+    true
+  );
+  assert.equal(
+    isManagedMediaObjectKeyForAsset(
+      key,
+      "different-asset",
+      "DJI_20261002_160000_0001.TIF"
+    ),
+    false
+  );
+});
+
+test("managed media object keys reject path-like filenames", () => {
+  for (const fileName of [
+    "../DJI_0001.TIF",
+    "folder/DJI_0001.TIF",
+    "folder\\DJI_0001.TIF"
+  ]) {
+    assert.throws(
+      () => buildManagedMediaObjectKey("asset-1", fileName),
+      /media_upload_fileName_invalid/
+    );
+  }
+});
+
+test("presigned media PUT uses the media bucket", () => {
+  const key = buildManagedMediaObjectKey("asset-1", "capture.JPG");
+  const url = new URL(store().presignMediaPut(key));
+
+  assert.equal(url.origin, "http://192.0.2.10:9000");
+  assert.equal(url.pathname, `/fh2-media/${key}`);
+  assert.equal(url.searchParams.get("X-Amz-Expires"), "900");
+  assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[0-9a-f]{64}$/);
+});
+
+test("mediaExists checks the media bucket through the internal endpoint", async () => {
+  let seen: { url: string; method?: string } | undefined;
+  const fetchImpl: typeof fetch = async (input, init) => {
+    seen = {
+      url: String(input),
+      ...(init?.method ? { method: init.method } : {})
+    };
+    return new Response(null, { status: 200 });
+  };
+
+  const key = buildManagedMediaObjectKey("asset-1", "capture.JPG");
+  assert.equal(await store(fetchImpl).mediaExists(key), true);
+  assert.equal(seen?.method, "HEAD");
+  assert.equal(new URL(seen!.url).hostname, "minio");
+  assert.ok(new URL(seen!.url).pathname.startsWith("/fh2-media/ingest/"));
 });
