@@ -134,6 +134,46 @@ UUID-Format besitzen.
 
 Details: [WPML.md](WPML.md).
 
+## Mapping / Photogrammetrie
+
+Der Mapping-Pfad ist optional und standardmäßig deaktiviert.
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `MAPPING_OPERATOR_TOKEN` | leer | Bearer-Secret für Jobanlage und Jobliste |
+| `MAPPING_AGENT_TOKEN` | leer | Bearer-Secret für den externen Compute-Agent |
+| `MAPPING_DEFAULT_LEASE_SECONDS` | `600` | Standard-Lease eines geclaimten Jobs |
+| `MAPPING_MAX_LEASE_ATTEMPTS` | `3` | maximale Zahl abgelaufener Leases |
+| `MAPPING_S3_INTERNAL_ENDPOINT` | leer | S3-Endpunkt aus Sicht der Control API |
+| `MAPPING_S3_PUBLIC_ENDPOINT` | leer | vom Compute-Agent erreichbarer S3-Endpunkt |
+| `MAPPING_S3_ACCESS_KEY` | leer | Access Key des eingeschränkten Mapping-Benutzers |
+| `MAPPING_S3_SECRET_KEY` | leer | Secret Key des eingeschränkten Mapping-Benutzers |
+| `MAPPING_S3_REGION` | `us-east-1` | SigV4-Region |
+| `MAPPING_MEDIA_BUCKET` | leer | Quellbucket für MediaAssets |
+| `MAPPING_RESULTS_BUCKET` | leer | Ergebnisbucket für COGs, Reports und Tiles |
+| `MAPPING_PRESIGN_TTL_SECONDS` | `3600` | Gültigkeit signierter GET/PUT-URLs, maximal 3600 s |
+
+Die S3-Konfiguration ist **all-or-nothing**. Sobald einer der Pflichtwerte
+gesetzt ist, müssen alle Pflichtwerte vorhanden sein; eine Teilkonfiguration
+führt absichtlich zu einem Startfehler.
+
+Ein gesetztes `MAPPING_AGENT_TOKEN` ohne betriebsbereiten Object Store führt
+zu `/ready = 503`. Damit kann der Worker-Pfad nicht halbkonfiguriert
+freigeschaltet werden.
+
+Für das optionale lokale Compose-Profil `mapping` kommen hinzu:
+
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `MAPPING_MINIO_ROOT_USER` | leer | MinIO-Root-Benutzer; nur Initialisierung/Administration |
+| `MAPPING_MINIO_ROOT_PASSWORD` | leer | MinIO-Root-Passwort |
+| `MAPPING_S3_BIND` | `0.0.0.0` | Host-Bind des S3-Ports |
+| `MAPPING_S3_PORT` | `9000` | veröffentlichter S3-Port |
+| `MAPPING_MINIO_CONSOLE_BIND` | `127.0.0.1` | Host-Bind der MinIO-Konsole |
+| `MAPPING_MINIO_CONSOLE_PORT` | `9001` | Konsolenport |
+
+Details: [MAPPING.md](MAPPING.md).
+
 ## Diagnose
 
 | Variable | Standard | Bedeutung |
